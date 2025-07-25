@@ -11,6 +11,10 @@ export interface Demo {
     tavusShareableLink?: string;
     tavusPersonaId?: string;
     agentCreatedAt?: string;
+    ctaTitle?: string;
+    ctaMessage?: string;
+    ctaButtonText?: string;
+    ctaButtonUrl?: string;
   } | null;
 }
 

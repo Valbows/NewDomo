@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         replica_id: replicaId, 
         persona_id: demo.tavus_persona_id,
+        webhook_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/tavus-webhook`,
         // We can add more conversation settings here later
       }),
     });
@@ -60,11 +61,32 @@ export async function POST(req: NextRequest) {
     }
 
     const conversationData = await conversationResponse.json();
+    
+    console.log('Conversation data received:', conversationData);
 
-    // Save the conversation ID to the demo
+    // Get current demo metadata
+    const { data: currentDemo, error: fetchError } = await supabase
+      .from('demos')
+      .select('metadata')
+      .eq('id', demoId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current demo:', fetchError);
+    }
+
+    // Save the conversation ID and shareable link to the demo
+    const updatedMetadata = {
+      ...currentDemo?.metadata,
+      tavusShareableLink: conversationData.conversation_url
+    };
+
     const { error: updateError } = await supabase
       .from('demos')
-      .update({ tavus_conversation_id: conversationData.conversation_id })
+      .update({ 
+        tavus_conversation_id: conversationData.conversation_id,
+        metadata: updatedMetadata
+      })
       .eq('id', demoId);
 
     if (updateError) {

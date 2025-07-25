@@ -114,6 +114,39 @@ export async function POST(req: NextRequest) {
     console.log('Knowledge chunks:', knowledgeChunks?.length || 0);
     console.log('Available videos:', demoVideos?.length || 0);
 
+    // Define tools for the persona
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'fetch_video',
+          description: 'Fetch and display a demo video by title. Use this when the user asks to see a video, demo, or specific feature.',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'The exact title of the video to fetch. Must match one of the available video titles exactly.'
+              }
+            },
+            required: ['title']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'show_trial_cta',
+          description: 'Show a call-to-action for starting a trial. Use this when the user expresses interest in trying the product.',
+          parameters: {
+            type: 'object',
+            properties: {},
+            required: []
+          }
+        }
+      }
+    ];
+
     const personaResponse = await fetch('https://tavusapi.com/v2/personas', {
       method: 'POST',
       headers: {
@@ -124,6 +157,11 @@ export async function POST(req: NextRequest) {
         pipeline_mode: 'full',
         system_prompt: enhancedSystemPrompt,
         persona_name: agentName,
+        layers: {
+          llm: {
+            tools: tools
+          }
+        }
       }),
     });
 

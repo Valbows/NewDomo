@@ -11,6 +11,7 @@ import { VideoManagement } from './components/VideoManagement';
 import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
 import { AgentSettings } from './components/AgentSettings';
 import { VideoPlayer } from './components/VideoPlayer';
+import { CTASettings } from './components/CTASettings';
 
 export default function DemoConfigurationPage({ params }: { params: { demoId: string } }) {
   const { demoId } = params;
@@ -33,6 +34,12 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [tavusPersonaId, setTavusPersonaId] = useState<string | null>(demo?.metadata?.tavusPersonaId || null);
   const [conversationData, setConversationData] = useState<any>(null);
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
+  
+  // CTA Settings State
+  const [ctaTitle, setCTATitle] = useState('Ready to Get Started?');
+  const [ctaMessage, setCTAMessage] = useState('Start your free trial today and see the difference!');
+  const [ctaButtonText, setCTAButtonText] = useState('Start Free Trial');
+  const [ctaButtonUrl, setCTAButtonUrl] = useState('');
 
   const fetchDemoData = useCallback(async () => {
     try {
@@ -44,6 +51,12 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setAgentPersonality(demoData.metadata?.agentPersonality || 'Friendly and helpful assistant.');
       setAgentGreeting(demoData.metadata?.agentGreeting || 'Hello! How can I help you with the demo today?');
       setTavusPersonaId(demoData.metadata?.tavusPersonaId || null);
+      
+      // Initialize CTA settings from demo metadata
+      setCTATitle(demoData.metadata?.ctaTitle || 'Ready to Get Started?');
+      setCTAMessage(demoData.metadata?.ctaMessage || 'Start your free trial today and see the difference!');
+      setCTAButtonText(demoData.metadata?.ctaButtonText || 'Start Free Trial');
+      setCTAButtonUrl(demoData.metadata?.ctaButtonUrl || '');
 
       const { data: videoData, error: videoError } = await supabase.from('demo_videos').select('*').eq('demo_id', demoId).order('order_index');
       if (videoError) console.warn('Could not fetch videos:', videoError.message);
@@ -344,6 +357,44 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     }
   };
 
+  const handleSaveCTA = async () => {
+    try {
+      const { error } = await supabase
+        .from('demos')
+        .update({
+          metadata: {
+            ...demo?.metadata,
+            ctaTitle,
+            ctaMessage,
+            ctaButtonText,
+            ctaButtonUrl
+          }
+        })
+        .eq('id', demoId);
+
+      if (error) throw error;
+      
+      // Update local demo state
+      if (demo) {
+        setDemo({
+          ...demo,
+          metadata: {
+            ...demo.metadata,
+            ctaTitle,
+            ctaMessage,
+            ctaButtonText,
+            ctaButtonUrl
+          }
+        });
+      }
+      
+      alert('CTA settings saved successfully!');
+    } catch (err: any) {
+      console.error('Error saving CTA settings:', err);
+      alert('Failed to save CTA settings.');
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-12 h-12 animate-spin" /></div>;
   if (error) return <div className="flex items-center justify-center min-h-screen"><AlertCircle className="w-12 h-12 text-red-500" /><p className="ml-4">{error}</p></div>;
 
@@ -354,6 +405,14 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Configure: {demo?.name}</h1>
             <p className="text-sm text-gray-500">Manage your demo videos, knowledge base, and agent settings.</p>
+          </div>
+          <div className="flex space-x-4">
+            <a
+              href={`/demos/${demoId}/experience`}
+              className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+            >
+              View Demo Experience
+            </a>
           </div>
         </div>
       </header>
@@ -394,6 +453,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             <Tabs.Trigger value="videos" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Videos</Tabs.Trigger>
             <Tabs.Trigger value="knowledge" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Knowledge Base</Tabs.Trigger>
             <Tabs.Trigger value="agent" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Agent Settings</Tabs.Trigger>
+            <Tabs.Trigger value="cta" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Call-to-Action</Tabs.Trigger>
           </Tabs.List>
           <div className="mt-6">
             <Tabs.Content value="videos">
@@ -467,6 +527,20 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                   <p>An error occurred. Please check the console for details.</p>
                 </div>
               )}
+            </Tabs.Content>
+            <Tabs.Content value="cta">
+              <CTASettings
+                demo={demo}
+                ctaTitle={ctaTitle}
+                setCTATitle={setCTATitle}
+                ctaMessage={ctaMessage}
+                setCTAMessage={setCTAMessage}
+                ctaButtonText={ctaButtonText}
+                setCTAButtonText={setCTAButtonText}
+                ctaButtonUrl={ctaButtonUrl}
+                setCTAButtonUrl={setCTAButtonUrl}
+                onSaveCTA={handleSaveCTA}
+              />
             </Tabs.Content>
           </div>
         </Tabs.Root>
