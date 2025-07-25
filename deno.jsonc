@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window"]
+  },
+  "lint": {
+    "files": {
+      "include": ["supabase/functions/"],
+      "exclude": ["supabase/functions/node_modules/"]
+    },
+    "rules": {
+      "tags": ["recommended"],
+      "exclude": ["no-explicit-any"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["supabase/functions/"],
+      "exclude": ["supabase/functions/node_modules/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 120,
+      "indentWidth": 2,
+      "singleQuote": true
+    }
+  }
+}
