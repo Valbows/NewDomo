@@ -17,11 +17,61 @@ export async function POST(req: NextRequest) {
 
     console.log('Received Tavus Webhook Event:', JSON.stringify(event, null, 2));
 
-    if (event.type === 'tool_call' && event.name === 'play_video') {
-      const { conversation_id, arguments: toolArgs } = event;
-      const { video_title } = JSON.parse(toolArgs);
+    // HYBRID LISTENER IMPLEMENTATION
+    const TOOL_CALL_REGEX = /^([a-zA-Z_]+)\((.*)\)$/;
+    const KNOWN_TOOLS = ['fetch_video', 'show_trial_cta'];
 
-      console.log(`Tool call received: play_video with title: ${video_title}`);
+    let toolName = null;
+    let toolArgs = null;
+    let conversation_id = event.conversation_id;
+
+    if (event.type === 'tool_call') {
+      // Official path: trusted event
+      toolName = event.name;
+      toolArgs = event.arguments ? JSON.parse(event.arguments) : {};
+      console.log(`Official tool call: ${toolName}`, toolArgs);
+    } else if (event.type === 'utterance' && KNOWN_TOOLS.includes(event.speech)) {
+      // Handle no-arg case (e.g., just 'fetch_video')
+      toolName = event.speech;
+      toolArgs = {};
+      console.log(`No-arg tool call detected: ${toolName}`);
+    } else if (event.type === 'utterance') {
+      const match = event.speech.match(TOOL_CALL_REGEX);
+      if (match) {
+        // Parse malformed tool call from utterance
+        toolName = match[1];
+        const argsString = match[2];
+        try {
+          // Try to parse as JSON first
+          toolArgs = JSON.parse(argsString);
+        } catch {
+          // If not JSON, treat as simple string argument
+          if (toolName === 'fetch_video') {
+            toolArgs = { video_title: argsString.replace(/["']/g, '') };
+          } else {
+            toolArgs = { arg: argsString };
+          }
+        }
+        console.log(`Parsed tool call from utterance: ${toolName}`, toolArgs);
+      } else {
+        // Normal conversational speech - ignore
+        console.log('Normal speech, no tool call detected');
+        return NextResponse.json({ received: true });
+      }
+    } else {
+      // Other event types - acknowledge but don't process
+      return NextResponse.json({ received: true });
+    }
+
+    // Process tool calls
+    if (toolName === 'fetch_video' || toolName === 'play_video') {
+      const video_title = toolArgs.video_title || toolArgs.title;
+      if (!video_title) {
+        console.error('No video title provided in tool call');
+        return NextResponse.json({ message: 'No video title provided.' });
+      }
+
+      console.log(`Processing video request for: ${video_title}`);
 
       // 1. Find the demo associated with this conversation
       const { data: demo, error: demoError } = await supabase
@@ -72,6 +122,30 @@ export async function POST(req: NextRequest) {
       });
 
       console.log(`Broadcasted play_video event for demo ${demo.id}`);
+    } else if (toolName === 'show_trial_cta') {
+      console.log('Processing show_trial_cta tool call');
+      
+      // 1. Find the demo associated with this conversation
+      const { data: demo, error: demoError } = await supabase
+        .from('demos')
+        .select('id')
+        .eq('tavus_conversation_id', conversation_id)
+        .single();
+
+      if (demoError || !demo) {
+        console.error('Webhook Error: Could not find demo for conversation_id:', conversation_id);
+        return NextResponse.json({ message: 'Demo not found for conversation.' });
+      }
+
+      // 2. Broadcast the CTA event to the frontend
+      const channel = supabase.channel(`demo-${demo.id}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'show_trial_cta',
+        payload: { message: 'Ready to start your trial?' },
+      });
+
+      console.log(`Broadcasted show_trial_cta event for demo ${demo.id}`);
     }
 
     // Acknowledge receipt of the webhook
