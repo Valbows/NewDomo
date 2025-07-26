@@ -32,85 +32,15 @@ export async function POST(req: NextRequest) {
     const conversationData = await conversationResponse.json();
     console.log('Conversation status:', conversationData.status);
 
-    // For now, implement a simpler approach - check if conversation is active and trigger video
-    // The hybrid listener logic will be implemented in the webhook handler
+    // Just verify conversation is active - don't auto-trigger videos
+    // The webhook handler will handle actual video requests
     if (conversationData.status === 'active') {
-      console.log('Active conversation detected - triggering default video playback');
-      
-      const videoTitle = 'Fourth Video'; // Default video to play
-      console.log(`Triggering video playback for: ${videoTitle}`);
-
-      // Trigger video playback
-      const { data: video, error: videoError } = await supabase
-        .from('demo_videos')
-        .select('storage_url')
-        .eq('demo_id', demoId)
-        .eq('title', videoTitle)
-        .single();
-
-      let videoToPlay = video;
-
-      if (videoError || !video) {
-        console.error(`Video not found: ${videoTitle}`);
-        // Try with default video
-        const { data: defaultVideo, error: defaultError } = await supabase
-          .from('demo_videos')
-          .select('storage_url, title')
-          .eq('demo_id', demoId)
-          .limit(1)
-          .single();
-
-        if (defaultError || !defaultVideo) {
-          console.error('No videos found in demo');
-          return NextResponse.json({ 
-            success: true, 
-            videoTriggered: false,
-            message: 'No videos found in demo'
-          });
-        }
-
-        console.log(`Using default video: ${defaultVideo.title}`);
-        videoToPlay = defaultVideo;
-      }
-
-      if (!videoToPlay) {
-        console.error('No video available to play');
-        return NextResponse.json({ 
-          success: true, 
-          videoTriggered: false,
-          message: 'No video available to play'
-        });
-      }
-
-      // Generate signed URL
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from('demo-videos')
-        .createSignedUrl(videoToPlay.storage_url, 3600);
-
-      if (signedUrlError || !signedUrlData) {
-        console.error('Error creating signed URL:', signedUrlError);
-        return NextResponse.json({ 
-          success: true, 
-          videoTriggered: false,
-          message: 'Error creating signed URL'
-        });
-      }
-
-      // Broadcast video playback event
-      const channel = supabase.channel(`demo-${demoId}`);
-      await channel.send({
-        type: 'broadcast',
-        event: 'play_video',
-        payload: { url: signedUrlData.signedUrl },
-      });
-
-      console.log(`Video playback triggered for demo ${demoId}`);
+      console.log('Conversation is active and ready for tool calls');
       
       return NextResponse.json({ 
         success: true, 
-        videoTriggered: true,
-        videoTitle,
-        videoUrl: signedUrlData.signedUrl
+        conversationActive: true,
+        message: 'Conversation is active, waiting for video requests'
       });
     }
 

@@ -45,6 +45,44 @@ This log tracks important architectural decisions, errors encountered, and solut
   3. Restarted the development server to load the corrected environment variables.
 - **Prevention**: Create a `.env.example` file to ensure consistent and correct environment variable naming. Implement stricter linting to catch duplicate exports.
 
+### Tavus Real-Time Tool Calling Breakthrough (2025-07-25)
+- **Date**: 2025-07-25
+- **Component**: Tavus Agent Integration / Real-Time Tool Calling
+- **Issue Description**: Tool calls were only being detected after conversation ended via webhook `application.transcription_ready` events, not in real-time during active conversation.
+- **Root Cause**: 
+  1. Using iframe embedding instead of Daily.co JavaScript SDK prevented access to real-time `app-message` events.
+  2. Webhook-based tool calls only fire after conversation transcription is complete.
+  3. Real-time tool calling requires Daily.co WebRTC data channel integration.
+- **Solution**: 
+  1. **Created TavusConversation component** with Daily.co JavaScript SDK integration.
+  2. **Implemented app-message event listener** to capture real-time tool calls via WebRTC data channel.
+  3. **Added dual-path architecture**: Real-time via Daily.co + backup webhook parsing for reliability.
+  4. **Enhanced transcript parsing** with detailed logging to debug tool call extraction.
+- **Key Discovery**: Tavus real-time tool calling works through Daily.co's `app-message` events, not webhooks. Webhooks are only for post-conversation analysis.
+- **Impact**: Enables true real-time video playback triggered by AI agent during active conversation, achieving the core user requirement.
+- **Prevention**: Always use Daily.co SDK for real-time interactions with Tavus conversations, not iframe embedding.
+
+### Daily.co Integration Fixes (2025-07-25)
+- **Date**: 2025-07-25
+- **Component**: TavusConversation Component / Daily.co Integration
+- **Issue Description**: Multiple issues with Daily.co integration: duplicate DailyIframe instances, video interface not displaying, and app messages not being processed for tool calls.
+- **Root Cause**: 
+  1. React re-rendering causing duplicate Daily.co instances without proper cleanup.
+  2. Iframe mounting timing issues - trying to mount before Daily.co fully initialized.
+  3. App message processing not handling different tool call formats from Tavus.
+- **Solution**: 
+  1. **Added initialization guard** to prevent duplicate Daily.co instances.
+  2. **Enhanced iframe mounting** with proper timing, container clearing, and error handling.
+  3. **Improved app message processing** to handle multiple tool call formats (direct events, transcript parsing, content mentions).
+  4. **Added manual test button** for debugging tool call functionality.
+- **Key Technical Details**:
+  - Used `isInitialized` state to prevent duplicate Daily.co instances
+  - Added 1-second delay for iframe mounting to allow Daily.co initialization
+  - Enhanced app message listener to check `data.transcript`, `data.content`, and direct tool call events
+  - Added comprehensive logging for debugging tool call processing
+- **Impact**: Fixes the video interface display and enables proper real-time tool call processing.
+- **Prevention**: Always implement proper React cleanup and initialization guards for external SDK integrations.
+
 ### Error Template
 - **Date**: YYYY-MM-DD
 - **Component**: [Component Name]

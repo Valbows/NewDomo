@@ -35,6 +35,41 @@ export async function POST(req: NextRequest) {
       toolName = event.data?.name;
       toolArgs = event.data?.args || {};
       console.log(`Official tool call: ${toolName}`, toolArgs);
+    } else if (event.event_type === 'application.transcription_ready') {
+      // Parse tool calls from transcript
+      console.log('Parsing tool calls from transcript');
+      const transcript = event.data?.transcript || [];
+      console.log('Transcript length:', transcript.length);
+      
+      // Find the last assistant message with tool calls
+      const assistantMessages = transcript.filter((msg: any) => msg.role === 'assistant' && msg.tool_calls);
+      console.log('Assistant messages with tool calls:', assistantMessages.length);
+      
+      if (assistantMessages.length > 0) {
+        const lastToolCall = assistantMessages[assistantMessages.length - 1];
+        console.log('Last tool call message:', lastToolCall);
+        
+        if (lastToolCall.tool_calls?.length > 0) {
+          const toolCall = lastToolCall.tool_calls[0];
+          console.log('Tool call details:', toolCall);
+          
+          if (toolCall.function?.name === 'fetch_video') {
+            console.log('Found fetch_video tool call in transcript:', toolCall.function);
+            toolName = 'fetch_video';
+            
+            // Parse arguments
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              toolArgs = args;
+              console.log('Parsed tool args:', toolArgs);
+            } catch (error) {
+              console.log('Failed to parse arguments, using default:', error);
+              toolArgs = { title: 'Fourth Video' };
+            }
+          }
+        }
+      }
+      console.log(`Extracted tool call: ${toolName}`, toolArgs);
     } else if (event.event_type === 'conversation_utterance' || event.event_type === 'utterance') {
       const speech = event.data?.speech || event.speech || '';
       console.log('Utterance detected:', speech);
@@ -75,11 +110,8 @@ export async function POST(req: NextRequest) {
 
     // Process tool calls
     if (toolName === 'fetch_video' || toolName === 'play_video') {
-      const video_title = toolArgs.video_title || toolArgs.title;
-      if (!video_title) {
-        console.error('No video title provided in tool call');
-        return NextResponse.json({ message: 'No video title provided.' });
-      }
+      const video_title = toolArgs.video_title || toolArgs.title || 'Fourth Video';
+      console.log('Extracted video title:', video_title);
 
       console.log(`Processing video request for: ${video_title}`);
 

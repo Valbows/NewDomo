@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { InlineVideoPlayer } from './components/InlineVideoPlayer';
+import { TavusConversation } from './components/TavusConversation';
 import { useRouter } from 'next/navigation';
 
 interface Demo {
@@ -103,8 +104,8 @@ export default function DemoExperiencePage({ params }: { params: { demoId: strin
         });
 
         const result = await response.json();
-        if (result.videoTriggered) {
-          console.log('Video triggered by conversation monitor:', result);
+        if (result.conversationActive) {
+          console.log('Conversation monitoring active:', result.message);
         }
       } catch (error) {
         console.error('Conversation monitoring error:', error);
@@ -121,7 +122,49 @@ export default function DemoExperiencePage({ params }: { params: { demoId: strin
     };
   }, [demo?.tavus_conversation_id, tavusConversationUrl, demo?.id]);
 
-  // Subscribe to real-time events
+  // Handle real-time tool calls from Daily.co
+  const handleRealTimeToolCall = async (toolName: string, args: any) => {
+    console.log('Real-time tool call received:', toolName, args);
+    
+    if (toolName === 'fetch_video') {
+      const videoTitle = args.title || args.video_title || 'Fourth Video';
+      console.log('Processing real-time video request:', videoTitle);
+      
+      try {
+        // Find the video in Supabase
+        const { data: video, error: videoError } = await supabase
+          .from('demo_videos')
+          .select('storage_url')
+          .eq('demo_id', demo?.id)
+          .eq('title', videoTitle)
+          .single();
+
+        if (videoError || !video) {
+          console.error('Video not found:', videoTitle);
+          return;
+        }
+
+        // Generate signed URL
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('demo-videos')
+          .createSignedUrl(video.storage_url, 3600);
+
+        if (signedUrlError || !signedUrlData) {
+          console.error('Error creating signed URL:', signedUrlError);
+          return;
+        }
+
+        console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
+        setPlayingVideoUrl(signedUrlData.signedUrl);
+        setUiState(UIState.VIDEO_PLAYING);
+        
+      } catch (error) {
+        console.error('Real-time tool call error:', error);
+      }
+    }
+  };
+
+  // Subscribe to real-time events (backup for webhook-based tool calls)
   useEffect(() => {
     if (!demo) return;
 
@@ -129,7 +172,7 @@ export default function DemoExperiencePage({ params }: { params: { demoId: strin
 
     channel
       .on('broadcast', { event: 'play_video' }, (payload) => {
-        console.log('Received play_video event:', payload);
+        console.log('Received play_video event via webhook:', payload);
         if (payload?.payload?.url) {
           setPlayingVideoUrl(payload.payload.url);
           setUiState(UIState.VIDEO_PLAYING);
@@ -211,33 +254,11 @@ export default function DemoExperiencePage({ params }: { params: { demoId: strin
             </div>
             
             {tavusConversationUrl ? (
-              <div className="relative">
-                <iframe
-                  src={tavusConversationUrl}
-                  className="w-full h-96 border-0"
-                  allow="camera; microphone; fullscreen"
-                  title="Tavus AI Conversation"
-                />
-                
-                {/* UI State Overlay */}
-                {uiState === UIState.VIDEO_PLAYING && (
-                  <div className="absolute top-2 left-2 right-2 bg-blue-100 border border-blue-300 rounded-md p-2">
-                    <p className="text-blue-800 text-sm font-medium">🎥 Playing demo video</p>
-                  </div>
-                )}
-                
-                {uiState === UIState.AGENT_THINKING && (
-                  <div className="absolute top-2 left-2 right-2 bg-yellow-100 border border-yellow-300 rounded-md p-2">
-                    <p className="text-yellow-800 text-sm font-medium">🤔 Agent is thinking...</p>
-                  </div>
-                )}
-                
-                {isMonitoring && (
-                  <div className="absolute bottom-2 left-2 right-2 bg-blue-100 border border-blue-300 rounded-md p-2">
-                    <p className="text-blue-800 text-xs font-medium">🔍 Monitoring for video requests...</p>
-                  </div>
-                )}
-              </div>
+              <TavusConversation 
+                conversationUrl={tavusConversationUrl}
+                onToolCall={handleRealTimeToolCall}
+                isMonitoring={isMonitoring}
+              />
             ) : (
               <div className="h-96 flex items-center justify-center bg-gray-100">
                 <p className="text-gray-500">Starting conversation...</p>
