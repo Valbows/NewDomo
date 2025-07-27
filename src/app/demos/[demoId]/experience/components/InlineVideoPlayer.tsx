@@ -72,7 +72,7 @@ export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps)
           controls
           autoPlay
           muted // Muting is often required for autoplay to work reliably
-          className="w-full h-64 bg-black rounded-lg"
+          className="w-full h-full bg-black rounded-lg"
           poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='14' fill='%236b7280' text-anchor='middle' dy='0.3em'%3ELoading...%3C/text%3E%3C/svg%3E"
         />
         

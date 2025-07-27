@@ -2,6 +2,7 @@
 export enum UIState {
   IDLE = 'idle',
   LOADING = 'loading',           // Connecting to Tavus
+  CONVERSATION = 'conversation', // Active Tavus conversation
   AGENT_THINKING = 'thinking',   // Processing user input  
   VIDEO_PLAYING = 'playing',     // Demo content active
   VIDEO_PAUSED = 'paused',       // Q&A interruption

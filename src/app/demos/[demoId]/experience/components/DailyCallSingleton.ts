@@ -28,15 +28,9 @@ class DailyCallSingleton {
     this.activeComponents.delete(componentId);
     console.log(`🗑️ Unregistered component ${componentId}. Active components: ${this.activeComponents.size}`);
     
-    // If no more active components, cleanup after a delay
-    if (this.activeComponents.size === 0) {
-      setTimeout(() => {
-        if (this.activeComponents.size === 0) {
-          console.log('🧹 No active components, cleaning up Daily.co call');
-          this.cleanup();
-        }
-      }, 1000);
-    }
+    // DISABLED: Don't auto-cleanup to prevent multiple instances
+    // The cleanup will only happen on explicit cleanup() calls or URL changes
+    console.log('🚫 Auto-cleanup disabled to prevent multiple Daily.co instances');
   }
 
   public async initialize(conversationUrl: string, onToolCall: (toolName: string, args: any) => void, componentId: string): Promise<any> {
@@ -45,7 +39,7 @@ class DailyCallSingleton {
     
     // If currently cleaning up, wait for it to complete
     if (this.isCleaningUp) {
-      console.log('⏳ Waiting for cleanup to complete before initializing');
+      console.log(`⏳ [${componentId}] Waiting for cleanup to complete before initializing`);
       await new Promise(resolve => {
         const checkCleanup = () => {
           if (!this.isCleaningUp) {
@@ -66,28 +60,35 @@ class DailyCallSingleton {
 
     // If different conversation, cleanup first
     if (this.dailyCall && this.conversationUrl !== conversationUrl) {
+      console.log(`🧹 [${componentId}] Different conversation detected, cleaning up first`);
       await this.cleanup();
     }
 
-    // If already initializing, return the promise
-    if (this.initializationPromise) {
+    // If already initializing for same conversation, return the promise
+    if (this.initializationPromise && this.conversationUrl === conversationUrl) {
       console.log(`⏳ [${componentId}] Waiting for existing initialization`);
       return this.initializationPromise;
     }
 
-    console.log(`🚀 [${componentId}] Starting new Daily.co initialization`);
-    this.conversationUrl = conversationUrl;
-    this.initializationPromise = this.createDailyCall(conversationUrl, onToolCall);
-    
-    try {
-      this.dailyCall = await this.initializationPromise;
-      this.isInitialized = true;
-      console.log(`✅ [${componentId}] Daily.co call initialized successfully`);
+    // Only initialize if we don't have an active call
+    if (!this.dailyCall || !this.isInitialized) {
+      console.log(`🚀 [${componentId}] Starting new Daily.co initialization`);
+      this.conversationUrl = conversationUrl;
+      this.initializationPromise = this.createDailyCall(conversationUrl, onToolCall);
+      
+      try {
+        this.dailyCall = await this.initializationPromise;
+        this.isInitialized = true;
+        console.log(`✅ [${componentId}] Daily.co call initialized successfully`);
+        return this.dailyCall;
+      } catch (error) {
+        this.initializationPromise = null;
+        console.error(`❌ [${componentId}] Failed to initialize Daily.co:`, error);
+        throw error;
+      }
+    } else {
+      console.log(`🚫 [${componentId}] Daily.co call already exists, returning existing instance`);
       return this.dailyCall;
-    } catch (error) {
-      this.initializationPromise = null;
-      console.error(`❌ [${componentId}] Failed to initialize Daily.co:`, error);
-      throw error;
     }
   }
 
@@ -213,6 +214,13 @@ class DailyCallSingleton {
   }
 
   private mountIframe(call: any, conversationUrl: string) {
+    console.log(`🕒 [DailyCallSingleton] mountIframe invoked at ${new Date().toISOString()}. conversationUrl=${conversationUrl}, activeComponents=${this.activeComponents.size}, IFRAME_MOUNTED=${(window as any).__DAILY_IFRAME_MOUNTED__}, containerExists=${!!this.container}`);
+    // Throttle: skip if iframe already globally mounted
+    // Throttle: skip if iframe already globally mounted
+    if (typeof window !== 'undefined' && (window as any).__DAILY_IFRAME_MOUNTED__) {
+      console.log('⚠️ Global iframe mount flag set, skipping mountIframe');
+      return;
+    }
     setTimeout(() => {
       if (!this.container) {
         console.log('⚠️ No container available for iframe mounting');
@@ -240,7 +248,7 @@ class DailyCallSingleton {
         
         // Append to container
         this.container.appendChild(iframe);
-        console.log('✅ Daily.co iframe mounted successfully');
+        console.log('✅ Daily.co iframe mounted successfully'); (window as any).__DAILY_IFRAME_MOUNTED__ = true;
       } else {
         console.log('🔄 Daily.co iframe not available, using fallback');
         const fallbackIframe = document.createElement('iframe');
@@ -253,7 +261,7 @@ class DailyCallSingleton {
         fallbackIframe.setAttribute('data-source', 'fallback');
         
         this.container.appendChild(fallbackIframe);
-        console.log('✅ Fallback iframe created');
+        console.log('✅ Fallback iframe created'); (window as any).__DAILY_IFRAME_MOUNTED__ = true;
       }
     }, 1000);
   }
@@ -265,7 +273,7 @@ class DailyCallSingleton {
     }
     
     this.isCleaningUp = true;
-    console.log('🧹 Cleaning up Daily.co call singleton');
+    console.log(`🧹 [DailyCallSingleton] Starting cleanup at ${new Date().toISOString()}. conversationUrl=${this.conversationUrl}, activeComponents=${this.activeComponents.size}, isInitialized=${this.isInitialized}`);
     
     if (this.dailyCall) {
       try {
@@ -295,7 +303,7 @@ class DailyCallSingleton {
     this.isCleaningUp = false;
     this.activeComponents.clear();
     
-    console.log('✅ Cleanup completed');
+    delete (window as any).__DAILY_IFRAME_MOUNTED__; console.log('✅ Cleanup completed');
   }
 
   public getDailyCall() {

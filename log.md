@@ -149,6 +149,61 @@ This log tracks important architectural decisions, errors encountered, and solut
     3. Prepared for execution in Supabase SQL editor to create the required infrastructure
 - **Prevention**: Following the S.A.F.E. principle (Strategic) by implementing database schema first before application code, and documenting all schema requirements for future reference.
 
+### Multiple Daily.co Video Windows Issue (2025-07-27)
+- **Date**: 2025-07-27
+- **Component**: TavusConversation Component / Daily.co Integration / React 18
+- **Issue Description**: Multiple Daily.co video windows were mounting simultaneously in the React app, causing audio feedback loops and making the Tavus agent interface unusable. This prevented testing of the `fetch_video` tool call feature.
+- **Root Cause**: 
+  1. **React 18 StrictMode**: In development, React 18's StrictMode intentionally mounts components twice to detect side effects, causing duplicate Daily.co instances.
+  2. **Improper cleanup**: The custom Daily.co integration wasn't properly handling React's component lifecycle, especially unmount/remount cycles.
+  3. **Singleton pattern limitations**: Despite implementing a singleton class (`DailyCallSingleton`), React's concurrent features and StrictMode still caused multiple instances.
+  4. **Iframe mounting race conditions**: Multiple components trying to mount Daily.co iframes simultaneously.
+- **Attempted Solutions (Failed)**:
+  1. **Global window flags**: Added `__DOMO_COMPONENT_INITIALIZED__`, `__DOMO_DAILY_CALL_INSTANCE__`, etc. to persist state across remounts.
+  2. **Singleton pattern**: Created `DailyCallSingleton` class to enforce single instance.
+  3. **Global initialization promise**: Added serialization of Daily.co initialization.
+  4. **Iframe mounting throttling**: Added global flag to prevent concurrent iframe mounts.
+  5. **Moved initialization to page level**: Attempted to initialize Daily.co outside React component lifecycle.
+  6. **Disabled StrictMode**: Temporarily disabled React StrictMode in `next.config.js`.
+  7. **Wrapped initialization in if(false)**: Disabled component-level initialization entirely.
+- **Final Solution - Tavus CVI Library Migration**:
+  1. **Installed official Tavus CVI library**: `npx @tavus/cvi-ui@latest init`
+  2. **Added CVI components**: Provider and Conversation components that properly manage Daily.co lifecycle.
+  3. **Created wrapper component**: `TavusConversationCVI.tsx` to add tool call handling to CVI's Conversation component.
+  4. **Updated page structure**: Wrapped app in `CVIProvider` for proper context management.
+- **Key Technical Details**:
+  - CVI library uses `@daily-co/daily-react` hooks and context for proper React integration
+  - Provider pattern ensures single Daily.co instance across entire app
+  - Built with React 18 compatibility in mind (handles StrictMode properly)
+  - Includes built-in device controls (camera, mic, screen share)
+  - Clean separation of concerns with modular component architecture
+- **Impact**: 
+  1. Resolved multiple video windows issue completely
+  2. Enabled proper testing of `fetch_video` tool calls
+  3. Improved code maintainability by using official library
+  4. Better user experience with built-in controls and responsive design
+- **Prevention**: 
+  1. Always prefer official SDK/component libraries over custom implementations for complex integrations
+  2. When dealing with WebRTC/video SDKs in React, ensure proper lifecycle management
+  3. Test thoroughly with React StrictMode enabled to catch concurrent rendering issues
+  4. Document integration patterns for future reference
+
+### Tool Call Implementation Status (2025-07-27)
+- **Date**: 2025-07-27
+- **Component**: Tavus Agent Tool Calls / fetch_video Feature
+- **Status**: Implementation complete but not yet tested with live Tavus agent
+- **Implementation Details**:
+  1. **Tool Definition**: Configured `fetch_video` function in agent creation with proper parameters
+  2. **System Prompt**: Enhanced with available videos list for agent context
+  3. **Event Listeners**: Set up Daily.co app-message handlers for real-time tool calls
+  4. **Video Retrieval**: Implemented Supabase queries and signed URL generation
+  5. **Manual Testing**: Added debug button that successfully triggers video playback
+- **Blocking Issue**: Multiple Daily.co windows prevented live agent testing (now resolved with CVI migration)
+- **Next Steps**: 
+  1. Test live tool calls with Tavus agent using new CVI implementation
+  2. Verify all tool call event formats are properly handled
+  3. Document successful patterns for future tool implementations
+
 ## CRITICAL FAILURE ANALYSIS - 2025-07-25T02:13:00
 
 ### PROTOCOL VIOLATION ACKNOWLEDGMENT
