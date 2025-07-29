@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 interface InlineVideoPlayerProps {
   videoUrl: string;
   onClose: () => void;
+  onVideoEnd?: () => void;
 }
 
-export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps) {
+export function InlineVideoPlayer({ videoUrl, onClose, onVideoEnd }: InlineVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -28,7 +29,9 @@ export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps)
 
     const handleEnded = () => {
       console.log('Video ended');
-      // Don't auto-close, let user decide
+      if (onVideoEnd) {
+        onVideoEnd();
+      }
     };
 
     const handleError = (error: Event) => {

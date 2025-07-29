@@ -8,6 +8,47 @@ import { TavusConversationCVI } from './components/TavusConversationCVI';
 import { InlineVideoPlayer } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 
+// Custom styles for PiP video layout
+const pipStyles = `
+  .pip-video-layout {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  
+  .pip-video-layout [class*="mainVideoContainer"] {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+  
+  .pip-video-layout [class*="selfViewContainer"] {
+    position: relative !important;
+    bottom: auto !important;
+    right: auto !important;
+    left: auto !important;
+    z-index: 1;
+    margin-top: 8px;
+    align-self: center;
+  }
+  
+  .pip-video-layout [class*="previewVideoContainer"] {
+    width: 80px !important;
+    height: 60px !important;
+    max-height: 60px !important;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  
+  .pip-video-layout [class*="previewVideo"] {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+`;
+
 interface Demo {
   id: string;
   name: string;
@@ -38,6 +79,7 @@ export default function DemoExperiencePage() {
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
+  const [showCTA, setShowCTA] = useState(false);
 
   // Fetch demo data and start conversation
   useEffect(() => {
@@ -57,6 +99,14 @@ export default function DemoExperiencePage() {
         }
 
         setDemo(demoData);
+        
+        // Debug: Log CTA data
+        console.log('🎯 Demo CTA Data:', {
+          ctaTitle: demoData.metadata?.ctaTitle,
+          ctaMessage: demoData.metadata?.ctaMessage,
+          ctaButtonText: demoData.metadata?.ctaButtonText,
+          ctaButtonUrl: demoData.metadata?.ctaButtonUrl
+        });
 
         // Check if we have a conversation URL
         if (demoData.metadata?.tavusShareableLink) {
@@ -131,9 +181,22 @@ export default function DemoExperiencePage() {
     router.push(`/demos/${demoId}`);
   };
 
+  const handleVideoEnd = () => {
+    console.log('Video ended, returning agent to full screen and showing CTA');
+    setPlayingVideoUrl(null);
+    setUiState(UIState.CONVERSATION);
+    setShowCTA(true);
+  };
+
   const handleVideoClose = () => {
     setPlayingVideoUrl(null);
     setUiState(UIState.CONVERSATION);
+    // Show CTA after video ends
+    setShowCTA(true);
+    // Small delay to ensure smooth transition
+    setTimeout(() => {
+      console.log('Video closed, agent returned to full screen');
+    }, 300);
   };
 
   if (loading) {
@@ -165,6 +228,7 @@ export default function DemoExperiencePage() {
 
   return (
     <CVIProvider>
+      <style dangerouslySetInnerHTML={{ __html: pipStyles }} />
       <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Header */}
         <header className="bg-white shadow-sm">
@@ -190,11 +254,11 @@ export default function DemoExperiencePage() {
           {conversationUrl && (
             <div className={`${
               uiState === UIState.VIDEO_PLAYING 
-                ? 'fixed bottom-4 right-4 w-80 h-60 z-50 shadow-2xl' 
+                ? 'fixed bottom-4 right-4 w-96 h-72 z-50 shadow-2xl' 
                 : 'w-full h-full flex items-center justify-center p-4'
             } transition-all duration-300`}>
-              <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full h-full">
-                <div className="p-2 bg-indigo-600 text-white flex justify-between items-center">
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full h-full flex flex-col">
+                <div className="p-2 bg-indigo-600 text-white flex justify-between items-center flex-shrink-0">
                   <div>
                     <h2 className={`font-semibold ${
                       uiState === UIState.VIDEO_PLAYING ? 'text-sm' : 'text-lg'
@@ -218,14 +282,17 @@ export default function DemoExperiencePage() {
                     </button>
                   )}
                 </div>
-                <div className="relative bg-gray-900 flex-1" style={{ 
-                  height: uiState === UIState.VIDEO_PLAYING ? '200px' : '600px' 
+                <div className="relative bg-gray-900 flex-1" style={{
+                  height: uiState === UIState.VIDEO_PLAYING ? '250px' : '75vh',
+                  minHeight: '400px'
                 }}>
-                  <TavusConversationCVI
-                    conversationUrl={conversationUrl}
-                    onLeave={handleConversationEnd}
-                    onToolCall={handleRealTimeToolCall}
-                  />
+                  <div className={uiState === UIState.VIDEO_PLAYING ? 'pip-video-layout' : ''}>
+                    <TavusConversationCVI
+                      conversationUrl={conversationUrl}
+                      onLeave={handleConversationEnd}
+                      onToolCall={handleRealTimeToolCall}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -233,32 +300,82 @@ export default function DemoExperiencePage() {
 
           {/* Video Player - Full screen when playing */}
           {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
-            <div className="absolute inset-0 bg-black flex items-center justify-center p-4">
-              <div className="w-full max-w-6xl mx-auto">
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                  <div className="p-4 bg-gray-800 text-white flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">Demo Video</h2>
-                    <button
-                      onClick={handleVideoClose}
-                      className="text-white hover:text-gray-300 p-2"
-                      title="Close video"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="relative" style={{ height: '70vh' }}>
-                    <InlineVideoPlayer
-                      videoUrl={playingVideoUrl}
-                      onClose={handleVideoClose}
-                    />
-                  </div>
+            <div className="absolute inset-0 bg-black flex flex-col">
+              <div className="flex-shrink-0 bg-gray-800 text-white p-4 flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Demo Video</h2>
+                <button
+                  onClick={handleVideoClose}
+                  className="text-white hover:text-gray-300 p-2"
+                  title="Close video"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex-1 p-4">
+                <div className="w-full h-full max-w-6xl mx-auto">
+                  <InlineVideoPlayer
+                    videoUrl={playingVideoUrl}
+                    onClose={handleVideoClose}
+                    onVideoEnd={handleVideoEnd}
+                  />
                 </div>
               </div>
             </div>
           )}
         </main>
+
+        {/* CTA Banner - Shows after video demo */}
+        {showCTA && demo?.metadata && (
+          <div className="fixed bottom-0 left-0 right-0 z-40 shadow-lg">
+            <div className="bg-gradient-to-r from-green-400 to-blue-500">
+              <div className="mx-auto max-w-7xl py-4 px-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="text-xl mr-3">✅</div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">
+                        {demo.metadata.ctaTitle || 'Ready to Get Started?'}
+                      </h3>
+                      <p className="text-sm text-green-100">
+                        {demo.metadata.ctaMessage || 'Start your free trial today and see the difference!'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 ml-6">
+                    <a
+                      href={demo.metadata?.ctaButtonUrl && demo.metadata.ctaButtonUrl.trim() !== '' ? demo.metadata.ctaButtonUrl : 'https://example.com'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        const url = demo.metadata?.ctaButtonUrl;
+                        console.log('🔗 CTA Button clicked with URL:', url);
+                        console.log('📊 Full demo metadata:', demo.metadata);
+                        
+                        if (!url || url.trim() === '') {
+                          e.preventDefault();
+                          alert('No CTA URL configured. Please set the Primary Button URL in the demo configuration.');
+                          return;
+                        }
+                      }}
+                      className="inline-flex items-center justify-center px-6 py-2 bg-white text-green-600 font-semibold rounded-lg shadow hover:bg-gray-50 transition-colors duration-200 text-sm"
+                    >
+                      {demo.metadata.ctaButtonText || 'Start Free Trial'}
+                    </a>
+                    <button
+                      onClick={() => setShowCTA(false)}
+                      className="inline-flex items-center justify-center px-4 py-2 border border-white text-white font-medium rounded-lg hover:bg-white/10 transition-colors duration-200 text-sm"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </CVIProvider>
   );

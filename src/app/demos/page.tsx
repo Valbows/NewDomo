@@ -1,59 +1,108 @@
-import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
+'use client';
+
 import Link from 'next/link';
+import DashboardLayout from '@/components/DashboardLayout';
+import withAuth from '@/components/withAuth';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-export default async function DemosPage() {
-  const supabase = createClient();
+interface Demo {
+  id: string;
+  name: string;
+  created_at: string;
+}
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return redirect('/login');
+function DemosPage() {
+  const [demos, setDemos] = useState<Demo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDemos = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          window.location.href = '/login';
+          return;
+        }
+
+        const { data: demosData, error: demosError } = await supabase
+          .from('demos')
+          .select('id, name, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (demosError) {
+          console.error('Error fetching demos:', demosError);
+          setError('Error loading demos. Please try again.');
+        } else {
+          setDemos(demosData || []);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        setError('Error loading demos. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDemos();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Loading demos...</div>
+        </div>
+      </DashboardLayout>
+    );
   }
 
-  const { data: demos, error } = await supabase
-    .from('demos')
-    .select('id, name, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-
   if (error) {
-    console.error('Error fetching demos:', error);
-    // You might want to show a proper error page here
-    return <div>Error loading demos. Please try again.</div>;
+    return (
+      <DashboardLayout>
+        <div className="text-red-600">{error}</div>
+      </DashboardLayout>
+    );
   }
 
   if (demos.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8">
-        <h2 className="text-2xl font-semibold mb-4">No Demos Found</h2>
-        <p className="text-gray-500 mb-6">You haven't created any demos yet. Let's get started!</p>
-        <Link href="/demos/create" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-          Create Your First Demo
-        </Link>
-      </div>
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-full p-8">
+          <h2 className="text-2xl font-semibold mb-4 text-domo-dark-text">No Demos Found</h2>
+          <p className="text-domo-light-text mb-6">You haven't created any demos yet. Let's get started!</p>
+          <Link href="/demos/create" className="bg-domo-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">
+            Create Your First Demo
+          </Link>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="p-8">
+    <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Your Demos</h1>
-        <Link href="/demos/create" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+        <h1 className="text-3xl font-bold text-domo-dark-text">Your Demos</h1>
+        <Link href="/demos/create" className="bg-domo-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">
           + New Demo
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {demos.map((demo) => (
           <Link href={`/demos/${demo.id}/configure`} key={demo.id}>
-            <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-              <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{demo.name}</h5>
-              <p className="font-normal text-gray-700 dark:text-gray-400">
+            <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 transition-colors">
+              <h5 className="mb-2 text-xl font-bold tracking-tight text-domo-dark-text">{demo.name}</h5>
+              <p className="font-normal text-domo-light-text">
                 Created on: {new Date(demo.created_at).toLocaleDateString()}
               </p>
             </div>
           </Link>
         ))}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
+
+export default withAuth(DemosPage);

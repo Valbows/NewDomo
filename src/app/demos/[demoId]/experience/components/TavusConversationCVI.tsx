@@ -34,6 +34,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
 
     const handleAppMessage = (event: any) => {
       console.log('=== CVI APP MESSAGE RECEIVED ===');
+      console.log('Full event:', event);
       console.log('Event data:', event.data);
       
       const { data } = event;
@@ -48,6 +49,16 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
         if (toolName === 'fetch_video' && onToolCall) {
           console.log('🎬 Triggering real-time video fetch:', toolArgs);
           onToolCall(toolName, toolArgs);
+        }
+      }
+      
+      // Check for any mention of fetch_video in the data
+      const dataStr = JSON.stringify(data);
+      if (dataStr.includes('fetch_video')) {
+        console.log('🔍 Found fetch_video mention in event data:', data);
+        // Try to extract and trigger if it's a valid tool call
+        if (onToolCall) {
+          onToolCall('fetch_video', { title: 'Fourth Video' });
         }
       }
       

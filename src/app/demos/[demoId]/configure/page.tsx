@@ -359,6 +359,13 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
   const handleSaveCTA = async () => {
     try {
+      console.log('💾 Saving CTA data:', {
+        ctaTitle,
+        ctaMessage,
+        ctaButtonText,
+        ctaButtonUrl
+      });
+      
       const { error } = await supabase
         .from('demos')
         .update({
@@ -374,6 +381,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
       if (error) throw error;
       
+      console.log('✅ CTA data saved successfully to Supabase');
+      
       // Update local demo state
       if (demo) {
         setDemo({
@@ -386,6 +395,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             ctaButtonUrl
           }
         });
+        console.log('🔄 Updated local demo state with CTA data');
       }
       
       alert('CTA settings saved successfully!');
