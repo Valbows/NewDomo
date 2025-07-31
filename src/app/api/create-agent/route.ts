@@ -115,6 +115,11 @@ export async function POST(req: NextRequest) {
     console.log('Available videos:', demoVideos?.length || 0);
 
     // Define tools for the persona
+    // TEMPORARILY DISABLED: Tool validation is causing persona creation to fail
+    // TODO: Fix tool configuration to match Tavus requirements
+    const tools: any[] = [];
+    
+    /* Disabled tools - causing validation error:
     const tools = [
       {
         type: 'function',
@@ -146,6 +151,7 @@ export async function POST(req: NextRequest) {
         }
       }
     ];
+    */
 
     const personaResponse = await fetch('https://tavusapi.com/v2/personas', {
       method: 'POST',

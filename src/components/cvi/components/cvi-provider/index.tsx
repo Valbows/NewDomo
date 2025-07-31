@@ -30,5 +30,5 @@ export const CVIProvider = ({ children }: { children: React.ReactNode }) => {
     <DailyProvider callObject={callObject}>
       {children}
     </DailyProvider>
-  )
-}
+  );
+};

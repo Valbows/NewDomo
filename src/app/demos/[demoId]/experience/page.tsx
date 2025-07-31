@@ -98,29 +98,49 @@ export default function DemoExperiencePage() {
           return;
         }
 
-        setDemo(demoData);
+        // Parse metadata if it's a string BEFORE setting demo state
+        let processedDemoData = { ...demoData };
         
-        // Debug: Log CTA data
+        if (typeof processedDemoData.metadata === 'string') {
+          console.log('⚠️ Metadata is a string, parsing...');
+          try {
+            processedDemoData.metadata = JSON.parse(processedDemoData.metadata);
+            console.log('✅ Metadata parsed successfully');
+          } catch (e) {
+            console.error('❌ Failed to parse metadata:', e);
+            processedDemoData.metadata = {};
+          }
+        }
+        
+        // Set the demo with properly parsed metadata
+        setDemo(processedDemoData);
+        
+        // Debug: Log full demo data
+        console.log('📊 Full Demo Data:', JSON.stringify(processedDemoData, null, 2));
+        console.log('📦 Demo Metadata Type:', typeof processedDemoData.metadata);
+        console.log('📦 Demo Metadata Value:', JSON.stringify(processedDemoData.metadata, null, 2));
         console.log('🎯 Demo CTA Data:', {
-          ctaTitle: demoData.metadata?.ctaTitle,
-          ctaMessage: demoData.metadata?.ctaMessage,
-          ctaButtonText: demoData.metadata?.ctaButtonText,
-          ctaButtonUrl: demoData.metadata?.ctaButtonUrl
+          ctaTitle: processedDemoData.metadata?.ctaTitle,
+          ctaMessage: processedDemoData.metadata?.ctaMessage,
+          ctaButtonText: processedDemoData.metadata?.ctaButtonText,
+          ctaButtonUrl: processedDemoData.metadata?.ctaButtonUrl
         });
 
         // Check if we have a conversation URL
-        if (demoData.metadata?.tavusShareableLink) {
-          console.log('🔗 Setting conversation URL from metadata:', demoData.metadata.tavusShareableLink);
-          setConversationUrl(demoData.metadata.tavusShareableLink);
+        if (processedDemoData.metadata?.tavusShareableLink) {
+          console.log('🔗 Setting conversation URL from metadata:', processedDemoData.metadata.tavusShareableLink);
+          setConversationUrl(processedDemoData.metadata.tavusShareableLink);
           setUiState(UIState.CONVERSATION);
-        } else if (demoData.tavus_conversation_id) {
+        } else if (processedDemoData.tavus_conversation_id) {
           // Fallback: construct URL from conversation ID
-          const fallbackUrl = `https://tavus.daily.co/${demoData.tavus_conversation_id}`;
+          const fallbackUrl = `https://tavus.daily.co/${processedDemoData.tavus_conversation_id}`;
           console.log('🔗 Using fallback conversation URL:', fallbackUrl);
           setConversationUrl(fallbackUrl);
           setUiState(UIState.CONVERSATION);
         } else {
-          setError('No conversation available for this demo');
+          setError('No conversation URL found');
+          setLoading(false);
+          return;
         }
       } catch (err) {
         console.error('Error fetching demo:', err);
@@ -327,7 +347,7 @@ export default function DemoExperiencePage() {
         </main>
 
         {/* CTA Banner - Shows after video demo */}
-        {showCTA && demo?.metadata && (
+        {showCTA && demo && (
           <div className="fixed bottom-0 left-0 right-0 z-40 shadow-lg">
             <div className="bg-gradient-to-r from-green-400 to-blue-500">
               <div className="mx-auto max-w-7xl py-4 px-6">
@@ -336,33 +356,26 @@ export default function DemoExperiencePage() {
                     <div className="text-xl mr-3">✅</div>
                     <div>
                       <h3 className="text-lg font-bold text-white">
-                        {demo.metadata.ctaTitle || 'Ready to Get Started?'}
+                        {demo?.metadata?.ctaTitle || 'Ready to Get Started?'}
                       </h3>
                       <p className="text-sm text-green-100">
-                        {demo.metadata.ctaMessage || 'Start your free trial today and see the difference!'}
+                        {demo?.metadata?.ctaMessage || 'Take the next step today!'}
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 ml-6">
                     <a
-                      href={demo.metadata?.ctaButtonUrl && demo.metadata.ctaButtonUrl.trim() !== '' ? demo.metadata.ctaButtonUrl : 'https://example.com'}
+                      href={demo?.metadata?.ctaButtonUrl || 'https://bolt.new'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={(e) => {
-                        const url = demo.metadata?.ctaButtonUrl;
-                        console.log('🔗 CTA Button clicked with URL:', url);
-                        console.log('📊 Full demo metadata:', demo.metadata);
-                        
-                        if (!url || url.trim() === '') {
-                          e.preventDefault();
-                          alert('No CTA URL configured. Please set the Primary Button URL in the demo configuration.');
-                          return;
-                        }
+                      onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                        console.log('🔗 CTA Button clicked - Redirecting to configured URL');
+                        console.log('🎯 CTA URL from dashboard:', demo?.metadata?.ctaButtonUrl || 'https://bolt.new (fallback)');
                       }}
                       className="inline-flex items-center justify-center px-6 py-2 bg-white text-green-600 font-semibold rounded-lg shadow hover:bg-gray-50 transition-colors duration-200 text-sm"
                     >
-                      {demo.metadata.ctaButtonText || 'Start Free Trial'}
+                      {demo?.metadata?.ctaButtonText || 'Start Free Trial'}
                     </a>
                     <button
                       onClick={() => setShowCTA(false)}
