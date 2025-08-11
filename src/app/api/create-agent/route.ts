@@ -118,6 +118,10 @@ export async function POST(req: NextRequest) {
     // TEMPORARILY DISABLED: Tool validation is causing persona creation to fail
     // TODO: Fix tool configuration to match Tavus requirements
     const tools: any[] = [];
+
+    // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
+    const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
+    console.log('Using Tavus LLM model:', tavusLlmModel);
     
     /* Disabled tools - causing validation error:
     const tools = [
@@ -165,6 +169,7 @@ export async function POST(req: NextRequest) {
         persona_name: agentName,
         layers: {
           llm: {
+            model: tavusLlmModel,
             tools: tools
           }
         }

@@ -31,6 +31,13 @@ This log tracks important architectural decisions, errors encountered, and solut
   - **Alternatives Considered**: Client-side processing (not feasible for large files), dedicated backend server (more complex to manage).
   - **Impact**: Fully automates the core content creation workflow, enabling a seamless admin experience.
 
+### LLM Upgrade to tavus-llama-4 (2025-08-11)
+- **Decision**: Set Tavus persona LLM to `tavus-llama-4` by default, configurable via `TAVUS_LLM_MODEL` env var
+  - **Rationale**: Adopt latest Tavus model for improved quality while keeping rollback path via env override
+  - **Implementation**: Added `model` under `layers.llm` in `src/app/api/create-agent/route.ts`
+  - **Env**: `TAVUS_LLM_MODEL` (default `tavus-llama-4`)
+  - **Impact**: All newly created personas use `tavus-llama-4` unless overridden
+
 ## Errors & Solutions
 
 - **Date**: 2025-07-25

@@ -56,6 +56,9 @@ SUPABASE_SERVICE_ROLE_KEY=your_local_service_key
 # API Keys
 TAVUS_API_KEY=your_tavus_api_key
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
+
+# Tavus LLM model override (optional, default: tavus-llama-4)
+TAVUS_LLM_MODEL=tavus-llama-4
 ```
 
 ### 3. Start Supabase Locally
