@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import * as Sentry from '@sentry/nextjs';
+import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
 
 // This is the endpoint that Tavus will call with real-time conversation events.
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const supabase = createClient();
 
   try {
@@ -21,90 +23,12 @@ export async function POST(req: NextRequest) {
     console.log('Full Event:', JSON.stringify(event, null, 2));
     console.log('=====================================');
 
-    // HYBRID LISTENER IMPLEMENTATION
-    const TOOL_CALL_REGEX = /^([a-zA-Z_]+)\((.*)\)$/;
-    const KNOWN_TOOLS = ['fetch_video', 'show_trial_cta'];
+    const conversation_id = event.conversation_id;
+    const { toolName, toolArgs } = parseToolCallFromEvent(event);
+    console.log('Parsed tool call from event:', toolName, toolArgs);
 
-    let toolName = null;
-    let toolArgs = null;
-    let conversation_id = event.conversation_id;
-
-    if (event.event_type === 'conversation_toolcall' || event.event_type === 'tool_call') {
-      // Official path: trusted event
-      console.log('Official tool call event detected:', event.event_type);
-      toolName = event.data?.name;
-      toolArgs = event.data?.args || {};
-      console.log(`Official tool call: ${toolName}`, toolArgs);
-    } else if (event.event_type === 'application.transcription_ready') {
-      // Parse tool calls from transcript
-      console.log('Parsing tool calls from transcript');
-      const transcript = event.data?.transcript || [];
-      console.log('Transcript length:', transcript.length);
-      
-      // Find the last assistant message with tool calls
-      const assistantMessages = transcript.filter((msg: any) => msg.role === 'assistant' && msg.tool_calls);
-      console.log('Assistant messages with tool calls:', assistantMessages.length);
-      
-      if (assistantMessages.length > 0) {
-        const lastToolCall = assistantMessages[assistantMessages.length - 1];
-        console.log('Last tool call message:', lastToolCall);
-        
-        if (lastToolCall.tool_calls?.length > 0) {
-          const toolCall = lastToolCall.tool_calls[0];
-          console.log('Tool call details:', toolCall);
-          
-          if (toolCall.function?.name === 'fetch_video') {
-            console.log('Found fetch_video tool call in transcript:', toolCall.function);
-            toolName = 'fetch_video';
-            
-            // Parse arguments
-            try {
-              const args = JSON.parse(toolCall.function.arguments);
-              toolArgs = args;
-              console.log('Parsed tool args:', toolArgs);
-            } catch (error) {
-              console.log('Failed to parse arguments, using default:', error);
-              toolArgs = { title: 'Fourth Video' };
-            }
-          }
-        }
-      }
-      console.log(`Extracted tool call: ${toolName}`, toolArgs);
-    } else if (event.event_type === 'conversation_utterance' || event.event_type === 'utterance') {
-      const speech = event.data?.speech || event.speech || '';
-      console.log('Utterance detected:', speech);
-      
-      if (KNOWN_TOOLS.includes(speech)) {
-        // Handle no-arg case (e.g., just 'fetch_video')
-        toolName = speech;
-        toolArgs = {};
-        console.log(`No-arg tool call detected: ${toolName}`);
-      } else {
-        const match = speech.match(TOOL_CALL_REGEX);
-        if (match) {
-          // Parse malformed tool call from utterance
-          toolName = match[1];
-          const argsString = match[2];
-          try {
-            // Try to parse as JSON first
-            toolArgs = JSON.parse(argsString);
-          } catch {
-            // If not JSON, treat as simple string argument
-            if (toolName === 'fetch_video') {
-              toolArgs = { video_title: argsString.replace(/["']/g, '') };
-            } else {
-              toolArgs = { arg: argsString };
-            }
-          }
-          console.log(`Parsed tool call from utterance: ${toolName}`, toolArgs);
-        } else {
-          // Normal conversational speech - ignore
-          console.log('Normal speech, no tool call detected');
-          return NextResponse.json({ received: true });
-        }
-      }
-    } else {
-      // Other event types - acknowledge but don't process
+    if (!toolName) {
+      // No actionable tool call; acknowledge
       return NextResponse.json({ received: true });
     }
 
@@ -205,8 +129,15 @@ export async function POST(req: NextRequest) {
     // Acknowledge receipt of the webhook
     return NextResponse.json({ received: true });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Tavus Webhook Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/tavus-webhook',
+});

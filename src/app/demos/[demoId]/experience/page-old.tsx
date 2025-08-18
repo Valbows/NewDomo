@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
-import { TavusConversationCVI } from './components/TavusConversationCVI';
 import { InlineVideoPlayer } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 
@@ -30,7 +29,6 @@ interface Demo {
 
 export default function DemoExperiencePage() {
   const params = useParams();
-  const router = useRouter();
   const demoId = params.demoId as string;
   const [demo, setDemo] = useState<Demo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +36,7 @@ export default function DemoExperiencePage() {
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   const [showCTA, setShowCTA] = useState(false);
-  const [ctaData, setCTAData] = useState<any>(null);
+  const [, setCTAData] = useState<any>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
 
   // CTA settings from demo metadata
@@ -215,11 +213,11 @@ export default function DemoExperiencePage() {
       <main className="flex-1 flex items-center justify-center p-4">
         <CVIProvider>
           {uiState === UIState.LOADING && (
-            <LoadingSpinner message="Loading demo..." />
+            <div className="text-gray-600">Loading demo...</div>
           )}
 
-          {uiState === UIState.ERROR && (
-            <ErrorMessage message={error || 'An error occurred'} />
+          {uiState === UIState.SERVICE_ERROR && (
+            <div role="alert" className="text-red-600">{error || 'An error occurred'}</div>
           )}
             
             {/* Video Player */}
@@ -328,8 +326,7 @@ export default function DemoExperiencePage() {
                 </li>
               </ul>
             </div>
-          </div>
-        </div>
+        </CVIProvider>
       </main>
     </div>
   );

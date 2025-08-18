@@ -40,6 +40,21 @@ This log tracks important architectural decisions, errors encountered, and solut
 
 ## Errors & Solutions
 
+- **Date**: 2025-08-18
+- **Component**: Next.js Build / TypeScript / Sentry
+- **Error Description**: Build failed due to `error` typed as `unknown` in `src/app/test-login/page.tsx`, and TypeScript attempted to resolve Deno URL imports in `supabase/functions/*` during the app build.
+- **Root Cause**:
+  1. Strict TypeScript settings treat the caught error as `unknown`, so `error.message` is invalid.
+  2. App TS compilation included Deno-based Supabase Edge Function files, whose URL imports (e.g., `https://deno.land/...`) are not resolvable under the Node.js toolchain.
+- **Solution**:
+  1. Narrowed error: `err instanceof Error ? err.message : String(err)` in `src/app/test-login/page.tsx`.
+  2. Excluded `supabase/**` in `tsconfig.json` `exclude` to prevent Deno function code from being type-checked by Next's build.
+  3. Added `src/app/global-error.tsx` with `Sentry.ErrorBoundary` to capture React render errors globally in the App Router.
+- **Prevention**:
+  - Keep non-Node runtimes (Supabase Edge/Deno) excluded from the Next.js app's TS build.
+  - Use consistent error narrowing patterns in `catch` blocks.
+  - Ensure Sentry instrumentation files and error boundaries are present for robust observability.
+
 - **Date**: 2025-07-25
 - **Component**: Next.js Build / Supabase Server Client
 - **Error Description**: The application failed to build due to a duplicate export error, and API routes were returning 500 errors because the Supabase client could not initialize.
@@ -816,7 +831,80 @@ minHeight: '400px'
 ```
 
 ### Result
-- ✅ User video is now fully visible during conversation
-- ✅ Agent video remains properly sized
-- ✅ Maintains responsive design across different screen sizes
-- ✅ Preserves all existing functionality (PiP, video playback, CTA)
+- **User video is now fully visible during conversation**
+- **Agent video remains properly sized**
+- **Maintains responsive design across different screen sizes**
+- **Preserves all existing functionality (PiP, video playback, CTA)**
+
+## Docker Acceptance Validation — 2025-08-18
+
+### Summary
+- Production image built using multi-stage Dockerfile on `node:20-alpine` and tagged `domo-ai-mvp:prod`.
+- Final image size: 278MB (< 300MB target).
+- Production container smoke test: served homepage with HTTP 200.
+- Dev environment via `docker compose up`: app responded at `http://localhost:3000` with HTTP 200.
+- Hot reload confirmed by temporarily changing brand text in `src/app/HomePageClient.tsx` from "DOMO" → "DOMO Dev" and reverting; changes reflected live.
+- Clean-up: brought dev stack down with `docker compose down`; no lingering containers.
+
+### Acceptance
+- PASSED: All Docker acceptance criteria satisfied (image size threshold, dev hot reload, server responds 200).
+
+### Notes
+- No errors encountered during build, run, or reload validation.
+
+## Deployment Preparation Blueprint — 2025-08-18
+
+### Summary of Decisions
+- **Hosting/CI:** Vercel for hosting and CI/CD. Preview for PRs, staging branch → Staging env, main → Production.
+- **Containers:** Docker for local/staging and optional self-hosting. Images: `node:20-alpine` (web/api), `postgres:15-alpine` (local only).
+- **Database:** Supabase Cloud for prod/staging. Migrations maintained under `supabase/migrations/` with mirrored docs in `/database/`.
+- **CTA Governance:** End-user configurable per demo with fields: `cta_title`, `cta_message`, `cta_button_text`, `cta_button_url`.
+- **Tavus Integration:** CVI + Hybrid Listener retained; persona-level tools deferred to separate repo exploration.
+- **UI State:** Core IDLE/CONVERSATION/ENDED; Aux CONNECTING/ERROR; Sub LISTENING/SPEAKING/PROCESSING driven by Tavus events.
+- **Monitoring:** Sentry SDK initialized in Next.js; optional Sentry MCP integration for assisted debugging.
+- **Performance:** Target up to 15 concurrent streams with <2s latency for critical paths.
+
+### Repository/Structure Plan
+- Create `/frontend`, `/backend`, `/database` top-level directories.
+- Keep Next.js app in `/frontend`; API routes may later move to `/backend` if separated.
+- Store schema and migration docs in `/database` mirroring `supabase/`.
+
+### Database Schema Tasks (Supabase)
+- New tables: `pricing_tiers`, `user_pricing`, `usage_events`, `knowledge_sources`.
+- Alter `demos`: add `cta_title`, `cta_message`, `cta_button_text`, `cta_button_url`.
+- RLS: enforce per-user ownership; admins bypass. Keep storage bucket policies strict.
+
+### CI/CD and Environments
+- Branch mapping: Dev-branch → Preview, `staging` → Staging, `main` → Production.
+  - **Required env vars to configure in Vercel and `.env.example`:
+    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - `SUPABASE_SECRET_KEY` (server only)
+    - `TAVUS_API_KEY`, `ELEVENLABS_API_KEY`
+    - `SENTRY_DSN`, optional `NEXT_PUBLIC_SENTRY_DSN`; CI releases use `SENTRY_AUTH_TOKEN`
+- PR checks: lint + unit/integration tests; block merges on failure.
+
+### Security & Compliance (S.A.F.E.)
+- OWASP-minded input validation for tool args; SSRF-safe fetch; strict headers/CSP via `next.config.js`.
+- Secrets only via env vars; never baked into images. No PII stored.
+- Audit logs: structured logs for Tavus events/tool-calls with redaction.
+
+### Risks & Mitigations
+- Persona-level tools validation errors → deferred and tracked in separate repo; fallback: CVI + Hybrid Listener.
+- Env/secret misconfig → mitigate by `.env.example` completeness and Vercel env groups.
+- Migration safety → run on staging first; backout via transactional migrations.
+- Concurrency bottlenecks → synthetic load tests; optimize caching/network.
+- Vendor limits (Tavus/ElevenLabs) → rate-limiters and graceful degradation.
+
+### Next Actions
+1. Author Supabase migrations for pricing/usage/knowledge + demos CTA fields; apply to staging.
+2. Add Sentry instrumentation (`instrumentation.ts`) and minimal API error capture.
+3. Create Dockerfile (multi-stage) + `docker-compose.yml` for local dev; verify `docker compose up` works.
+4. Update `.env.example` with all required vars; set Vercel envs for Preview/Staging/Prod.
+5. Implement tests: unit (utils/state), integration (API + Supabase client), E2E (Playwright core flows).
+6. Scaffold pricing page and admin dashboard shell guarded by roles.
+
+### Acceptance Criteria
+- Preview deployments pass tests and lint; staging/prod URLs live.
+- Migrations apply cleanly with RLS verified by integration tests.
+- Docker local dev image < 300MB; hot reload functional.
+- CTA per-demo configuration works end-to-end and is covered by tests.

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
-export async function GET() {
+async function handleGET() {
   const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
   const ELEVENLABS_URL = process.env.ELEVENLABS_URL || 'https://api.elevenlabs.io/v1';
 
@@ -22,8 +23,15 @@ export async function GET() {
     }
 
     return NextResponse.json(data.voices);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('ElevenLabs API error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = Sentry.wrapRouteHandlerWithSentry(handleGET, {
+  method: 'GET',
+  parameterizedRoute: '/api/elevenlabs/voices',
+});

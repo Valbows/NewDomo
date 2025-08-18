@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/utils/supabase/server';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const supabase = createClient();
 
   try {
@@ -200,8 +201,15 @@ export async function POST(req: NextRequest) {
       personaId: personaId
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Agent Creation Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/create-agent',
+});

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import * as Sentry from '@sentry/nextjs';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const supabase = createClient();
   let demo_video_id;
 
@@ -76,14 +77,21 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: 'Transcription process completed successfully.' });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Transcription Error:', error);
+    const message = error instanceof Error ? error.message : String(error);
     if (demo_video_id) {
       await supabase
         .from('demo_videos')
-        .update({ processing_status: 'failed', processing_error: error.message })
+        .update({ processing_status: 'failed', processing_error: message })
         .eq('id', demo_video_id);
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/transcribe',
+});

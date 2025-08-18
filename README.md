@@ -51,7 +51,7 @@ Fill in your API keys in `.env.local`:
 # Supabase (Local Development)
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_local_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_local_service_key
+SUPABASE_SECRET_KEY=your_local_service_key
 
 # API Keys
 TAVUS_API_KEY=your_tavus_api_key
@@ -59,6 +59,12 @@ ELEVENLABS_API_KEY=your_elevenlabs_api_key
 
 # Tavus LLM model override (optional, default: tavus-llama-4)
 TAVUS_LLM_MODEL=tavus-llama-4
+
+# Sentry Monitoring
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
+# CI release token (set in CI/CD only)
+SENTRY_AUTH_TOKEN=
 ```
 
 ### 3. Start Supabase Locally

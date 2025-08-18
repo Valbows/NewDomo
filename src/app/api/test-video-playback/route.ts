@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import * as Sentry from '@sentry/nextjs';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const supabase = createClient();
 
   try {
@@ -67,8 +68,15 @@ export async function POST(req: NextRequest) {
       message: 'Video playback event sent successfully'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Test video playback error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/test-video-playback',
+});

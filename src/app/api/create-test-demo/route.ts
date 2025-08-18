@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   // Use service role client to bypass RLS for testing
   const supabase = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -125,13 +126,32 @@ export async function POST(req: NextRequest) {
       videosCreated: videos?.length || 0
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Test demo creation error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   // Allow GET requests to create test data for easy testing
-  return POST(req);
+  try {
+    return await handlePOST(req);
+  } catch (error: unknown) {
+    console.error('Test demo GET error:', error);
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
+
+export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/create-test-demo',
+});
+
+export const GET = Sentry.wrapRouteHandlerWithSentry(handleGET, {
+  method: 'GET',
+  parameterizedRoute: '/api/create-test-demo',
+});

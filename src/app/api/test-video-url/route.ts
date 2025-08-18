@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import * as Sentry from '@sentry/nextjs';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const supabase = createClient();
 
   try {
@@ -42,7 +43,14 @@ export async function GET(req: NextRequest) {
       message: 'Video URL generated successfully'
     });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = Sentry.wrapRouteHandlerWithSentry(handleGET, {
+  method: 'GET',
+  parameterizedRoute: '/api/test-video-url',
+});

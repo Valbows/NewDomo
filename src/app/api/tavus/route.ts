@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const { script, voice_id } = await request.json();
 
   if (!script || !voice_id) {
@@ -34,8 +35,15 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Tavus API error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/tavus',
+});

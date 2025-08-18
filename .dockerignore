@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Next.js build output
+.next
+**/.next
+out
+
+# Vercel / build artifacts
+.vercel
+coverage
+
+# Git and editor
+.git
+.gitignore
+.DS_Store
+
+# Environment files (do not send to build context)
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Supabase local artifacts
+supabase/.temp
