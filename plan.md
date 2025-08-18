@@ -509,7 +509,13 @@ This section augments the above strategy with the finalized deployment approach,
   - Integration: Jest (node env) for API routes and Supabase client interactions (mocked network).
   - E2E: Playwright for core flows (create demo → upload → process → experience → CTA).
   - Coverage threshold: 80% statements/branches for critical modules (tool parser, CTA flow, Supabase data access).
-
+  - Tasks
+    - Add Playwright test scaffolding (playwright.config.ts, @playwright/test) with Chromium on CI.
+    - Write smoke specs: homepage renders, experience page loads, CTA block renders when mocked event fires.
+    - Add npm scripts: `e2e` (headed local), `e2e:ci` (headless, reporter=junit/html).
+    - Create GitHub Action workflow to run unit/integration + Playwright on PRs.
+  - Acceptance: E2E specs pass locally and on PR CI.
+ 
   - Status
     - [x] Unit/Integration scaffolding present (Jest configs + tests under `__tests__/`)
     - [ ] Playwright E2E scaffolding added
@@ -535,7 +541,18 @@ This section augments the above strategy with the finalized deployment approach,
     - TAVUS_API_KEY, ELEVENLABS_API_KEY
     - SENTRY_DSN (and SENTRY_AUTH_TOKEN for releases), NEXT_PUBLIC_SENTRY_DSN (optional)
   - Checks: run tests and lint on PRs; block merge on failures.
-  - Acceptance: successful deploy previews for PRs; staging and prod URLs live.
+  - Tasks
+    - Create a Vercel project linked to GitHub repo `Valbows/NewDomo`.
+    - Configure branch mapping: Dev-branch → Preview, staging → Staging, main → Production.
+    - Set environment variables in Vercel (Preview/Staging/Production):
+      - NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+      - SUPABASE_SECRET_KEY
+      - TAVUS_API_KEY, ELEVENLABS_API_KEY
+      - SENTRY_DSN (and SENTRY_AUTH_TOKEN for releases), NEXT_PUBLIC_SENTRY_DSN (optional)
+    - Enable Vercel Git integration: deploy previews on PRs.
+    - Add CI workflow to run `npm ci && npm run lint && npm test` on PRs (block merge on failure).
+    - Document `vercel env pull .env.local` for local sync and update `.env.example` accordingly.
+  - Acceptance: successful deploy previews for PRs; staging and prod URLs live and healthy.
 
   - Status
     - [ ] Branch mapping configured in Vercel (dev→Preview, staging→Staging, main→Production)
@@ -549,7 +566,14 @@ This section augments the above strategy with the finalized deployment approach,
   - Sentry MCP: document setup for assisted debugging (non-blocking optional integration).
   - Logging: structured logs for Tavus events/tool-calls; redact secrets.
   - OWASP: input validation for tool args, SSRF-safe fetch, strict CSP, headers via Next config.
-
+  - Tasks
+    - Release tagging in CI: install sentry-cli, export release (commit SHA), set SENTRY_AUTH_TOKEN; upload sourcemaps.
+    - Add strict Content-Security-Policy in `next.config.js` (prod): default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co https://api.elevenlabs.io https://tavusapi.com https://*.sentry.io; img-src 'self' data: blob:; media-src 'self' https://*.supabase.co blob:; frame-ancestors 'none'.
+    - Implement structured logging with redaction (no keys/tokens) and surface key fields to Sentry (breadcrumbs/extras).
+    - Enable GitHub Advanced Security (CodeQL) and Dependabot security updates for JS/TS and GitHub Actions.
+    - Author an ops runbook in `README.md`: Sentry dashboards, alert routing, rollback steps.
+  - Acceptance: Sentry shows releases with sourcemaps; CSP applied without blocking core resources; logs contain structured, redacted fields; CodeQL runs on default branch.
+ 
   - Status
     - [x] Sentry Next.js SDK initialized (`src/sentry.client.config.ts`, `src/sentry.server.config.ts`, `src/sentry.edge.config.ts`, `src/app/instrumentation.ts`, `next.config.js` wrapped with `withSentry`)
     - [x] Sentry MCP configured in IDE (Windsurf MCP server)
