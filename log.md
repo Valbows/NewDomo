@@ -38,6 +38,22 @@ This log tracks important architectural decisions, errors encountered, and solut
   - **Env**: `TAVUS_LLM_MODEL` (default `tavus-llama-4`)
   - **Impact**: All newly created personas use `tavus-llama-4` unless overridden
 
+### Centralized API Error Handling & Sentry Gating (2025-08-19)
+- **Decision**: Centralize API error handling via `src/lib/errors.ts` helpers: `getErrorMessage`, `normalizeError`, and `logError`.
+  - **Rationale**: Ensure consistent, typed error messages; single integration point for Sentry; production-only error reporting; improved maintainability and testability.
+  - **Impact**: All API route handlers under `src/app/api/**/route.ts` now use `logError` in error paths and `getErrorMessage` for response payloads. Direct `console.error` and `Sentry.captureException` calls were removed from routes. `Sentry.wrapRouteHandlerWithSentry` remains at the route level.
+- **Implementation**:
+  - Refactored routes: `create-agent`, `tavus-webhook`, `test-video-playback`, `monitor-conversation`, `create-test-demo`, `setup-test-user`, `elevenlabs/voices`, `tavus`, `test-webhook`, `transcribe`, `test-video-url`.
+  - Utilities: `src/lib/errors.ts` used across routes; Sentry capture occurs only inside `logError` when `NODE_ENV === 'production'`.
+  - Tests: Added `__tests__/lib/errors.test.ts` covering `getErrorMessage`, `normalizeError`, and `logError` (mocks Sentry, verifies production gating). All Jest suites pass.
+- **Results**:
+  - Consistent API error responses and logs with context.
+  - Safer Sentry usage isolated to one place and environment-gated.
+  - 7/7 test suites passed (22 tests) after refactor.
+- **Prevention / Next Steps**:
+  - Add CI/lint rules to reject direct `Sentry.captureException` and `console.error` in `src/app/api/**` to prevent regressions.
+  - Keep adding unit tests for new error-handling branches as features evolve.
+
 ## Errors & Solutions
 
 - **Date**: 2025-08-18
