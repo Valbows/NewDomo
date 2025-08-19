@@ -4,7 +4,7 @@ const nextConfig = {
   // Required to use the standalone server in Docker
   output: 'standalone',
   async headers() {
-    return [
+    const headers = [
       {
         source: '/(.*)',
         headers: [
@@ -15,6 +15,14 @@ const nextConfig = {
         ],
       },
     ];
+    if (process.env.NODE_ENV === 'production') {
+      headers[0].headers.push({
+        key: 'Content-Security-Policy-Report-Only',
+        value:
+          "default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co https://api.elevenlabs.io https://tavusapi.com https://*.sentry.io; img-src 'self' data: blob:; media-src 'self' blob: https://*.supabase.co; frame-ancestors 'none'",
+      });
+    }
+    return headers;
   },
 };
 
