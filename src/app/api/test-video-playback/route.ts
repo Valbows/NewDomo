@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   const supabase = createClient();
@@ -23,7 +24,7 @@ async function handlePOST(req: NextRequest) {
       .single();
 
     if (videoError || !video) {
-      console.error(`Could not find video with title '${videoTitle}' in demo ${demoId}`);
+      logError(`Could not find video with title '${videoTitle}' in demo ${demoId}`);
       
       // Let's also check what videos are available
       const { data: availableVideos } = await supabase
@@ -46,7 +47,7 @@ async function handlePOST(req: NextRequest) {
       .createSignedUrl(video.storage_url, 3600); // 1 hour expiry
 
     if (signedUrlError || !signedUrlData) {
-      console.error('Error creating signed URL:', signedUrlError);
+      logError(signedUrlError, 'Error creating signed URL');
       return NextResponse.json({ error: 'Could not generate video URL.' }, { status: 500 });
     }
 
@@ -69,9 +70,8 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Test video playback error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Test video playback error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

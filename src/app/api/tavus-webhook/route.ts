@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
 
 // This is the endpoint that Tavus will call with real-time conversation events.
@@ -34,7 +35,11 @@ async function handlePOST(req: NextRequest) {
 
     // Process tool calls
     if (toolName === 'fetch_video' || toolName === 'play_video') {
-      const video_title = toolArgs.video_title || toolArgs.title || 'Fourth Video';
+      const video_title = toolArgs?.video_title || toolArgs?.title;
+      if (!video_title || typeof video_title !== 'string' || !video_title.trim()) {
+        logError('Webhook: Missing or invalid video title for fetch_video/play_video', 'ToolCall Validation');
+        return NextResponse.json({ message: 'Invalid or missing video title.' });
+      }
       console.log('Extracted video title:', video_title);
 
       console.log(`Processing video request for: ${video_title}`);
@@ -47,8 +52,8 @@ async function handlePOST(req: NextRequest) {
         .single();
 
       if (demoError || !demo) {
-        console.error('Webhook Error: Could not find demo for conversation_id:', conversation_id);
-        console.error('Demo error details:', demoError);
+        logError(`Webhook Error: Could not find demo for conversation_id: ${conversation_id}`);
+        logError(demoError, 'Demo error details');
         // Return 200 to prevent Tavus from retrying, as this is a permanent error.
         return NextResponse.json({ message: 'Demo not found for conversation.' });
       }
@@ -64,8 +69,8 @@ async function handlePOST(req: NextRequest) {
         .single();
 
       if (videoError || !video) {
-        console.error(`Webhook Error: Could not find video with title '${video_title}' in demo ${demo.id}`);
-        console.error('Video error details:', videoError);
+        logError(`Webhook Error: Could not find video with title '${video_title}' in demo ${demo.id}`);
+        logError(videoError, 'Video error details');
         
         // Let's also check what videos are available
         const { data: availableVideos } = await supabase
@@ -85,7 +90,7 @@ async function handlePOST(req: NextRequest) {
         .createSignedUrl(video.storage_url, 3600); // 1 hour expiry
 
       if (signedUrlError || !signedUrlData) {
-        console.error('Error creating signed URL:', signedUrlError);
+        logError(signedUrlError, 'Error creating signed URL');
         return NextResponse.json({ message: 'Could not generate video URL.' });
       }
 
@@ -111,7 +116,7 @@ async function handlePOST(req: NextRequest) {
         .single();
 
       if (demoError || !demo) {
-        console.error('Webhook Error: Could not find demo for conversation_id:', conversation_id);
+        logError(`Webhook Error: Could not find demo for conversation_id: ${conversation_id}`);
         return NextResponse.json({ message: 'Demo not found for conversation.' });
       }
 
@@ -130,9 +135,8 @@ async function handlePOST(req: NextRequest) {
     return NextResponse.json({ received: true });
 
   } catch (error: unknown) {
-    console.error('Tavus Webhook Error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Tavus Webhook Error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

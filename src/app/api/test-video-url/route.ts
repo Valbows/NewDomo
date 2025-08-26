@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handleGET(req: NextRequest) {
   const supabase = createClient();
@@ -44,8 +45,8 @@ async function handleGET(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Test video URL error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

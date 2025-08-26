@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   const supabase = createClient();
@@ -57,7 +58,7 @@ async function handlePOST(req: NextRequest) {
 
     if (!conversationResponse.ok) {
       const errorBody = await conversationResponse.text();
-      console.error('Tavus Conversation API Error:', errorBody);
+      logError(errorBody, 'Tavus Conversation API Error');
       return NextResponse.json({ error: `Failed to start Tavus conversation: ${conversationResponse.statusText}` }, { status: conversationResponse.status });
     }
 
@@ -73,7 +74,7 @@ async function handlePOST(req: NextRequest) {
       .single();
 
     if (fetchError) {
-      console.error('Error fetching current demo:', fetchError);
+      logError(fetchError, 'Error fetching current demo');
     }
 
     // Save the conversation ID and shareable link to the demo
@@ -91,16 +92,15 @@ async function handlePOST(req: NextRequest) {
       .eq('id', demoId);
 
     if (updateError) {
-      console.error('Supabase update error after starting conversation:', updateError);
+      logError(updateError, 'Supabase update error after starting conversation');
       // We will proceed but this is a critical error to flag for debugging
     }
 
     return NextResponse.json(conversationData);
 
   } catch (error: unknown) {
-    console.error('Start Conversation Error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Start Conversation Error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

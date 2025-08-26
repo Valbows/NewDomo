@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   // Use service role client to bypass RLS for testing
@@ -68,9 +69,8 @@ async function handlePOST(req: NextRequest) {
       .single();
 
     if (demoError) {
-      console.error('Demo creation error:', demoError);
-      console.error('Demo error details:', JSON.stringify(demoError, null, 2));
-      return NextResponse.json({ error: 'Failed to create demo: ' + demoError.message }, { status: 500 });
+      logError(demoError, 'Demo creation error');
+      return NextResponse.json({ error: getErrorMessage(demoError, 'Failed to create demo') }, { status: 500 });
     }
 
     console.log('Demo created:', demo);
@@ -113,8 +113,8 @@ async function handlePOST(req: NextRequest) {
       .select();
 
     if (videosError) {
-      console.error('Videos creation error:', videosError);
-      return NextResponse.json({ error: 'Failed to create videos: ' + videosError.message }, { status: 500 });
+      logError(videosError, 'Videos creation error');
+      return NextResponse.json({ error: getErrorMessage(videosError, 'Failed to create videos') }, { status: 500 });
     }
 
     console.log('Videos created:', videos);
@@ -127,9 +127,8 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Test demo creation error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Test demo creation error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -139,9 +138,8 @@ async function handleGET(req: NextRequest) {
   try {
     return await handlePOST(req);
   } catch (error: unknown) {
-    console.error('Test demo GET error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Test demo GET error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

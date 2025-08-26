@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   const supabase = createClient();
@@ -34,9 +35,8 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Test webhook error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Test webhook error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

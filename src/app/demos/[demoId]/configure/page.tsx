@@ -13,6 +13,8 @@ import { AgentSettings } from './components/AgentSettings';
 import { VideoPlayer } from './components/VideoPlayer';
 import { CTASettings } from './components/CTASettings';
 
+import { getErrorMessage, logError } from '@/lib/errors';
+
 export default function DemoConfigurationPage({ params }: { params: { demoId: string } }) {
   const { demoId } = params;
   const [demo, setDemo] = useState<Demo | null>(null);
@@ -66,8 +68,9 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       if (knowledgeError) console.warn('Could not fetch knowledge chunks:', knowledgeError.message);
       else setKnowledgeChunks(knowledgeData || []);
 
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch demo data.');
+    } catch (err: unknown) {
+      logError(err, 'Failed to fetch demo data');
+      setError(getErrorMessage(err, 'Failed to fetch demo data.'));
     } finally {
       setLoading(false);
     }
@@ -191,16 +194,16 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ demo_video_id: newVideo.id }),
-      }).catch(err => console.warn('Transcription request failed:', err));
+      }).catch((err: unknown) => logError(err, 'Transcription request failed'));
 
       setDemoVideos([...demoVideos, newVideo]);
       setProcessingStatus({ stage: 'completed', progress: 100, message: 'Video uploaded. Transcription in progress.' });
       setSelectedVideoFile(null);
       setVideoTitle('');
 
-    } catch (err: any) {
-      console.error('Video upload error:', err);
-      setError(err.message || 'Failed to upload video.');
+    } catch (err: unknown) {
+      logError(err, 'Video upload error');
+      setError(getErrorMessage(err, 'Failed to upload video.'));
       setProcessingStatus({ stage: 'error', progress: 0, message: 'Upload failed.' });
     }
   };
@@ -212,8 +215,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         .createSignedUrl(video.storage_url, 3600);
       if (error) throw error;
       setPreviewVideoUrl(data.signedUrl);
-    } catch (err: any) {
-      setError(err.message || 'Could not generate preview link.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not generate preview link.'));
     }
   };
 
@@ -229,8 +232,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       if (dbError) throw dbError;
 
       setDemoVideos(demoVideos.filter(v => v.id !== id));
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete video.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to delete video.'));
     }
   };
 
@@ -258,8 +261,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setKnowledgeChunks([...knowledgeChunks, newChunk]);
       setNewQuestion('');
       setNewAnswer('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add Q&A pair.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to add Q&A pair.'));
     }
   };
 
@@ -268,8 +271,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       const { error } = await supabase.from('knowledge_chunks').delete().eq('id', id);
       if (error) throw error;
       setKnowledgeChunks(knowledgeChunks.filter(chunk => chunk.id !== id));
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete knowledge chunk.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to delete knowledge chunk.'));
     }
   };
 
@@ -303,8 +306,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         setKnowledgeDoc(null);
       };
       reader.readAsText(knowledgeDoc);
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload document.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to upload document.'));
     }
   };
 
@@ -350,8 +353,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         alert(`Error starting conversation: ${errorData.error}`);
         setUiState(UIState.SERVICE_ERROR);
       }
-    } catch (error) {
-      console.error('An unexpected error occurred:', error);
+    } catch (error: unknown) {
+      logError(error, 'An unexpected error occurred during agent creation');
       alert('An unexpected error occurred. Please check the console.');
       setUiState(UIState.SERVICE_ERROR);
     }
@@ -399,8 +402,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       }
       
       alert('CTA settings saved successfully!');
-    } catch (err: any) {
-      console.error('Error saving CTA settings:', err);
+    } catch (err: unknown) {
+      logError(err, 'Error saving CTA settings');
       alert('Failed to save CTA settings.');
     }
   };

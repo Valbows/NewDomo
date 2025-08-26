@@ -32,7 +32,7 @@ describe('parseToolCallFromEvent', () => {
     expect(res.toolArgs).toEqual({ title: 'Fourth Video' });
   });
 
-  test('falls back to default title when tool args are malformed in transcript', () => {
+  test('returns null toolArgs when tool args are malformed in transcript', () => {
     const event = {
       event_type: 'application.transcription_ready',
       data: {
@@ -49,29 +49,33 @@ describe('parseToolCallFromEvent', () => {
 
     const res = parseToolCallFromEvent(event);
     expect(res.toolName).toBe('fetch_video');
-    expect(res.toolArgs).toEqual({ title: 'Fourth Video' });
+    expect(res.toolArgs).toBeNull();
   });
 
   test('parses utterance with known tool name (no args)', () => {
+    const prev = process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK;
+    process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK = 'true';
     const event = {
       event_type: 'utterance',
       data: { speech: 'show_trial_cta' },
     };
-
     const res = parseToolCallFromEvent(event);
     expect(res.toolName).toBe('show_trial_cta');
     expect(res.toolArgs).toEqual({});
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK; else process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK = prev;
   });
 
   test('parses utterance with function-style call and JSON args', () => {
+    const prev = process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK;
+    process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK = 'true';
     const event = {
       event_type: 'conversation_utterance',
       data: { speech: 'fetch_video({"video_title":"Intro"})' },
     };
-
     const res = parseToolCallFromEvent(event);
     expect(res.toolName).toBe('fetch_video');
     expect(res.toolArgs).toEqual({ video_title: 'Intro' });
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK; else process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK = prev;
   });
 
   test('returns null tool for non-actionable events', () => {

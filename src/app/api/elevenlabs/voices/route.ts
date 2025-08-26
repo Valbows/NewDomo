@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handleGET() {
   const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -24,9 +25,8 @@ async function handleGET() {
 
     return NextResponse.json(data.voices);
   } catch (error: unknown) {
-    console.error('ElevenLabs API error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    logError(error, 'ElevenLabs API error');
+    const message = getErrorMessage(error, 'An unexpected error occurred');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

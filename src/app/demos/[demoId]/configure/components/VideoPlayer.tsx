@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -16,14 +17,16 @@ export function VideoPlayer({ videoUrl, onClose }: VideoPlayerProps) {
 
     const handleCanPlay = async () => {
       // Autoplay the video
-      await videoElement.play().catch(error => console.error("Video autoplay failed:", error));
+      await videoElement
+        .play()
+        .catch((error: unknown) => logError(error, 'Video autoplay failed'));
 
       // Attempt to enter Picture-in-Picture mode if supported
       if (document.pictureInPictureEnabled && !videoElement.disablePictureInPicture) {
         try {
           await videoElement.requestPictureInPicture();
-        } catch (error) {
-          console.error("Failed to enter Picture-in-Picture mode:", error);
+        } catch (error: unknown) {
+          logError(error, 'Failed to enter Picture-in-Picture mode');
         }
       }
     };

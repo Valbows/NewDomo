@@ -7,6 +7,7 @@ import { CVIProvider } from '@/components/cvi/components/cvi-provider';
 import { TavusConversationCVI } from './components/TavusConversationCVI';
 import { InlineVideoPlayer } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 // Custom styles for PiP video layout
 const pipStyles = `
@@ -80,6 +81,7 @@ export default function DemoExperiencePage() {
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [showCTA, setShowCTA] = useState(false);
+  const [videoTitles, setVideoTitles] = useState<string[]>([]);
 
   // Fetch demo data and start conversation
   useEffect(() => {
@@ -106,8 +108,8 @@ export default function DemoExperiencePage() {
           try {
             processedDemoData.metadata = JSON.parse(processedDemoData.metadata);
             console.log('✅ Metadata parsed successfully');
-          } catch (e) {
-            console.error('❌ Failed to parse metadata:', e);
+          } catch (e: unknown) {
+            logError(e, '❌ Failed to parse metadata');
             processedDemoData.metadata = {};
           }
         }
@@ -126,6 +128,24 @@ export default function DemoExperiencePage() {
           ctaButtonUrl: processedDemoData.metadata?.ctaButtonUrl
         });
 
+        // Load available video titles for dropdown debugging (dev-only UI consumes this)
+        try {
+          const { data: titlesData, error: titlesError } = await supabase
+            .from('demo_videos')
+            .select('title')
+            .eq('demo_id', processedDemoData.id);
+          if (titlesError) {
+            console.warn('⚠️ Failed to load video titles', titlesError);
+          } else if (Array.isArray(titlesData)) {
+            const titles = titlesData
+              .map((row: any) => row?.title)
+              .filter((t: any): t is string => typeof t === 'string' && t.trim().length > 0);
+            setVideoTitles(titles);
+          }
+        } catch (e) {
+          console.warn('⚠️ Unexpected error loading video titles', e);
+        }
+
         // Check if we have a conversation URL
         if (processedDemoData.metadata?.tavusShareableLink) {
           console.log('🔗 Setting conversation URL from metadata:', processedDemoData.metadata.tavusShareableLink);
@@ -142,9 +162,9 @@ export default function DemoExperiencePage() {
           setLoading(false);
           return;
         }
-      } catch (err) {
-        console.error('Error fetching demo:', err);
-        setError('Failed to load demo');
+      } catch (err: unknown) {
+        logError(err, 'Error fetching demo');
+        setError(getErrorMessage(err, 'Failed to load demo'));
       } finally {
         setLoading(false);
       }
@@ -158,7 +178,11 @@ export default function DemoExperiencePage() {
     console.log('Real-time tool call received:', toolName, args);
     
     if (toolName === 'fetch_video') {
-      const videoTitle = args.title || args.video_title || 'Fourth Video';
+      const videoTitle = args?.title || args?.video_title;
+      if (!videoTitle || typeof videoTitle !== 'string' || !videoTitle.trim()) {
+        logError('Missing or invalid video title in fetch_video tool call', 'ToolCall Validation');
+        return;
+      }
       console.log('Processing real-time video request:', videoTitle);
       
       try {
@@ -171,7 +195,7 @@ export default function DemoExperiencePage() {
           .single();
 
         if (videoError || !video) {
-          console.error('Video not found:', videoTitle);
+          logError(videoError || `Video not found: ${videoTitle}`, 'Video lookup');
           return;
         }
 
@@ -181,7 +205,7 @@ export default function DemoExperiencePage() {
           .createSignedUrl(video.storage_url, 3600);
 
         if (signedUrlError || !signedUrlData) {
-          console.error('Error creating signed URL:', signedUrlError);
+          logError(signedUrlError || 'Unknown error creating signed URL', 'Error creating signed URL');
           return;
         }
 
@@ -189,8 +213,8 @@ export default function DemoExperiencePage() {
         setPlayingVideoUrl(signedUrlData.signedUrl);
         setUiState(UIState.VIDEO_PLAYING);
         
-      } catch (error) {
-        console.error('Real-time tool call error:', error);
+      } catch (error: unknown) {
+        logError(error, 'Real-time tool call error');
       }
     }
   };
@@ -311,6 +335,7 @@ export default function DemoExperiencePage() {
                       conversationUrl={conversationUrl}
                       onLeave={handleConversationEnd}
                       onToolCall={handleRealTimeToolCall}
+                      debugVideoTitles={videoTitles}
                     />
                   </div>
                 </div>

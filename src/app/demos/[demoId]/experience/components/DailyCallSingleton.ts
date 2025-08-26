@@ -1,4 +1,7 @@
 // Singleton class to manage Daily.co call instances globally
+import { logError } from '@/lib/errors';
+import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
+
 class DailyCallSingleton {
   private static instance: DailyCallSingleton;
   private dailyCall: any = null;
@@ -81,9 +84,9 @@ class DailyCallSingleton {
         this.isInitialized = true;
         console.log(`✅ [${componentId}] Daily.co call initialized successfully`);
         return this.dailyCall;
-      } catch (error) {
+      } catch (error: unknown) {
         this.initializationPromise = null;
-        console.error(`❌ [${componentId}] Failed to initialize Daily.co:`, error);
+        logError(error, `❌ [${componentId}] Failed to initialize Daily.co`);
         throw error;
       }
     } else {
@@ -145,50 +148,30 @@ class DailyCallSingleton {
     // App message listener for tool calls
     const appMessageHandler = (event: any) => {
       console.log('=== DAILY APP MESSAGE RECEIVED ===');
-      console.log('Event data:', event.data);
-      
-      const { data } = event;
-      
-      // Check for different tool call event formats
-      if (data?.event_type === 'conversation_toolcall' || data?.type === 'tool_call') {
-        console.log('🎯 Real-time tool call detected:', data);
-        
-        const toolName = data.name || data.function?.name;
-        const toolArgs = data.args || data.arguments;
-        
-        if (toolName === 'fetch_video') {
-          console.log('🎬 Triggering real-time video fetch:', toolArgs);
-          onToolCall(toolName, toolArgs);
+      try {
+        console.log('Full event (json):', JSON.stringify(event, null, 2));
+      } catch {}
+      const { data } = event || {};
+      try {
+        console.log('Event.data (json):', JSON.stringify(data, null, 2));
+      } catch {}
+
+      // Unified parsing using shared helper on multiple shapes
+      let parsed = parseToolCallFromEvent(data);
+      if (!parsed.toolName) parsed = parseToolCallFromEvent(event);
+
+      console.log('Parsed tool call result (DailyCallSingleton):', parsed);
+
+      if (parsed.toolName === 'fetch_video') {
+        if (!parsed.toolArgs) {
+          console.warn('fetch_video detected but args missing/null; ignoring');
+          return;
         }
+        console.log('🎬 Triggering real-time video fetch (parsed):', parsed.toolArgs);
+        onToolCall('fetch_video', parsed.toolArgs);
+        return;
       }
-      
-      // Check for tool calls in transcript format
-      if (data?.transcript) {
-        console.log('📝 Checking transcript for tool calls:', data.transcript);
-        const transcript = data.transcript;
-        
-        // Find assistant messages with tool calls
-        const toolCallMessages = transcript.filter((msg: any) => 
-          msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0
-        );
-        
-        if (toolCallMessages.length > 0) {
-          const lastToolCall = toolCallMessages[toolCallMessages.length - 1];
-          const toolCall = lastToolCall.tool_calls[0];
-          
-          if (toolCall.function?.name === 'fetch_video') {
-            console.log('🎬 Found fetch_video in transcript:', toolCall.function);
-            try {
-              const args = JSON.parse(toolCall.function.arguments);
-              console.log('🎬 Triggering real-time video from transcript:', args);
-              onToolCall('fetch_video', args);
-            } catch (error) {
-              console.error('Error parsing tool call arguments:', error);
-            }
-          }
-        }
-      }
-      
+
       // Check for system events
       if (data?.message_type === 'system') {
         console.log('🔧 System event:', data);
@@ -203,8 +186,8 @@ class DailyCallSingleton {
       console.log('❌ Daily call left');
     };
     
-    const errorHandler = (error: any) => {
-      console.error('🚨 Daily call error:', error);
+    const errorHandler = (error: unknown) => {
+      logError(error, '🚨 Daily call error');
     };
     
     call.on('left-meeting', leftHandler);
@@ -290,8 +273,8 @@ class DailyCallSingleton {
         if (this.container) {
           this.container.innerHTML = '';
         }
-      } catch (error) {
-        console.error('Error during cleanup:', error);
+      } catch (error: unknown) {
+        logError(error, 'Error during cleanup');
       }
     }
     

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/utils/supabase/server';
+import { getErrorMessage, logError } from '@/lib/errors';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -115,10 +116,46 @@ async function handlePOST(req: NextRequest) {
     console.log('Knowledge chunks:', knowledgeChunks?.length || 0);
     console.log('Available videos:', demoVideos?.length || 0);
 
-    // Define tools for the persona
-    // TEMPORARILY DISABLED: Tool validation is causing persona creation to fail
-    // TODO: Fix tool configuration to match Tavus requirements
-    const tools: any[] = [];
+    const allowedTitles = (demoVideos || []).map(v => v.title).filter(Boolean);
+
+    // Define tools for the persona (optional via env toggle)
+    // By default, tools remain disabled to avoid persona validation errors observed previously.
+    const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true';
+    let tools: any[] = [];
+    if (tavusToolsEnabled) {
+      tools = [
+        {
+          type: 'function',
+          function: {
+            name: 'fetch_video',
+            description: 'Fetch and display a demo video by title. Use when the user asks to see a specific video or feature demo.',
+            parameters: {
+              type: 'object',
+              properties: {
+                title: {
+                  type: 'string',
+                  description: 'Exact title of the video to fetch. Must match available videos exactly.',
+                  enum: allowedTitles
+                }
+              },
+              required: ['title']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'show_trial_cta',
+            description: 'Show call-to-action for starting a trial when user expresses interest.',
+            parameters: {
+              type: 'object',
+              properties: {},
+              required: []
+            }
+          }
+        }
+      ];
+    }
 
     // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
     const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
@@ -179,7 +216,7 @@ async function handlePOST(req: NextRequest) {
 
     if (!personaResponse.ok) {
       const errorBody = await personaResponse.text();
-      console.error('Tavus Persona API Error:', errorBody);
+      logError(errorBody, 'Tavus Persona API Error');
       return NextResponse.json({ error: `Failed to create Tavus persona: ${personaResponse.statusText}` }, { status: personaResponse.status });
     }
 
@@ -192,7 +229,7 @@ async function handlePOST(req: NextRequest) {
       .eq('id', demoId);
 
     if (updateError) {
-        console.error('Supabase update error:', updateError);
+        logError(updateError, 'Supabase update error');
         throw updateError;
     }
 
@@ -202,9 +239,8 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Agent Creation Error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Agent Creation Error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import DailyCallSingleton from './DailyCallSingleton';
+import { logError } from '@/lib/errors';
 
 interface TavusConversationProps {
   conversationUrl: string;
@@ -266,8 +267,8 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
           (window as any).__DOMO_INIT_PROMISE__ = null; // Clear global promise
         }
       })
-      .catch((error) => {
-        console.error(`❌ [${componentId.current}] Failed to initialize Daily.co:`, error);
+      .catch((error: unknown) => {
+        logError(error, `❌ [${componentId.current}] Failed to initialize Daily.co`);
         initializationRef.current = false;
         if (typeof window !== 'undefined') {
           (window as any).__DOMO_MOUNTING_FLAG__ = false;
@@ -351,7 +352,12 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
             <button
               onClick={() => {
                 console.log('Manual tool call test triggered');
-                onToolCall('fetch_video', { video_name: 'Fourth Video' });
+                const title = window.prompt('Enter exact video title to fetch:');
+                if (title && title.trim()) {
+                  onToolCall('fetch_video', { title: title.trim() });
+                } else {
+                  console.log('Manual tool call cancelled: no title provided');
+                }
               }}
               className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
             >

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   const supabase = createClient();
@@ -78,15 +79,14 @@ async function handlePOST(req: NextRequest) {
     return NextResponse.json({ message: 'Transcription process completed successfully.' });
 
   } catch (error: unknown) {
-    console.error('Transcription Error:', error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Transcription Error');
+    const message = getErrorMessage(error);
     if (demo_video_id) {
       await supabase
         .from('demo_videos')
         .update({ processing_status: 'failed', processing_error: message })
         .eq('id', demo_video_id);
     }
-    Sentry.captureException(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

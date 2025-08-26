@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   const supabase = createClient();
@@ -26,7 +27,7 @@ async function handlePOST(req: NextRequest) {
     });
 
     if (!conversationResponse.ok) {
-      console.error('Failed to fetch conversation:', conversationResponse.statusText);
+      logError(conversationResponse.statusText, 'Failed to fetch conversation');
       return NextResponse.json({ error: 'Conversation not found' }, { status: conversationResponse.status });
     }
 
@@ -52,9 +53,8 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Conversation monitor error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Conversation monitor error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

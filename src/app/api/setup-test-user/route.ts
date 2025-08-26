@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   try {
@@ -14,8 +15,8 @@ async function handlePOST(req: NextRequest) {
     });
 
     if (error) {
-      console.error('Error creating test user:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      logError(error, 'Error creating test user');
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 
     return NextResponse.json({ 
@@ -24,9 +25,8 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Setup error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : String(error);
+    logError(error, 'Setup error');
+    const message = getErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(request: Request) {
   const { script, voice_id } = await request.json();
@@ -36,9 +37,8 @@ async function handlePOST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: unknown) {
-    console.error('Tavus API error:', error);
-    Sentry.captureException(error);
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    logError(error, 'Tavus API error');
+    const message = getErrorMessage(error, 'An unexpected error occurred');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

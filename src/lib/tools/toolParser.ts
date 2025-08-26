@@ -8,7 +8,8 @@ export type ToolParseResult = {
  * Mirrors the Hybrid Listener logic used in the webhook route.
  */
 export function parseToolCallFromEvent(event: any): ToolParseResult {
-  const TOOL_CALL_REGEX = /^([a-zA-Z_]+)\((.*)\)$/;
+  // Match a function call anywhere in the string, e.g. "... text ... fetch_video(\"Title\") ..."
+  const TOOL_CALL_REGEX = /\b([a-zA-Z_]+)\s*\(([^)]*)\)/;
   const KNOWN_TOOLS = ['fetch_video', 'show_trial_cta'];
 
   let toolName: string | null = null;
@@ -16,15 +17,52 @@ export function parseToolCallFromEvent(event: any): ToolParseResult {
 
   if (!event) return { toolName, toolArgs };
 
-  const eventType = event.event_type || event.type;
+  const eventTypeRaw = event.event_type || event.type;
+  const eventType = typeof eventTypeRaw === 'string' ? eventTypeRaw : '';
+  const normalizedType = eventType.replace(/\./g, '_');
 
-  if (eventType === 'conversation_toolcall' || eventType === 'tool_call') {
-    toolName = event.data?.name ?? null;
-    toolArgs = event.data?.args ?? {};
+  if (normalizedType === 'conversation_toolcall' || normalizedType === 'tool_call') {
+    // Prefer nested function fields if present
+    toolName = event.data?.name
+      ?? event.data?.function?.name
+      ?? event.name
+      ?? event.function?.name
+      ?? null;
+
+    let rawArgs = event.data?.args
+      ?? event.data?.arguments
+      ?? event.data?.function?.arguments
+      ?? event.args
+      ?? event.arguments
+      ?? event.function?.arguments
+      ?? null;
+
+    if (typeof rawArgs === 'string') {
+      try {
+        const parsed = JSON.parse(rawArgs);
+        if (typeof parsed === 'string') {
+          // Normalize string args to an object with title
+          toolArgs = { title: parsed.replace(/^["']|["']$/g, '') };
+        } else if (parsed && typeof parsed === 'object') {
+          // Preserve original object shape
+          toolArgs = parsed;
+        } else {
+          toolArgs = null;
+        }
+      } catch {
+        // Only return null when JSON fails; caller can ignore gracefully
+        toolArgs = null;
+      }
+    } else if (rawArgs && typeof rawArgs === 'object') {
+      // Preserve original object shape
+      toolArgs = rawArgs;
+    } else {
+      toolArgs = rawArgs ?? null;
+    }
     return { toolName, toolArgs };
   }
 
-  if (eventType === 'application.transcription_ready') {
+  if (normalizedType === 'application_transcription_ready') {
     const transcript = event.data?.transcript || [];
     const assistantMessages = transcript.filter((msg: any) => msg.role === 'assistant' && msg.tool_calls);
     if (assistantMessages.length > 0) {
@@ -37,7 +75,9 @@ export function parseToolCallFromEvent(event: any): ToolParseResult {
             const args = JSON.parse(toolCall.function.arguments);
             toolArgs = args;
           } catch {
-            toolArgs = { title: 'Fourth Video' };
+            // If arguments cannot be parsed, do not assume a default title.
+            // Returning null args allows callers to ignore or request clarification.
+            toolArgs = null;
           }
           return { toolName, toolArgs };
         }
@@ -46,8 +86,16 @@ export function parseToolCallFromEvent(event: any): ToolParseResult {
     return { toolName, toolArgs };
   }
 
-  if (eventType === 'conversation_utterance' || eventType === 'utterance') {
-    const speech = event.data?.speech || event.speech || '';
+  if (normalizedType === 'conversation_utterance' || normalizedType === 'utterance') {
+    const TEXT_FALLBACK_ENABLED = process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK === 'true';
+    if (!TEXT_FALLBACK_ENABLED) {
+      return { toolName, toolArgs };
+    }
+    const speech = event.data?.speech
+      || event.data?.properties?.speech
+      || event.speech
+      || event.properties?.speech
+      || '';
 
     if (KNOWN_TOOLS.includes(speech)) {
       toolName = speech;
@@ -60,12 +108,21 @@ export function parseToolCallFromEvent(event: any): ToolParseResult {
       toolName = match[1];
       const argsString = match[2];
       try {
-        toolArgs = JSON.parse(argsString);
-      } catch {
-        if (toolName === 'fetch_video') {
-          toolArgs = { video_title: argsString.replace(/["']/g, '') };
+        const parsed = JSON.parse(argsString);
+        if (typeof parsed === 'string') {
+          toolArgs = { title: parsed.replace(/^["']|["']$/g, '') };
+        } else if (parsed && typeof parsed === 'object') {
+          // Preserve original object shape
+          toolArgs = parsed;
         } else {
-          toolArgs = { arg: argsString };
+          toolArgs = null;
+        }
+      } catch {
+        const cleaned = argsString.trim();
+        if (toolName === 'fetch_video') {
+          toolArgs = { title: cleaned.replace(/["']/g, '') };
+        } else {
+          toolArgs = { arg: cleaned };
         }
       }
       return { toolName, toolArgs };
