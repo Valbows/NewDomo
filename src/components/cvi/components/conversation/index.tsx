@@ -100,6 +100,7 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	const { joinCall, leaveCall } = useCVICall();
 	const meetingState = useMeetingState();
 	const { hasMicError } = useDevices()
+	const isE2E = process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true';
 
 	// Debug meeting state
 	useEffect(() => {
@@ -114,11 +115,26 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	// Initialize call when conversation is available
 	useEffect(() => {
-		if (conversationUrl) {
-			console.log('🎥 CVI: Joining call with URL:', conversationUrl);
-			joinCall({ url: conversationUrl });
+		if (!conversationUrl) return;
+		if (isE2E || conversationUrl === 'about:blank') {
+			console.log('🧪 E2E mode: Skipping Daily join');
+			return;
 		}
-	}, [conversationUrl, joinCall]);
+		console.log('🎥 CVI: Joining call with URL:', conversationUrl);
+		joinCall({ url: conversationUrl });
+	}, [conversationUrl, joinCall, isE2E]);
+
+	// Ensure we leave the call when component unmounts to prevent lingering sessions
+	useEffect(() => {
+		return () => {
+			if (isE2E) return; // nothing to leave in E2E
+			try {
+				leaveCall();
+			} catch (_) {
+				// no-op
+			}
+		};
+	}, [leaveCall, isE2E]);
 
 	const handleLeave = useCallback(() => {
 		leaveCall();

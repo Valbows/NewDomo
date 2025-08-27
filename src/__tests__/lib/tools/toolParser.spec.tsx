@@ -84,4 +84,87 @@ describe('parseToolCallFromEvent', () => {
     expect(res.toolName).toBeNull();
     expect(res.toolArgs).toBeNull();
   });
+
+  test('parses conversation_toolcall with bare string argument (non-JSON, non-quoted)', () => {
+    const event = {
+      event_type: 'conversation_toolcall',
+      data: { name: 'fetch_video', args: 'Strategic Planning' },
+    };
+    const res = parseToolCallFromEvent(event);
+    expect(res.toolName).toBe('fetch_video');
+    expect(res.toolArgs).toEqual({ title: 'Strategic Planning' });
+  });
+
+  test('parses conversation.tool_call with properties name/arguments JSON', () => {
+    const event = {
+      event_type: 'conversation.tool_call',
+      data: {
+        properties: {
+          name: 'fetch_video',
+          arguments: '{"title":"Intro 2"}',
+        },
+      },
+    };
+    const res = parseToolCallFromEvent(event);
+    expect(res.toolName).toBe('fetch_video');
+    expect(res.toolArgs).toEqual({ title: 'Intro 2' });
+  });
+
+  test('parses conversation.tool_call with properties args object', () => {
+    const event = {
+      event_type: 'conversation.tool_call',
+      data: {
+        properties: {
+          name: 'fetch_video',
+          args: { title: 'Intro 3' },
+        },
+      },
+    };
+    const res = parseToolCallFromEvent(event);
+    expect(res.toolName).toBe('fetch_video');
+    expect(res.toolArgs).toEqual({ title: 'Intro 3' });
+  });
+
+  test('parses conversation_toolcall with no-arg tool (pause_video)', () => {
+    const event = {
+      event_type: 'conversation_toolcall',
+      data: { name: 'pause_video' },
+    };
+    const res = parseToolCallFromEvent(event);
+    expect(res.toolName).toBe('pause_video');
+    expect(res.toolArgs).toBeNull();
+  });
+
+  test('parses conversation.tool_call properties with no-arg tool (next_video)', () => {
+    const event = {
+      event_type: 'conversation.tool_call',
+      data: {
+        properties: {
+          name: 'next_video',
+        },
+      },
+    };
+    const res = parseToolCallFromEvent(event);
+    expect(res.toolName).toBe('next_video');
+    expect(res.toolArgs).toBeNull();
+  });
+
+  test('parses transcription_ready tool call with empty string args for play_video', () => {
+    const event = {
+      event_type: 'application.transcription_ready',
+      data: {
+        transcript: [
+          {
+            role: 'assistant',
+            tool_calls: [
+              { function: { name: 'play_video', arguments: '' } },
+            ],
+          },
+        ],
+      },
+    };
+    const res = parseToolCallFromEvent(event);
+    expect(res.toolName).toBe('play_video');
+    expect(res.toolArgs).toEqual({});
+  });
 });

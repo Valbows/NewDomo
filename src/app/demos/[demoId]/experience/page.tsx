@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
 import { TavusConversationCVI } from './components/TavusConversationCVI';
-import { InlineVideoPlayer } from './components/InlineVideoPlayer';
+import { InlineVideoPlayer, InlineVideoPlayerHandle } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { getErrorMessage, logError } from '@/lib/errors';
 
@@ -68,6 +68,14 @@ interface Demo {
     ctaButtonText?: string;
     ctaButtonUrl?: string;
   } | null;
+  // Admin-level CTA fields (new)
+  cta_title?: string;
+  cta_message?: string;
+  cta_button_text?: string;
+  cta_button_url?: string;
+  // Legacy CTA fields
+  cta_text?: string;
+  cta_link?: string;
 }
 
 export default function DemoExperiencePage() {
@@ -82,11 +90,43 @@ export default function DemoExperiencePage() {
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [showCTA, setShowCTA] = useState(false);
   const [videoTitles, setVideoTitles] = useState<string[]>([]);
+  const videoPlayerRef = useRef<InlineVideoPlayerHandle>(null);
+  const [currentVideoTitle, setCurrentVideoTitle] = useState<string | null>(null);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState<number | null>(null);
+  const [alert, setAlert] = useState<{ type: 'error' | 'info' | 'success'; message: string } | null>(null);
+  const isE2E = process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true';
 
   // Fetch demo data and start conversation
   useEffect(() => {
     const fetchDemoAndStartConversation = async () => {
       try {
+        // E2E mode: provide stub data, avoid network calls
+        if (isE2E) {
+          const stubDemo: Demo = {
+            id: demoId,
+            name: 'E2E Demo',
+            user_id: 'e2e-user',
+            tavus_conversation_id: 'e2e-conv',
+            metadata: {
+              tavusShareableLink: 'about:blank',
+              ctaTitle: 'Ready to Get Started?',
+              ctaMessage: 'Take the next step today!',
+              ctaButtonText: 'Start Free Trial',
+              ctaButtonUrl: 'https://example.com/meta-start'
+            },
+            // Admin-level CTA fields (override metadata for testing precedence)
+            cta_title: 'Ready to Get Started?',
+            cta_message: 'Take the next step today!',
+            cta_button_text: 'Start Free Trial',
+            cta_button_url: 'https://example.com/admin-start'
+          };
+          setDemo(stubDemo);
+          setVideoTitles(['E2E Test Video', 'E2E Second Video']);
+          setConversationUrl('about:blank');
+          setUiState(UIState.CONVERSATION);
+          setLoading(false);
+          return;
+        }
         // Get demo data
         const { data: demoData, error: demoError } = await supabase
           .from('demos')
@@ -176,46 +216,157 @@ export default function DemoExperiencePage() {
   // Handle real-time tool calls from Daily.co
   const handleRealTimeToolCall = async (toolName: string, args: any) => {
     console.log('Real-time tool call received:', toolName, args);
-    
-    if (toolName === 'fetch_video') {
-      const videoTitle = args?.title || args?.video_title;
+
+    const playByTitle = async (videoTitle: string) => {
       if (!videoTitle || typeof videoTitle !== 'string' || !videoTitle.trim()) {
-        logError('Missing or invalid video title in fetch_video tool call', 'ToolCall Validation');
+        logError('Missing or invalid video title in fetch/next_video tool call', 'ToolCall Validation');
         return;
       }
-      console.log('Processing real-time video request:', videoTitle);
-      
+      // Normalize incoming title (trim and remove a single leading/trailing quote)
+      const normalizedTitle = videoTitle.trim().replace(/^["']|["']$/g, '');
+      console.log('Processing real-time video request:', normalizedTitle);
+
+      // Ensure CTA banner is hidden while a video is starting and clear prior alerts
+      setShowCTA(false);
+      if (alert) setAlert(null);
+
       try {
-        // Find the video in Supabase
-        const { data: video, error: videoError } = await supabase
+        if (isE2E) {
+          // Deterministic mapping of titles to distinct sample URLs for E2E assertions
+          const samples = [
+            // Proxy through our Next.js API to avoid cross-origin/codec quirks in headless tests
+            '/api/e2e-video?i=0',
+            '/api/e2e-video?i=1',
+          ];
+
+          let idx = -1;
+          if (Array.isArray(videoTitles) && videoTitles.length > 0) {
+            idx = videoTitles.indexOf(normalizedTitle);
+          }
+          // Fallback: map unknown titles to first sample
+          const sampleUrl = samples[(idx >= 0 ? idx : 0) % samples.length];
+
+          setPlayingVideoUrl(sampleUrl);
+          setUiState(UIState.VIDEO_PLAYING);
+          setCurrentVideoTitle(normalizedTitle);
+          setCurrentVideoIndex(idx >= 0 ? idx : null);
+          return;
+        }
+        // Guard: ensure we have a demo id available for queries even if state hasn't settled yet
+        const demoKey = demo?.id ?? demoId;
+        if (!demoKey) {
+          console.warn('⚠️ Demo id unavailable at tool call time; delaying fetch_video', { demo, demoId, title: normalizedTitle });
+          setAlert({ type: 'info', message: 'Preparing demo… please try again in a moment.' });
+          return;
+        }
+        // First attempt: exact title match
+        const { data: videoExact, error: videoExactError } = await supabase
           .from('demo_videos')
           .select('storage_url')
-          .eq('demo_id', demo?.id)
-          .eq('title', videoTitle)
+          .eq('demo_id', demoKey)
+          .eq('title', normalizedTitle)
           .single();
 
-        if (videoError || !video) {
-          logError(videoError || `Video not found: ${videoTitle}`, 'Video lookup');
+        let storagePath: string | null = null;
+        if (!videoExactError && videoExact) {
+          storagePath = videoExact.storage_url as string;
+        } else {
+          console.warn('Exact title match not found, attempting case-insensitive lookup for:', normalizedTitle);
+          // Fallback: case-insensitive exact match (no wildcards)
+          const { data: videosILike, error: ilikeError } = await supabase
+            .from('demo_videos')
+            .select('storage_url')
+            .eq('demo_id', demoKey)
+            .ilike('title', normalizedTitle)
+            .limit(1);
+
+          if (!ilikeError && Array.isArray(videosILike) && videosILike.length > 0) {
+            storagePath = (videosILike[0] as any).storage_url as string;
+          }
+        }
+
+        if (!storagePath) {
+          logError(videoExactError || `Video not found: ${normalizedTitle}`, 'Video lookup');
+          setAlert({ type: 'error', message: `Could not find a video titled "${normalizedTitle}".` });
           return;
         }
 
-        // Generate signed URL
+        // If storagePath is already a full URL, don't try to sign it
+        if (/^https?:\/\//i.test(storagePath)) {
+          console.log('Using direct video URL (no signing needed):', storagePath);
+          setPlayingVideoUrl(storagePath);
+          setUiState(UIState.VIDEO_PLAYING);
+          setCurrentVideoTitle(normalizedTitle);
+          if (Array.isArray(videoTitles) && videoTitles.length > 0) {
+            const idx = videoTitles.indexOf(normalizedTitle);
+            setCurrentVideoIndex(idx >= 0 ? idx : null);
+          }
+          return;
+        }
+
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('demo-videos')
-          .createSignedUrl(video.storage_url, 3600);
+          .createSignedUrl(storagePath, 3600);
 
         if (signedUrlError || !signedUrlData) {
           logError(signedUrlError || 'Unknown error creating signed URL', 'Error creating signed URL');
+          setAlert({ type: 'error', message: 'There was a problem preparing the video for playback. Please try again.' });
           return;
         }
 
         console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
         setPlayingVideoUrl(signedUrlData.signedUrl);
         setUiState(UIState.VIDEO_PLAYING);
-        
+        setCurrentVideoTitle(normalizedTitle);
+        if (Array.isArray(videoTitles) && videoTitles.length > 0) {
+          const idx = videoTitles.indexOf(normalizedTitle);
+          setCurrentVideoIndex(idx >= 0 ? idx : null);
+        }
       } catch (error: unknown) {
         logError(error, 'Real-time tool call error');
+        setAlert({ type: 'error', message: 'Unexpected error while loading the video.' });
       }
+    };
+
+    if (toolName === 'fetch_video') {
+      await playByTitle(args?.title || args?.video_title || args?.video_name);
+      return;
+    }
+
+    if (toolName === 'pause_video') {
+      if (uiState === UIState.VIDEO_PLAYING) {
+        videoPlayerRef.current?.pause();
+      }
+      return;
+    }
+
+    if (toolName === 'play_video') {
+      if (uiState === UIState.VIDEO_PLAYING) {
+        await videoPlayerRef.current?.play();
+      }
+      return;
+    }
+
+    if (toolName === 'close_video') {
+      handleVideoClose();
+      return;
+    }
+
+    if (toolName === 'next_video') {
+      if (Array.isArray(videoTitles) && videoTitles.length > 0) {
+        const idx = currentVideoTitle ? videoTitles.indexOf(currentVideoTitle) : -1;
+        const nextIdx = idx >= 0 ? (idx + 1) % videoTitles.length : 0;
+        const nextTitle = videoTitles[nextIdx];
+        await playByTitle(nextTitle);
+      } else {
+        console.warn('next_video called but no videoTitles available');
+      }
+      return;
+    }
+
+    if (toolName === 'show_trial_cta') {
+      setShowCTA(true);
+      return;
     }
   };
 
@@ -242,6 +393,12 @@ export default function DemoExperiencePage() {
       console.log('Video closed, agent returned to full screen');
     }, 300);
   };
+
+  // Derive CTA values with fallbacks to admin-level columns
+  const ctaTitle = demo?.cta_title || demo?.metadata?.ctaTitle || 'Ready to Get Started?';
+  const ctaMessage = demo?.cta_message || demo?.metadata?.ctaMessage || demo?.cta_text || 'Take the next step today!';
+  const ctaButtonText = demo?.cta_button_text || demo?.metadata?.ctaButtonText || 'Start Free Trial';
+  const ctaButtonUrl = demo?.cta_button_url || demo?.metadata?.ctaButtonUrl || demo?.cta_link || 'https://bolt.new';
 
   if (loading) {
     return (
@@ -294,13 +451,34 @@ export default function DemoExperiencePage() {
 
         {/* Main Content */}
         <main className="flex-1 relative">
+          {/* Alert banner */}
+          {alert && (
+            <div className="absolute top-4 right-4 z-50">
+              <div className={`px-3 py-2 rounded shadow text-sm ${alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'}`}>
+                <div className="flex items-center gap-2">
+                  <span>{alert.message}</span>
+                  <button
+                    aria-label="Dismiss alert"
+                    className="opacity-80 hover:opacity-100"
+                    onClick={() => setAlert(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Conversation View - Full screen when no video, minimized when video playing */}
           {conversationUrl && (
-            <div className={`${
+            <div
+              data-testid="conversation-container"
+              data-pip={uiState === UIState.VIDEO_PLAYING ? 'true' : 'false'}
+              className={`${
               uiState === UIState.VIDEO_PLAYING 
                 ? 'fixed bottom-4 right-4 w-96 h-72 z-50 shadow-2xl' 
                 : 'w-full h-full flex items-center justify-center p-4'
-            } transition-all duration-300`}>
+            } transition-all duration-300`}
+            >
               <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full h-full flex flex-col">
                 <div className="p-2 bg-indigo-600 text-white flex justify-between items-center flex-shrink-0">
                   <div>
@@ -313,6 +491,7 @@ export default function DemoExperiencePage() {
                   </div>
                   {uiState === UIState.VIDEO_PLAYING && (
                     <button
+                      data-testid="button-expand-conversation"
                       onClick={() => {
                         setPlayingVideoUrl(null);
                         setUiState(UIState.CONVERSATION);
@@ -345,10 +524,11 @@ export default function DemoExperiencePage() {
 
           {/* Video Player - Full screen when playing */}
           {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
-            <div className="absolute inset-0 bg-black flex flex-col">
+            <div className="absolute inset-0 bg-black flex flex-col" data-testid="video-overlay">
               <div className="flex-shrink-0 bg-gray-800 text-white p-4 flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Demo Video</h2>
                 <button
+                  data-testid="button-close-video"
                   onClick={handleVideoClose}
                   className="text-white hover:text-gray-300 p-2"
                   title="Close video"
@@ -361,6 +541,7 @@ export default function DemoExperiencePage() {
               <div className="flex-1 p-4">
                 <div className="w-full h-full max-w-6xl mx-auto">
                   <InlineVideoPlayer
+                    ref={videoPlayerRef}
                     videoUrl={playingVideoUrl}
                     onClose={handleVideoClose}
                     onVideoEnd={handleVideoEnd}
@@ -373,7 +554,7 @@ export default function DemoExperiencePage() {
 
         {/* CTA Banner - Shows after video demo */}
         {showCTA && demo && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 shadow-lg">
+          <div className="fixed bottom-0 left-0 right-0 z-40 shadow-lg" data-testid="cta-banner">
             <div className="bg-gradient-to-r from-green-400 to-blue-500">
               <div className="mx-auto max-w-7xl py-4 px-6">
                 <div className="flex items-center justify-between">
@@ -381,26 +562,26 @@ export default function DemoExperiencePage() {
                     <div className="text-xl mr-3">✅</div>
                     <div>
                       <h3 className="text-lg font-bold text-white">
-                        {demo?.metadata?.ctaTitle || 'Ready to Get Started?'}
+                        {ctaTitle}
                       </h3>
                       <p className="text-sm text-green-100">
-                        {demo?.metadata?.ctaMessage || 'Take the next step today!'}
+                        {ctaMessage}
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 ml-6">
                     <a
-                      href={demo?.metadata?.ctaButtonUrl || 'https://bolt.new'}
+                      href={ctaButtonUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
                         console.log('🔗 CTA Button clicked - Redirecting to configured URL');
-                        console.log('🎯 CTA URL from dashboard:', demo?.metadata?.ctaButtonUrl || 'https://bolt.new (fallback)');
+                        console.log('🎯 CTA URL resolved:', ctaButtonUrl);
                       }}
                       className="inline-flex items-center justify-center px-6 py-2 bg-white text-green-600 font-semibold rounded-lg shadow hover:bg-gray-50 transition-colors duration-200 text-sm"
                     >
-                      {demo?.metadata?.ctaButtonText || 'Start Free Trial'}
+                      {ctaButtonText}
                     </a>
                     <button
                       onClick={() => setShowCTA(false)}

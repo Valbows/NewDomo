@@ -30,11 +30,11 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
     console.log('  - Conversation URL:', conversationUrl);
   }, [daily, meetingState, conversationUrl]);
 
-  // Set up tool call event listeners
+  // Set up tool call event listeners as soon as Daily instance is available
   useEffect(() => {
-    if (!daily || meetingState !== 'joined-meeting') return;
+    if (!daily) return;
 
-    console.log('🎯 Setting up tool call listeners for CVI');
+    console.log('🎯 Setting up tool call listeners for CVI (meetingState=', meetingState, ')');
 
     const handleAppMessage = (event: any) => {
       console.log('=== CVI APP MESSAGE RECEIVED ===');
@@ -52,23 +52,46 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
 
       console.log('Parsed tool call result:', parsed);
 
-      if (parsed.toolName === 'fetch_video' && onToolCall) {
-        if (!parsed.toolArgs) {
+      const SUPPORTED = new Set(['fetch_video','pause_video','play_video','next_video','close_video','show_trial_cta']);
+      if (parsed.toolName && SUPPORTED.has(parsed.toolName) && onToolCall) {
+        const args = parsed.toolArgs ?? {};
+        if (parsed.toolName === 'fetch_video' && (!args || Object.keys(args).length === 0)) {
           console.warn('fetch_video detected but args missing/null; ignoring');
           return;
         }
-        console.log('🎬 Triggering real-time video fetch (parsed):', parsed.toolArgs);
-        onToolCall('fetch_video', parsed.toolArgs);
+        console.log(`🔧 Forwarding parsed tool call: ${parsed.toolName}`, args);
+        onToolCall(parsed.toolName, args);
         return;
       }
 
       // Fallback: legacy direct fields if any
       if (data?.event_type === 'conversation_toolcall' || data?.type === 'tool_call') {
         const toolName = data.name || data.function?.name;
-        const toolArgs = data.args || data.arguments;
-        if (toolName === 'fetch_video' && onToolCall) {
-          console.log('🎬 Triggering real-time video fetch (legacy fields):', toolArgs);
-          onToolCall(toolName, toolArgs);
+        const rawArgs = data.args || data.arguments;
+        if (toolName && SUPPORTED.has(toolName) && onToolCall) {
+          if (toolName === 'fetch_video') {
+            if (!rawArgs) {
+              console.warn('fetch_video legacy call missing args; ignoring');
+              return;
+            }
+            // Coerce string args to { title } for compatibility
+            let coercedArgs: any = rawArgs;
+            if (typeof rawArgs === 'string') {
+              try {
+                const parsed = JSON.parse(rawArgs);
+                coercedArgs = typeof parsed === 'string'
+                  ? { title: parsed.replace(/^["']|["']$/g, '') }
+                  : parsed;
+              } catch {
+                coercedArgs = { title: String(rawArgs).trim().replace(/^["']|["']$/g, '') };
+              }
+            }
+            console.log('🔧 Forwarding legacy tool call (coerced):', toolName, coercedArgs || {});
+            onToolCall(toolName, coercedArgs || {});
+            return;
+          }
+          console.log('🔧 Forwarding legacy tool call:', toolName, rawArgs || {});
+          onToolCall(toolName, rawArgs || {});
           return;
         }
       }
@@ -83,11 +106,17 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
         if (toolCallMessages.length > 0) {
           const lastToolCall = toolCallMessages[toolCallMessages.length - 1];
           const toolCall = lastToolCall.tool_calls[0];
-          if (toolCall.function?.name === 'fetch_video' && onToolCall) {
+          const name = toolCall.function?.name;
+          if (name && SUPPORTED.has(name) && onToolCall) {
             try {
-              const args = JSON.parse(toolCall.function.arguments);
-              console.log('🎬 Triggering real-time video from transcript:', args);
-              onToolCall('fetch_video', args);
+              const raw = toolCall.function.arguments;
+              const args = raw ? JSON.parse(raw) : {};
+              if (name === 'fetch_video' && (!args || Object.keys(args).length === 0)) {
+                console.warn('fetch_video transcript call missing args; ignoring');
+                return;
+              }
+              console.log('🔧 Forwarding transcript tool call:', name, args);
+              onToolCall(name, args);
             } catch (error) {
               console.error('Error parsing tool call arguments:', error);
             }
@@ -103,7 +132,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
     return () => {
       daily.off('app-message', handleAppMessage);
     };
-  }, [daily, meetingState, onToolCall]);
+  }, [daily, onToolCall, meetingState]);
 
   return (
     <div className="w-full h-full">
@@ -113,7 +142,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
       />
       
       {/* Manual test button for debugging */}
-      {process.env.NODE_ENV === 'development' && (
+      {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true') && (
         <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/90 p-2 rounded shadow">
           {Array.isArray(debugVideoTitles) && debugVideoTitles.length > 0 ? (
             <>
@@ -127,6 +156,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                     setSelectedTitle(debugVideoTitles[0]);
                   }
                 }}
+                data-testid="cvi-dev-dropdown"
               >
                 <option value="" disabled>
                   Select exact video title…
@@ -138,6 +168,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                 ))}
               </select>
               <button
+                data-testid="cvi-dev-play"
                 onClick={() => {
                   if (selectedTitle && selectedTitle.trim()) {
                     console.log('Manual tool call test (dropdown) triggered:', selectedTitle);
@@ -153,6 +184,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             </>
           ) : (
             <button
+              data-testid="cvi-dev-button"
               onClick={() => {
                 console.log('Manual tool call test triggered');
                 const title = window.prompt('Enter exact video title to fetch:');
@@ -167,6 +199,49 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
               Test Tool Call
             </button>
           )}
+          {/* Additional dev controls for exercising other tools */}
+          <div className="flex items-center gap-2 ml-2">
+            <button
+              data-testid="cvi-dev-pause"
+              onClick={() => onToolCall?.('pause_video', {})}
+              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              title="Pause video"
+            >
+              Pause
+            </button>
+            <button
+              data-testid="cvi-dev-resume"
+              onClick={() => onToolCall?.('play_video', {})}
+              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              title="Resume video"
+            >
+              Resume
+            </button>
+            <button
+              data-testid="cvi-dev-next"
+              onClick={() => onToolCall?.('next_video', {})}
+              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              title="Next video"
+            >
+              Next
+            </button>
+            <button
+              data-testid="cvi-dev-close"
+              onClick={() => onToolCall?.('close_video', {})}
+              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              title="Close video"
+            >
+              Close
+            </button>
+            <button
+              data-testid="cvi-dev-cta"
+              onClick={() => onToolCall?.('show_trial_cta', {})}
+              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 shadow"
+              title="Show CTA"
+            >
+              Show CTA
+            </button>
+          </div>
         </div>
       )}
     </div>

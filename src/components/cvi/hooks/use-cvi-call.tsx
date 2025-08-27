@@ -11,22 +11,60 @@ export const useCVICall = (): {
 
 	const joinCall = useCallback(
 		({ url }: { url: string }) => {
-			daily?.join({
-				url: url,
-				inputSettings: {
-					audio: {
-						processor: {
-							type: "noise-cancellation",
+			if (!daily) return;
+			const d: any = daily as any;
+			// Skip if we are already joining the same URL or already joined that URL
+			if (d.__CVI_JOINING__) {
+				console.log(' CVI join skipped: already joining');
+				return;
+			}
+			if (d.__CVI_JOIN_URL__ === url && (d.__CVI_JOINED__ === true)) {
+				console.log(' CVI join skipped: already joined this URL');
+				return;
+			}
+			// Mark as joining and record target url
+			d.__CVI_JOINING__ = true;
+			d.__CVI_JOIN_URL__ = url;
+			d.__CVI_JOINED__ = false;
+			
+			daily
+				.join({
+					url: url,
+					inputSettings: {
+						audio: {
+							processor: {
+								type: "noise-cancellation",
+							},
 						},
 					},
-				},
-			});
+				})
+				.then(() => {
+					console.log(' CVI joined call');
+					d.__CVI_JOINED__ = true;
+				})
+				.catch((e: unknown) => {
+					console.warn(' CVI join error', e);
+					// Reset join url on failure to allow retry
+					d.__CVI_JOIN_URL__ = undefined;
+				})
+				.finally(() => {
+					d.__CVI_JOINING__ = false;
+				});
 		},
 		[daily]
 	);
 
 	const leaveCall = useCallback(() => {
-		daily?.leave();
+		if (!daily) return;
+		const d: any = daily as any;
+		if (d.__CVI_JOINED__ !== true && !d.__CVI_JOINING__) {
+			console.log(' CVI leave skipped: not joined');
+			return;
+		}
+		// Clear flags before leaving
+		d.__CVI_JOINED__ = false;
+		d.__CVI_JOIN_URL__ = undefined;
+		daily.leave();
 	}, [daily]);
 
 	return { joinCall, leaveCall };

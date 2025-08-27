@@ -924,3 +924,69 @@ minHeight: '400px'
 - Migrations apply cleanly with RLS verified by integration tests.
 - Docker local dev image < 300MB; hot reload functional.
 - CTA per-demo configuration works end-to-end and is covered by tests.
+
+## E2E Video Playback Stability — 2025-08-27
+
+### Summary
+- Hardened video autoplay and readiness in E2E by updating `InlineVideoPlayer`, Playwright helpers, demo experience mapping, and adding a local proxy at `src/app/api/e2e-video/route.ts`.
+- All Playwright E2E tests, including "CTA tool call shows banner while video is playing", pass reliably.
+
+### Key Changes
+- InlineVideoPlayer (`src/app/demos/[demoId]/experience/components/InlineVideoPlayer.tsx`)
+  - Set `src={videoUrl}` and nested `<source src={videoUrl} type=...>` with MIME inferred from extension.
+  - On `videoUrl` change: pause, set `el.src = videoUrl`, call `el.load()`, and attempt `el.play()` on `loadedmetadata`/`canplay`.
+  - Added `autoPlay`, `muted`, `playsInline`, `preload="auto"`, and `data-testid="inline-video"`.
+  - Removed `crossOrigin` usage to avoid CORS in headless Chromium; added error overlay with details.
+  - Exposed imperative controls via `InlineVideoPlayerHandle` for pause/play during tool calls.
+
+- Experience page mapping (`src/app/demos/[demoId]/experience/page.tsx`)
+  - In E2E mode, map titles deterministically to:
+    ```
+    '/api/e2e-video?i=0', '/api/e2e-video?i=1'
+    ```
+  - Handles `fetch_video`, `pause_video`, `play_video`, `close_video`, `next_video`, `show_trial_cta`.
+  - Shows CTA after close/end and when explicitly triggered.
+
+- Local proxy route (`src/app/api/e2e-video/route.ts`)
+  - Proxies remote WebM videos, sets `content-type` and `accept-ranges`, disables caching.
+  - Ensures same-origin streaming for headless tests to avoid codec/CORS issues.
+
+- Playwright helpers (`e2e/video-controls.spec.ts`)
+  - `ensureLoad()`: enforce `muted`, `autoplay`, `playsInline`, sync `el.src` from `<source>`, call `load()`.
+  - `waitForReady()`: wait for `readyState >= 1` (HAVE_METADATA) with retries.
+  - `expectPlaying()`: call `play()`, then assert `!paused` and `readyState >= 2` or `currentTime > 0.05`.
+  - Increased timeouts and added polling for stability.
+
+- Playwright config (`playwright.config.ts`)
+  - Launch Chromium with `--autoplay-policy=no-user-gesture-required` and `--mute-audio`.
+  - Serve app with `NEXT_PUBLIC_E2E_TEST_MODE=true` and `NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK=true`.
+
+### Snippets
+- InlineVideoPlayer core markup:
+  ```tsx
+  <video ref={videoRef} key={videoUrl} src={videoUrl} controls autoPlay muted playsInline preload="auto" data-testid="inline-video">
+    <source src={videoUrl} type={/\.webm(\?|$)/.test(videoUrl) ? 'video/webm' : 'video/mp4'} />
+  </video>
+  ```
+- E2E mapping (E2E mode):
+  ```ts
+  const samples = ['/api/e2e-video?i=0','/api/e2e-video?i=1'];
+  setPlayingVideoUrl(samples[(idx >= 0 ? idx : 0) % samples.length]);
+  setUiState(UIState.VIDEO_PLAYING);
+  ```
+- Helper readiness and playback:
+  ```ts
+  await ensureLoad(video);
+  await expect.poll(() => video.evaluate(el => el.readyState >= 1)).toBe(true);
+  await video.evaluate(el => el.play());
+  await expect.poll(() => video.evaluate(el => !el.paused && (el.readyState >= 2 || el.currentTime > 0.05))).toBe(true);
+  ```
+
+### Results
+- Passes: `e2e/video-controls.spec.ts` full suite.
+- Stable autoplay across CI headless runs.
+- No CORS/codec flakes due to same-origin proxy.
+
+### Future Work
+- Add retry/backoff on `play()` failures with telemetry breadcrumbs.
+- Consider capturing `videoElement.error` codes in logs for analytics.

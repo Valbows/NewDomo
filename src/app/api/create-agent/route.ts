@@ -123,38 +123,99 @@ async function handlePOST(req: NextRequest) {
     const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true';
     let tools: any[] = [];
     if (tavusToolsEnabled) {
-      tools = [
-        {
-          type: 'function',
-          function: {
-            name: 'fetch_video',
-            description: 'Fetch and display a demo video by title. Use when the user asks to see a specific video or feature demo.',
-            parameters: {
-              type: 'object',
-              properties: {
-                title: {
-                  type: 'string',
-                  description: 'Exact title of the video to fetch. Must match available videos exactly.',
-                  enum: allowedTitles
-                }
-              },
-              required: ['title']
-            }
-          }
-        },
-        {
-          type: 'function',
-          function: {
-            name: 'show_trial_cta',
-            description: 'Show call-to-action for starting a trial when user expresses interest.',
-            parameters: {
-              type: 'object',
-              properties: {},
-              required: []
-            }
+      // Allow a minimal toolset during initial validation to reduce failure risk
+      const tavusMinimalTools = process.env.TAVUS_MINIMAL_TOOLS === 'true';
+
+      // Build the title property with an enum of allowed titles when available
+      const titleProperty: any = {
+        type: 'string',
+        description: 'Exact title of the video to fetch. Must match one of the listed video titles.'
+      };
+      if (Array.isArray(allowedTitles) && allowedTitles.length > 0) {
+        titleProperty.enum = allowedTitles;
+      }
+
+      const fetchVideoTool = {
+        type: 'function',
+        function: {
+          name: 'fetch_video',
+          description: 'Fetch and display a demo video by exact title. Use when the user asks to see a specific video or feature demo.',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: titleProperty
+            },
+            required: ['title']
           }
         }
-      ];
+      };
+
+      tools = [fetchVideoTool];
+
+      if (!tavusMinimalTools) {
+        tools.push(
+          {
+            type: 'function',
+            function: {
+              name: 'pause_video',
+              description: 'Pause the currently playing demo video.',
+              parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'play_video',
+              description: 'Resume playing the currently paused demo video.',
+              parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'next_video',
+              description: 'Stop current video and play the next available demo video in sequence.',
+              parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'close_video',
+              description: 'Close the video player and return to full-screen conversation.',
+              parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'show_trial_cta',
+              description: 'Show call-to-action for starting a trial when user expresses interest.',
+              parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+              }
+            }
+          }
+        );
+      }
     }
 
     // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
