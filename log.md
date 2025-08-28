@@ -933,9 +933,9 @@ minHeight: '400px'
 
 ### Key Changes
 - InlineVideoPlayer (`src/app/demos/[demoId]/experience/components/InlineVideoPlayer.tsx`)
-  - Set `src={videoUrl}` and nested `<source src={videoUrl} type=...>` with MIME inferred from extension.
+  - Use only `src={videoUrl}` (no nested `<source>`), avoiding MIME/type mismatches for proxied E2E URLs.
   - On `videoUrl` change: pause, set `el.src = videoUrl`, call `el.load()`, and attempt `el.play()` on `loadedmetadata`/`canplay`.
-  - Added `autoPlay`, `muted`, `playsInline`, `preload="auto"`, and `data-testid="inline-video"`.
+  - Added `autoPlay`, `muted`, `playsInline`, `preload="metadata"`, and `data-testid="inline-video"`.
   - Removed `crossOrigin` usage to avoid CORS in headless Chromium; added error overlay with details.
   - Exposed imperative controls via `InlineVideoPlayerHandle` for pause/play during tool calls.
 
@@ -952,10 +952,10 @@ minHeight: '400px'
   - Ensures same-origin streaming for headless tests to avoid codec/CORS issues.
 
 - Playwright helpers (`e2e/video-controls.spec.ts`)
-  - `ensureLoad()`: enforce `muted`, `autoplay`, `playsInline`, sync `el.src` from `<source>`, call `load()`.
+  - `ensureLoad()`: enforce `muted`, `autoplay`, `playsInline`, set `preload="metadata"`, and call `load()`.
   - `waitForReady()`: wait for `readyState >= 1` (HAVE_METADATA) with retries.
   - `expectPlaying()`: call `play()`, then assert `!paused` and `readyState >= 2` or `currentTime > 0.05`.
-  - Increased timeouts and added polling for stability.
+  - Avoid long-running in-page event listeners; use polling with increased timeouts for stability.
 
 - Playwright config (`playwright.config.ts`)
   - Launch Chromium with `--autoplay-policy=no-user-gesture-required` and `--mute-audio`.
@@ -964,11 +964,10 @@ minHeight: '400px'
 ### Snippets
 - InlineVideoPlayer core markup:
   ```tsx
-  <video ref={videoRef} key={videoUrl} src={videoUrl} controls autoPlay muted playsInline preload="auto" data-testid="inline-video">
-    <source src={videoUrl} type={/\.webm(\?|$)/.test(videoUrl) ? 'video/webm' : 'video/mp4'} />
-  </video>
+  <video ref={videoRef} key={videoUrl} src={videoUrl} controls autoPlay muted playsInline preload="metadata" data-testid="inline-video" />
   ```
-- E2E mapping (E2E mode):
+  
+  - E2E mapping (E2E mode):
   ```ts
   const samples = ['/api/e2e-video?i=0','/api/e2e-video?i=1'];
   setPlayingVideoUrl(samples[(idx >= 0 ? idx : 0) % samples.length]);
@@ -982,11 +981,223 @@ minHeight: '400px'
   await expect.poll(() => video.evaluate(el => !el.paused && (el.readyState >= 2 || el.currentTime > 0.05))).toBe(true);
   ```
 
-### Results
-- Passes: `e2e/video-controls.spec.ts` full suite.
+### Detailed Case Study: E2E Video Playback Readiness and Control Flakiness (2025-08-27)
+
+• __Symptoms__
+  - Autoplay intermittently fails in headless Chromium; `readyState` stuck at 0; tests timing out waiting for playback.
+  - Flaky clicks on dev controls due to early interaction before UI mounted.
+  - In-page `page.evaluate` listeners become stale when React remounts `<video>`, causing hanging waits.
+  - Cross-origin/codec mismatches block metadata fetch; `currentSrc` unresolved in CI.
+  - Paused videos would auto-resume after `loadedmetadata/canplay` due to default autoplay.
+  - Early returns on loading/error hid `conversation-container`, causing locator timeouts.
+
+• __Root causes__
+  - Nested `<source>` selection and lack of explicit `preload="metadata"` delayed HAVE_METADATA in headless.
+  - Long-running evaluate/listeners tied to a DOM node invalidated by remounts.
+  - Races with dev controls (E2E mode) not fully visible yet.
+  - Remote video origin produced CORS/codec issues in CI.
+  - No autoplay gating after an explicit `pause()`; no resume seek logic.
+
+• __Fixes (with grounded snippets)__
+
+1) __Single `<video>` with explicit `src` + autoplay attributes__ (`src/app/demos/[demoId]/experience/components/InlineVideoPlayer.tsx`)
+
+```tsx
+<video
+  ref={videoRef}
+  key={videoUrl}
+  src={videoUrl}
+  controls
+  autoPlay
+  muted // Muting is often required for autoplay to work reliably
+  playsInline // Improve autoplay on mobile/iOS and headless environments
+  preload="metadata" // Prioritize metadata to reach HAVE_METADATA quickly in headless
+  className="w-full h-full bg-black rounded-lg"
+  data-testid="inline-video"
+  data-paused={paused ? 'true' : 'false'}
+  poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='14' fill='%236b7280' text-anchor='middle' dy='0.3em'%3ELoading...%3C/text%3E%3C/svg%3E"
+>
+</video>
+```
+
+2) __Explicit `src` swap + `load()` on source change__ (ensure network fetch begins)
+
+```ts
+// Inside useEffect([videoUrl])
+try { videoElement.pause(); } catch {}
+try { (videoElement as HTMLVideoElement).src = videoUrl; } catch {}
+videoElement.load();
+```
+
+3) __Autoplay gating to prevent auto-resume after pause__
+
+```ts
+const handleLoadedMetadata = async () => {
+  if (shouldAutoplayRef.current) {
+    try {
+      await videoElement.play();
+      setPaused(false);
+    } catch {}
+  } else {
+    try { videoElement.pause(); } catch {}
+    setPaused(true);
+  }
+};
+```
+
+4) __Same-origin proxy for media in E2E__ (`src/app/api/e2e-video/route.ts`)
+
+```ts
+export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const iParam = url.searchParams.get('i') ?? '0';
+  const idx = Number.isFinite(Number(iParam)) ? Math.abs(Number(iParam)) : 0;
+  const sources = [
+    'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm',
+    'https://media.w3.org/2010/05/sintel/trailer.webm',
+  ];
+  const target = sources[idx % sources.length];
+  const range = request.headers.get('range') || undefined;
+  const upstream = await fetch(target, { cache: 'no-store', headers: range ? { Range: range } : undefined });
+  const headers = new Headers();
+  headers.set('content-type', upstream.headers.get('content-type') || 'video/webm');
+  headers.set('cache-control', 'no-store');
+  const acceptRanges = upstream.headers.get('accept-ranges');
+  if (acceptRanges) headers.set('accept-ranges', acceptRanges);
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+```
+
+5) __Playwright helpers: poll readiness; avoid long-running evaluate__ (`e2e/video-controls.spec.ts`)
+
+```ts
+async function ensureLoad(videoLocator: Locator) {
+  await videoLocator.evaluate((el: HTMLVideoElement) => {
+    el.muted = true;
+    el.autoplay = true;
+    (el as any).playsInline = true;
+    try { el.preload = 'metadata'; } catch {}
+    try { el.load(); } catch {}
+  });
+}
+
+async function waitForReady(videoLocator: Locator, timeoutMs = 30_000) {
+  await ensureLoad(videoLocator);
+  await expect
+    .poll(async () => await videoLocator.evaluate((el: HTMLVideoElement) => el.readyState), { timeout: timeoutMs })
+    .toBeGreaterThanOrEqual(1); // HAVE_METADATA
+}
+
+async function expectPlaying(page: Page, videoLocator: Locator) {
+  await waitForReady(videoLocator);
+  await videoLocator.evaluate(async (el: HTMLVideoElement) => { try { await el.play(); } catch {} });
+  await expect.poll(async () => {
+    return await videoLocator.evaluate((el: HTMLVideoElement) => {
+      const hasFrameData = el.readyState >= 2 || (el.currentTime ?? 0) > 0.05;
+      return !el.paused && hasFrameData;
+    });
+  }, { timeout: 20000 }).toBe(true);
+}
+```
+
+6) __Hardened dev control trigger across specs__
+
+```ts
+async function triggerVideoPlayback(page: Page) {
+  const dropdown = page.getByTestId('cvi-dev-dropdown');
+  const promptBtn = page.getByTestId('cvi-dev-button');
+  await Promise.race([
+    dropdown.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+    promptBtn.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+  ]);
+  if (await dropdown.count()) {
+    await dropdown.selectOption({ label: VIDEO_TITLE });
+    const playBtn = page.getByTestId('cvi-dev-play');
+    await expect(playBtn).toBeVisible();
+    await playBtn.click();
+  } else {
+    page.once('dialog', (dialog: Dialog) => dialog.accept(VIDEO_TITLE));
+    await promptBtn.click();
+  }
+}
+```
+
+7) __Always-present conversation + non-blocking banners__ (`src/app/demos/[demoId]/experience/page.tsx`)
+
+```tsx
+{alert && (
+  <div className="absolute top-4 right-4 z-50">
+    <div className={`px-3 py-2 rounded shadow text-sm ${alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'}`}>
+      <div className="flex items-center gap-2">
+        <span>{alert.message}</span>
+        <button aria-label="Dismiss alert" className="opacity-80 hover:opacity-100" onClick={() => setAlert(null)}>✕</button>
+      </div>
+    </div>
+  </div>
+)}
+{loading && (
+  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 text-gray-700 px-3 py-1 rounded shadow text-sm">Loading demo...</div>
+)}
+{error && (
+  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-3 py-1 rounded shadow text-sm">{error}</div>
+)}
+
+<div data-testid="conversation-container" data-pip={uiState === UIState.VIDEO_PLAYING ? 'true' : 'false'} className={`${uiState === UIState.VIDEO_PLAYING ? 'fixed bottom-4 right-4 w-96 h-72 z-50 shadow-2xl' : 'w-full h-full flex items-center justify-center p-4'} transition-all duration-300`}>
+  {/* TavusConversationCVI always rendered */}
+</div>
+
+{uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
+  <div className="absolute inset-0 bg-black flex flex-col z-30" data-testid="video-overlay">
+    <div className="flex-1 p-4">
+      <div className="w-full h-full max-w-6xl mx-auto">
+        <InlineVideoPlayer ref={videoPlayerRef} videoUrl={playingVideoUrl} onClose={handleVideoClose} onVideoEnd={handleVideoEnd} />
+      </div>
+    </div>
+  </div>
+)}
+```
+
+8) __Pause/resume: save & restore position; suppress re-fetch races__
+
+```ts
+if (toolName === 'pause_video') {
+  if (uiState === UIState.VIDEO_PLAYING) {
+    const t = videoPlayerRef.current?.getCurrentTime?.() ?? 0;
+    pausedPositionRef.current = t;
+    console.log(`⏸️ Saved paused position at ${t.toFixed(2)}s`);
+    videoPlayerRef.current?.pause();
+    suppressFetchUntilRef.current = Date.now() + 1500;
+    suppressReasonRef.current = 'pause';
+  }
+  return;
+}
+
+if (toolName === 'play_video') {
+  if (uiState === UIState.VIDEO_PLAYING) {
+    const t = pausedPositionRef.current || 0;
+    if (t > 0 && videoPlayerRef.current?.seekTo) videoPlayerRef.current.seekTo(t);
+    await videoPlayerRef.current?.play();
+    suppressFetchUntilRef.current = Date.now() + 1500;
+    suppressReasonRef.current = 'resume';
+  }
+  return;
+}
+```
+
+  
+ ### Results
+- Passes: full Playwright E2E suite (6/6).
+- Local run completed in ~1.2m; CI retriable and stable.
 - Stable autoplay across CI headless runs.
 - No CORS/codec flakes due to same-origin proxy.
 
+ 
+ - InlineVideoPlayer (`src/app/demos/[demoId]/experience/components/InlineVideoPlayer.tsx`): Added `shouldAutoplayRef` gating to block autoplay on `canplay`/`loadedmetadata` after a pause, preventing immediate resume.
+ - TavusConversationCVI (`src/app/demos/[demoId]/experience/components/TavusConversationCVI.tsx`): Added duplicate tool-call suppression (1.5s window) via `shouldForward()` to drop identical rapid-fire calls (e.g., repeated `fetch_video`).
+ - Experience page (`src/app/demos/[demoId]/experience/page.tsx`): Added quiescence window (1.5s) after `close_video` to ignore `fetch_video` and avoid instant reopen; CTA visibility preserved; PiP layout maintained.
+ - Tests: Jest 7/7 passed; Playwright 6/6 passed (pause does not auto-resume; close returns to conversation without reopening).
+ - Logging: Emits console warnings on suppressed duplicates/quiescence to aid field debugging.
+
 ### Future Work
-- Add retry/backoff on `play()` failures with telemetry breadcrumbs.
-- Consider capturing `videoElement.error` codes in logs for analytics.
+ - Add retry/backoff on `play()` failures with telemetry breadcrumbs.
+ - Consider capturing `videoElement.error` codes in logs for analytics.
