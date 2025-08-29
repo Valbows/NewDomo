@@ -50,11 +50,14 @@ const pipStyles = `
   }
 `;
 
+// Validate that a URL points to a Daily room (required by our CVI join logic)
+const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
+
 interface Demo {
   id: string;
   name: string;
   user_id: string;
-  tavus_conversation_id: string;
+  tavus_conversation_id: string | null;
   metadata: {
     agentName?: string;
     agentPersonality?: string;
@@ -95,6 +98,9 @@ export default function DemoExperiencePage() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState<number | null>(null);
   const [alert, setAlert] = useState<{ type: 'error' | 'info' | 'success'; message: string } | null>(null);
   const isE2E = process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true';
+  const suppressFetchUntilRef = useRef<number>(0);
+  const suppressReasonRef = useRef<'close' | 'pause' | 'resume' | null>(null);
+  const pausedPositionRef = useRef<number>(0);
 
   // Fetch demo data and start conversation
   useEffect(() => {
@@ -186,21 +192,67 @@ export default function DemoExperiencePage() {
           console.warn('⚠️ Unexpected error loading video titles', e);
         }
 
-        // Check if we have a conversation URL
-        if (processedDemoData.metadata?.tavusShareableLink) {
-          console.log('🔗 Setting conversation URL from metadata:', processedDemoData.metadata.tavusShareableLink);
-          setConversationUrl(processedDemoData.metadata.tavusShareableLink);
-          setUiState(UIState.CONVERSATION);
-        } else if (processedDemoData.tavus_conversation_id) {
-          // Fallback: construct URL from conversation ID
-          const fallbackUrl = `https://tavus.daily.co/${processedDemoData.tavus_conversation_id}`;
-          console.log('🔗 Using fallback conversation URL:', fallbackUrl);
-          setConversationUrl(fallbackUrl);
+        // Resolve conversation URL; prefer metadata, else attempt to start a new conversation
+        let candidateUrl: string | null = processedDemoData.metadata?.tavusShareableLink || null;
+        if (!candidateUrl && processedDemoData.tavus_conversation_id) {
+          // Legacy shareable link is not a Daily URL; only use as a display fallback, not for Daily join
+          candidateUrl = `https://app.tavus.io/conversation/${processedDemoData.tavus_conversation_id}`;
+        }
+
+        if (candidateUrl && isDailyRoomUrl(candidateUrl)) {
+          console.log('🔗 Using valid Daily conversation URL:', candidateUrl);
+          setConversationUrl(candidateUrl);
           setUiState(UIState.CONVERSATION);
         } else {
-          setError('No conversation URL found');
-          setLoading(false);
-          return;
+          // Attempt to start a new conversation to obtain a Daily room URL
+          console.log('🚀 Starting a new conversation to obtain a Daily room URL');
+          try {
+            // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
+            const win: any = typeof window !== 'undefined' ? window : undefined;
+            if (win) {
+              win.__startConvInflight = win.__startConvInflight || new Map<string, Promise<any>>();
+            }
+            const inflight: Map<string, Promise<any>> | undefined = win?.__startConvInflight;
+            let startPromise = inflight?.get(processedDemoData.id);
+            if (!startPromise) {
+              startPromise = fetch('/api/start-conversation', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ demoId: processedDemoData.id }),
+              }).then(async (resp) => {
+                if (!resp.ok) {
+                  const err = await resp.json().catch(() => ({}));
+                  throw err;
+                }
+                return resp.json();
+              });
+              inflight?.set(processedDemoData.id, startPromise);
+            } else {
+              console.log('⏳ Waiting for in-flight conversation start (deduped)');
+            }
+            let data: any;
+            try {
+              data = await startPromise;
+            } finally {
+              inflight?.delete(processedDemoData.id);
+            }
+            const url = data?.conversation_url as string | undefined;
+            if (url && isDailyRoomUrl(url)) {
+              console.log('✅ Received Daily conversation URL from API:', url);
+              setConversationUrl(url);
+              setUiState(UIState.CONVERSATION);
+            } else {
+              console.warn('Received non-Daily conversation URL from API:', url);
+              setError('Conversation URL invalid. Please verify Tavus configuration.');
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            logError(e, 'Error starting conversation');
+            setError(getErrorMessage(e, 'Failed to start conversation'));
+            setLoading(false);
+            return;
+          }
         }
       } catch (err: unknown) {
         logError(err, 'Error fetching demo');
@@ -245,7 +297,8 @@ export default function DemoExperiencePage() {
           }
           // Fallback: map unknown titles to first sample
           const sampleUrl = samples[(idx >= 0 ? idx : 0) % samples.length];
-
+          // New video source: reset any saved paused position
+          pausedPositionRef.current = 0;
           setPlayingVideoUrl(sampleUrl);
           setUiState(UIState.VIDEO_PLAYING);
           setCurrentVideoTitle(normalizedTitle);
@@ -294,6 +347,8 @@ export default function DemoExperiencePage() {
         // If storagePath is already a full URL, don't try to sign it
         if (/^https?:\/\//i.test(storagePath)) {
           console.log('Using direct video URL (no signing needed):', storagePath);
+          // New video source: reset any saved paused position
+          pausedPositionRef.current = 0;
           setPlayingVideoUrl(storagePath);
           setUiState(UIState.VIDEO_PLAYING);
           setCurrentVideoTitle(normalizedTitle);
@@ -315,6 +370,8 @@ export default function DemoExperiencePage() {
         }
 
         console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
+        // New video source: reset any saved paused position
+        pausedPositionRef.current = 0;
         setPlayingVideoUrl(signedUrlData.signedUrl);
         setUiState(UIState.VIDEO_PLAYING);
         setCurrentVideoTitle(normalizedTitle);
@@ -329,20 +386,74 @@ export default function DemoExperiencePage() {
     };
 
     if (toolName === 'fetch_video') {
+      // Quiescence window: ignore fetch shortly after a close to prevent immediate reopen
+      if (Date.now() < suppressFetchUntilRef.current) {
+        const reason = suppressReasonRef.current || 'suppression window';
+        console.warn(`🛑 Suppressing fetch_video due to recent ${reason}`);
+        return;
+      }
+      // If agent re-requests the same title while a video is already loaded, avoid resetting the src.
+      try {
+        const requestedTitleRaw = args?.title || args?.video_title || args?.video_name;
+        if (requestedTitleRaw && typeof requestedTitleRaw === 'string') {
+          const normalizedTitle = requestedTitleRaw.trim().replace(/^["']|["']$/g, '');
+          if (
+            currentVideoTitle &&
+            playingVideoUrl &&
+            normalizedTitle.toLowerCase() === currentVideoTitle.toLowerCase()
+          ) {
+            console.log('♻️ fetch_video for current title detected; resuming without reload');
+            // Seek back to paused position if we have one, then play
+            const t = pausedPositionRef.current || 0;
+            if (t > 0) {
+              console.log(`⏩ Resuming same video at ${t.toFixed(2)}s (fetch_video short-circuit)`);
+            }
+            if (t > 0 && videoPlayerRef.current?.seekTo) {
+              videoPlayerRef.current.seekTo(t);
+            }
+            await videoPlayerRef.current?.play();
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('fetch_video same-title resume check failed:', e);
+      }
       await playByTitle(args?.title || args?.video_title || args?.video_name);
       return;
     }
 
     if (toolName === 'pause_video') {
       if (uiState === UIState.VIDEO_PLAYING) {
+        // Record the current playback position before pausing
+        try {
+          const t = videoPlayerRef.current?.getCurrentTime?.() ?? 0;
+          pausedPositionRef.current = t;
+          console.log(`⏸️ Saved paused position at ${t.toFixed(2)}s`);
+        } catch {}
         videoPlayerRef.current?.pause();
+        // Prevent immediate re-fetch/play attempts triggered by the agent
+        suppressFetchUntilRef.current = Date.now() + 1500;
+        suppressReasonRef.current = 'pause';
       }
       return;
     }
 
     if (toolName === 'play_video') {
       if (uiState === UIState.VIDEO_PLAYING) {
+        // Restore to the paused position if available before resuming
+        try {
+          const t = pausedPositionRef.current || 0;
+          if (t > 0) {
+            console.log(`▶️ Resuming video at ${t.toFixed(2)}s`);
+          }
+          if (t > 0 && videoPlayerRef.current?.seekTo) {
+            videoPlayerRef.current.seekTo(t);
+          }
+        } catch {}
         await videoPlayerRef.current?.play();
+        // Suppress redundant fetch_video immediately after resume to avoid src reset
+        suppressFetchUntilRef.current = Date.now() + 1500;
+        suppressReasonRef.current = 'resume';
       }
       return;
     }
@@ -378,16 +489,22 @@ export default function DemoExperiencePage() {
 
   const handleVideoEnd = () => {
     console.log('Video ended, returning agent to full screen and showing CTA');
+    pausedPositionRef.current = 0;
     setPlayingVideoUrl(null);
     setUiState(UIState.CONVERSATION);
     setShowCTA(true);
   };
 
   const handleVideoClose = () => {
+    console.log('❎ Video closed by user; clearing paused position and returning to conversation');
+    pausedPositionRef.current = 0;
     setPlayingVideoUrl(null);
     setUiState(UIState.CONVERSATION);
     // Show CTA after video ends
     setShowCTA(true);
+    // Prevent immediate re-open by ignoring fetch_video for a short window
+    suppressFetchUntilRef.current = Date.now() + 1500;
+    suppressReasonRef.current = 'close';
     // Small delay to ensure smooth transition
     setTimeout(() => {
       console.log('Video closed, agent returned to full screen');
@@ -399,33 +516,6 @@ export default function DemoExperiencePage() {
   const ctaMessage = demo?.cta_message || demo?.metadata?.ctaMessage || demo?.cta_text || 'Take the next step today!';
   const ctaButtonText = demo?.cta_button_text || demo?.metadata?.ctaButtonText || 'Start Free Trial';
   const ctaButtonUrl = demo?.cta_button_url || demo?.metadata?.ctaButtonUrl || demo?.cta_link || 'https://bolt.new';
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading demo...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => router.back()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <CVIProvider>
@@ -468,47 +558,59 @@ export default function DemoExperiencePage() {
               </div>
             </div>
           )}
+          {/* Non-blocking loading banner */}
+          {loading && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 text-gray-700 px-3 py-1 rounded shadow text-sm">
+              Loading demo...
+            </div>
+          )}
+          {/* Non-blocking error banner */}
+          {error && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-3 py-1 rounded shadow text-sm">
+              {error}
+            </div>
+          )}
           {/* Conversation View - Full screen when no video, minimized when video playing */}
-          {conversationUrl && (
-            <div
-              data-testid="conversation-container"
-              data-pip={uiState === UIState.VIDEO_PLAYING ? 'true' : 'false'}
-              className={`${
+          <div
+            data-testid="conversation-container"
+            data-pip={uiState === UIState.VIDEO_PLAYING ? 'true' : 'false'}
+            className={`${
               uiState === UIState.VIDEO_PLAYING 
                 ? 'fixed bottom-4 right-4 w-96 h-72 z-50 shadow-2xl' 
                 : 'w-full h-full flex items-center justify-center p-4'
             } transition-all duration-300`}
-            >
-              <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full h-full flex flex-col">
-                <div className="p-2 bg-indigo-600 text-white flex justify-between items-center flex-shrink-0">
-                  <div>
-                    <h2 className={`font-semibold ${
-                      uiState === UIState.VIDEO_PLAYING ? 'text-sm' : 'text-lg'
-                    }`}>AI Demo Assistant</h2>
-                    {uiState !== UIState.VIDEO_PLAYING && (
-                      <p className="text-indigo-100 text-sm">Ask questions and request to see specific features</p>
-                    )}
-                  </div>
-                  {uiState === UIState.VIDEO_PLAYING && (
-                    <button
-                      data-testid="button-expand-conversation"
-                      onClick={() => {
-                        setPlayingVideoUrl(null);
-                        setUiState(UIState.CONVERSATION);
-                      }}
-                      className="text-white hover:text-indigo-200 p-1"
-                      title="Expand conversation"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
-                    </button>
+          >
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full h-full flex flex-col">
+              <div className="p-2 bg-indigo-600 text-white flex justify-between items-center flex-shrink-0">
+                <div>
+                  <h2 className={`font-semibold ${
+                    uiState === UIState.VIDEO_PLAYING ? 'text-sm' : 'text-lg'
+                  }`}>AI Demo Assistant</h2>
+                  {uiState !== UIState.VIDEO_PLAYING && (
+                    <p className="text-indigo-100 text-sm">Ask questions and request to see specific features</p>
                   )}
                 </div>
-                <div className="relative bg-gray-900 flex-1" style={{
-                  height: uiState === UIState.VIDEO_PLAYING ? '250px' : '75vh',
-                  minHeight: '400px'
-                }}>
+                {uiState === UIState.VIDEO_PLAYING && (
+                  <button
+                    data-testid="button-expand-conversation"
+                    onClick={() => {
+                      setPlayingVideoUrl(null);
+                      setUiState(UIState.CONVERSATION);
+                    }}
+                    className="text-white hover:text-indigo-200 p-1"
+                    title="Expand conversation"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="relative bg-gray-900 flex-1" style={{
+                height: uiState === UIState.VIDEO_PLAYING ? '250px' : '75vh',
+                minHeight: '400px'
+              }}>
+                {conversationUrl ? (
                   <div className={uiState === UIState.VIDEO_PLAYING ? 'pip-video-layout' : ''}>
                     <TavusConversationCVI
                       conversationUrl={conversationUrl}
@@ -517,14 +619,18 @@ export default function DemoExperiencePage() {
                       debugVideoTitles={videoTitles}
                     />
                   </div>
-                </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white">
+                    Connecting...
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* Video Player - Full screen when playing */}
           {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
-            <div className="absolute inset-0 bg-black flex flex-col" data-testid="video-overlay">
+            <div className="absolute inset-0 bg-black flex flex-col z-30" data-testid="video-overlay">
               <div className="flex-shrink-0 bg-gray-800 text-white p-4 flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Demo Video</h2>
                 <button
