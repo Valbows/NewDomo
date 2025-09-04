@@ -583,26 +583,71 @@ This section augments the above strategy with the finalized deployment approach,
     - [x] Baseline security headers present (X-Content-Type-Options, Referrer-Policy, X-Frame-Options, Permissions-Policy)
 
 - Phase G — Feature Additions (Scaffold and plan)
-  - Pricing: pricing page + gating via pricing_tiers; usage quotas enforcement.
-  - Admin Dashboard: roles/permissions (owner, admin, viewer), demo management, video deletion, per-demo public URL toggle.
-  - CTA: per-demo configurable fields surfaced in dashboard and consumed in experience flow.
-  - Live Chat & AI Chatbot widgets: embed providers; feature flag via env/config.
-  - Knowledge Ingestion: PDF/CSV/URL ingestion pipeline; background job status via knowledge_sources.
-  - Perception & Lead Scoring: scores stored per session; export CSV + optional CRM webhook.
-  - Guardrails customization; Multilingual support (language selector + Tavus settings).
-  - Acceptance: each feature includes unit/integration tests and UX acceptance criteria.
+  - [x] Pricing: pricing page + gating via pricing_tiers; usage quotas enforcement.
+  - [x] Admin Dashboard: roles/permissions (owner, admin, viewer), demo management, video deletion, per-demo public URL toggle.
+  - [x] CTA: per-demo configurable fields surfaced in dashboard and consumed in experience flow.
+    - [x] Surfaced in dashboard (admin-editable fields)
+    - [x] Consumed in experience flow (dynamic CTA shown in demo UI)
+  - [x] Live Chat & AI Chatbot widgets: embed providers; feature flag via env/config.
+  - [x] Knowledge Ingestion: PDF/CSV/URL ingestion pipeline; background job status via knowledge_sources.
+  - [x] Perception & Lead Scoring: scores stored per session; export CSV + optional CRM webhook.
+  - [x] Guardrails customization; Multilingual support (language selector + Tavus settings).
+  - [x] Acceptance: each feature includes unit/integration tests and UX acceptance criteria.
+
+  - Next Actions (Phase G)
+    - [x] Build Pricing page UI and read-only display of `pricing_tiers`; add gating checks in server routes.
+    - [x] Implement Admin Dashboard shell with demo list and per-demo public URL toggle.
+    - [x] Add validation + tests for CTA settings; enforce owner-only edits via RLS.
 
 - Phase H — UI/UX State Enhancements
-  - Core states: IDLE, CONVERSATION, ENDED; Aux: CONNECTING, ERROR; Sub-states: LISTENING, SPEAKING, PROCESSING (driven by Tavus events).
-  - Acceptance: visual QA to confirm transitions and PiP behavior remain smooth.
+  - [x] Core states: IDLE, CONVERSATION, ENDED; Aux: CONNECTING, ERROR; Sub-states: LISTENING, SPEAKING, PROCESSING (driven by Tavus events).
+  - [x] Acceptance: visual QA to confirm transitions and PiP behavior remain smooth.
+
+  - Next Actions (Phase H)
+    - [x] Map Tavus events to the above states and wire to UI reducers (retain PiP transitions).
+    - [x] Add dev overlay to visualize current state for QA.
 
 - Phase I — Performance & Concurrency
-  - Target up to 15 concurrent streams; measure with synthetic tests; optimize network and caching.
-  - Acceptance: no degradation in tool-call latency or video playback under target concurrency.
+  - [x] Target up to 15 concurrent streams; measure with synthetic tests; optimize network and caching.
+  - [x] Acceptance: no degradation in tool-call latency or video playback under target concurrency.
+
+  - Next Actions (Phase I)
+    - [x] Add Artillery/Locust script to simulate concurrent sessions hitting webhook + Realtime events.
+    - [x] Instrument latency metrics for tool-call → action roundtrip and video start time.
 
 - Phase J — Branching & Risk Management
-  - Work on Dev-branch with PRs; protect main; document issues in log.md.
+  - [x] Work on Dev-branch with PRs; protect main; document issues in log.md.
   - Known risk: persona-level tools validation errors (deferred investigation in separate repo).
+    - [x] Mitigation applied: persona-level tools disabled in `src/app/api/create-agent/route.ts`; risk documented.
+
+  - Next Actions (Phase J)
+    - [x] Configure branch protections and required checks (tests/lint) on main and staging.
+    - [x] Add PR template and CODEOWNERS; ensure `log.md` entry template is followed on merges.
+
+  
+  - Phase K — Go-Live Preparation
+    - [ ] Vercel environments (Preview/Staging/Production) verified; env vars synced and secrets scoped.
+    - [ ] Staging smoke runbook executed (upload → process → experience → CTA) with sign-off.
+    - [ ] On-call and rollback procedures documented in `README.md`.
+    - Acceptance: staging passes full demo flow; rollback tested; owner sign-off recorded in `log.md`.
+
+  - Phase L — Telemetry & Analytics
+    - [ ] Define event schema (video_started, tool_call_success/failure, cta_click) and persist to `usage_events`.
+    - [ ] Build minimal admin analytics view (per-demo charts) or export to CSV.
+    - [ ] Privacy-safe logging with redaction enforced.
+    - Acceptance: dashboards load in <2s; events match schema and pass validation tests.
+
+  - Phase M — Billing Readiness (Optional)
+    - [ ] Integrate Stripe (test mode) for pricing tier upgrades and webhooks.
+    - [ ] Enforce quotas via middleware on tool-call + video playback paths.
+    - [ ] Graceful degrade UX when limits reached; admin override toggle.
+    - Acceptance: tier changes reflected within 1m; gating covered by unit/integration tests.
+
+  - Phase N — Pilot Program & Feedback Loop
+    - [ ] Recruit 3–5 pilot users; create per-demo public URLs and collect feedback.
+    - [ ] Triage issues; track in GitHub Projects; weekly review cadence.
+    - [ ] Prioritize v1 backlog from pilot insights.
+    - Acceptance: pilot NPS ≥ 7; top-5 issues resolved; v1 backlog approved.
 
 ## 🔐 SECTION 4: SECURITY & COMPLIANCE
 

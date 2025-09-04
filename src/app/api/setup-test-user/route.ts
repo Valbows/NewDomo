@@ -10,7 +10,7 @@ async function handlePOST(req: NextRequest) {
     // Create the test user using Supabase's auth API
     const { data, error } = await supabase.auth.admin.createUser({
       email: 'test@example.com',
-      password: 'password',
+      password: 'password123',
       email_confirm: true,
     });
 

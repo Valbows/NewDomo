@@ -49,6 +49,7 @@ const CreateDemoPage = () => {
         .insert({ 
           name: demoName, 
           user_id: user.id,
+          upload_id: metadata.uploadId,
           video_storage_path: '', // Placeholder - will be updated when videos are uploaded
           metadata: metadata
         })

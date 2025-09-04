@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useDaily, useMeetingState } from '@daily-co/daily-react';
 import { Conversation } from '@/components/cvi/components/conversation';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
@@ -21,6 +21,22 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
   const daily = useDaily();
   const meetingState = useMeetingState();
   const [selectedTitle, setSelectedTitle] = useState<string>('');
+  const lastForwardRef = useRef<{ key: string; ts: number } | null>(null);
+
+  const shouldForward = useCallback((toolName: string, args: any) => {
+    const argKey = toolName === 'fetch_video'
+      ? (typeof args?.title === 'string' ? args.title.trim().toLowerCase() : JSON.stringify(args || {}))
+      : '';
+    const key = `${toolName}:${argKey}`;
+    const now = Date.now();
+    const last = lastForwardRef.current;
+    if (last && last.key === key && now - last.ts < 1500) {
+      console.warn('⏳ Suppressing duplicate tool call within window:', key);
+      return false;
+    }
+    lastForwardRef.current = { key, ts: now };
+    return true;
+  }, []);
 
   // Debug Daily instance and meeting state
   useEffect(() => {
@@ -59,6 +75,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
           console.warn('fetch_video detected but args missing/null; ignoring');
           return;
         }
+        if (!shouldForward(parsed.toolName, args)) return;
         console.log(`🔧 Forwarding parsed tool call: ${parsed.toolName}`, args);
         onToolCall(parsed.toolName, args);
         return;
@@ -86,10 +103,12 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                 coercedArgs = { title: String(rawArgs).trim().replace(/^["']|["']$/g, '') };
               }
             }
+            if (!shouldForward(toolName, coercedArgs || {})) return;
             console.log('🔧 Forwarding legacy tool call (coerced):', toolName, coercedArgs || {});
             onToolCall(toolName, coercedArgs || {});
             return;
           }
+          if (!shouldForward(toolName, rawArgs || {})) return;
           console.log('🔧 Forwarding legacy tool call:', toolName, rawArgs || {});
           onToolCall(toolName, rawArgs || {});
           return;
@@ -115,6 +134,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                 console.warn('fetch_video transcript call missing args; ignoring');
                 return;
               }
+              if (!shouldForward(name, args)) return;
               console.log('🔧 Forwarding transcript tool call:', name, args);
               onToolCall(name, args);
             } catch (error) {

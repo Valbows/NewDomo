@@ -12,7 +12,12 @@ export async function GET(request: Request): Promise<Response> {
 
     const target = sources[idx % sources.length];
 
-    const upstream = await fetch(target, { cache: 'no-store' });
+    // Forward Range requests for proper media loading behavior (metadata/seeking)
+    const range = request.headers.get('range') || undefined;
+    const upstream = await fetch(target, {
+      cache: 'no-store',
+      headers: range ? { Range: range } : undefined,
+    });
     if (!upstream.ok || !upstream.body) {
       return new Response(`Upstream fetch failed: ${upstream.status} ${upstream.statusText}`, { status: 502 });
     }
@@ -22,11 +27,21 @@ export async function GET(request: Request): Promise<Response> {
     const headers = new Headers();
     headers.set('content-type', contentType);
     headers.set('cache-control', 'no-store');
-    // Explicitly allow range requests if provided by upstream to improve seeking
+    // Propagate useful headers for media elements
     const acceptRanges = upstream.headers.get('accept-ranges');
     if (acceptRanges) headers.set('accept-ranges', acceptRanges);
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) headers.set('content-length', contentLength);
+    const contentRange = upstream.headers.get('content-range');
+    if (contentRange) headers.set('content-range', contentRange);
+    const etag = upstream.headers.get('etag');
+    if (etag) headers.set('etag', etag);
+    const lastModified = upstream.headers.get('last-modified');
+    if (lastModified) headers.set('last-modified', lastModified);
+    headers.set('vary', 'range');
 
-    return new Response(upstream.body, { status: 200, headers });
+    // Preserve upstream status (200 or 206 for partial content)
+    return new Response(upstream.body, { status: upstream.status, headers });
   } catch (err) {
     return new Response(`Proxy error: ${(err as Error).message}`, { status: 500 });
   }

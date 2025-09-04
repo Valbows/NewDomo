@@ -4,6 +4,8 @@ import { FFmpeg } from 'https://esm.sh/@ffmpeg/ffmpeg';
 import { fetchFile } from 'https://esm.sh/@ffmpeg/util';
 
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
+const OPENAI_EMBEDDING_MODEL = Deno.env.get('OPENAI_EMBEDDING_MODEL') ?? 'text-embedding-3-small';
 
 // TODO: Add error handling and more robust logging
 
@@ -15,21 +17,30 @@ serve(async (req) => {
   // 2. Create a Supabase client
   const supabaseAdmin = createClient(
     Deno.env.get('NEXT_PUBLIC_SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    // In Supabase Edge Functions, SUPABASE_SERVICE_ROLE_KEY is provided in env.
+    // Fallback to SUPABASE_SECRET_KEY if present for local testing.
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? ''
   );
 
-  // 3. Get the demo ID from the database
-  const { data: demo, error: demoError } = await supabaseAdmin
-    .from('demos')
-    .select('id')
-    .eq('video_url', videoFilePath)
+  // 3. Find the video row by storage path to get demo and video IDs
+  const { data: videoRow, error: videoRowError } = await supabaseAdmin
+    .from('demo_videos')
+    .select('id, demo_id')
+    .eq('storage_url', videoFilePath)
     .single();
 
-  if (demoError || !demo) {
-    console.error('Error fetching demo:', demoError);
-    return new Response(JSON.stringify({ error: 'Failed to find demo for video' }), { status: 404 });
+  if (videoRowError || !videoRow) {
+    console.error('Error fetching video row:', videoRowError);
+    return new Response(JSON.stringify({ error: 'Failed to find demo_video for storage key' }), { status: 404 });
   }
-  const demoId = demo.id;
+  const demoId = videoRow.demo_id as string;
+  const demoVideoId = videoRow.id as string;
+
+  // Mark processing start
+  await supabaseAdmin
+    .from('demo_videos')
+    .update({ processing_status: 'processing', processing_error: null })
+    .eq('id', demoVideoId);
 
   // 4. Download the video from Supabase Storage
   const { data: videoData, error: downloadError } = await supabaseAdmin.storage
@@ -100,18 +111,86 @@ serve(async (req) => {
 
   const transcript = fullTranscript.trim();
 
-
   // 7. Store the transcript in the database
-  const { error: insertError } = await supabaseAdmin.from('knowledge_chunks').insert([
-    { demo_id: demoId, chunk_text: transcript, embedding: [] }, // Embedding will be done in a separate step
-  ]);
-
-  if (insertError) {
-    console.error('Error inserting transcript:', insertError);
-    return new Response(JSON.stringify({ error: 'Failed to save transcript' }), { status: 500 });
+  // 7a. Persist transcript on the video row for quick access
+  const { error: videoUpdateError } = await supabaseAdmin
+    .from('demo_videos')
+    .update({ transcript })
+    .eq('id', demoVideoId);
+  if (videoUpdateError) {
+    console.error('Error updating video transcript:', videoUpdateError);
   }
 
-  return new Response(JSON.stringify({ success: true, transcript }), {
+  // 7b. Chunk transcript and generate embeddings (with graceful fallback)
+  const MAX_CHUNK_CHARS = 2000;
+  const chunks: string[] = [];
+  for (let i = 0; i < transcript.length; i += MAX_CHUNK_CHARS) {
+    const part = transcript.slice(i, i + MAX_CHUNK_CHARS).trim();
+    if (part) chunks.push(part);
+  }
+
+  const baseRows = chunks.map((content) => ({
+    demo_id: demoId,
+    content,
+    chunk_type: 'transcript' as const,
+    source: `video:${demoVideoId}`,
+  }));
+
+  let insertErr: unknown = null;
+  if (OPENAI_API_KEY && baseRows.length > 0) {
+    try {
+      const resp = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: OPENAI_EMBEDDING_MODEL,
+          input: chunks,
+        }),
+      });
+
+      if (resp.ok) {
+        const json = await resp.json();
+        const vectors: number[][] = (json?.data || []).map((d: any) => d?.embedding ?? []);
+        const rowsWithVectors = baseRows.map((row, idx) => ({
+          ...row,
+          vector_embedding: vectors[idx] ?? null,
+        }));
+        const { error } = await supabaseAdmin.from('knowledge_chunks').insert(rowsWithVectors);
+        insertErr = error;
+      } else {
+        console.error('OpenAI embeddings HTTP error:', resp.status, await resp.text());
+        const { error } = await supabaseAdmin.from('knowledge_chunks').insert(baseRows);
+        insertErr = error;
+      }
+    } catch (e) {
+      console.error('OpenAI embeddings request failed:', e);
+      const { error } = await supabaseAdmin.from('knowledge_chunks').insert(baseRows);
+      insertErr = error;
+    }
+  } else if (baseRows.length > 0) {
+    const { error } = await supabaseAdmin.from('knowledge_chunks').insert(baseRows);
+    insertErr = error;
+  }
+
+  if (insertErr) {
+    console.error('Error inserting transcript knowledge chunks:', insertErr);
+    await supabaseAdmin
+      .from('demo_videos')
+      .update({ processing_status: 'failed', processing_error: 'Failed to save transcript chunks' })
+      .eq('id', demoVideoId);
+    return new Response(JSON.stringify({ error: 'Failed to save transcript chunks' }), { status: 500 });
+  }
+
+  // Mark processing completed
+  await supabaseAdmin
+    .from('demo_videos')
+    .update({ processing_status: 'completed' })
+    .eq('id', demoVideoId);
+
+  return new Response(JSON.stringify({ success: true, transcript, demo_id: demoId, demo_video_id: demoVideoId }), {
     headers: { 'Content-Type': 'application/json' },
   });
 });

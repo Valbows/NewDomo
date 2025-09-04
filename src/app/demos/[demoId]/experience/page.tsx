@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
 import { TavusConversationCVI } from './components/TavusConversationCVI';
-import { InlineVideoPlayer, InlineVideoPlayerHandle } from './components/InlineVideoPlayer';
+import { InlineVideoPlayer } from './components/InlineVideoPlayer';
+import type { InlineVideoPlayerHandle } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { getErrorMessage, logError } from '@/lib/errors';
 
@@ -81,9 +82,18 @@ interface Demo {
   cta_link?: string;
 }
 
+// CTA override payload shape from Realtime broadcasts
+type CtaOverrides = {
+  cta_title?: string | null;
+  cta_message?: string | null;
+  cta_button_text?: string | null;
+  cta_button_url?: string | null;
+};
+
 export default function DemoExperiencePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const demoId = params.demoId as string;
   const [demo, setDemo] = useState<Demo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,8 +102,9 @@ export default function DemoExperiencePage() {
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [showCTA, setShowCTA] = useState(false);
+  const [ctaOverrides, setCtaOverrides] = useState<CtaOverrides | null>(null);
   const [videoTitles, setVideoTitles] = useState<string[]>([]);
-  const videoPlayerRef = useRef<InlineVideoPlayerHandle>(null);
+  const videoPlayerRef = useRef<InlineVideoPlayerHandle | null>(null);
   const [currentVideoTitle, setCurrentVideoTitle] = useState<string | null>(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState<number | null>(null);
   const [alert, setAlert] = useState<{ type: 'error' | 'info' | 'success'; message: string } | null>(null);
@@ -101,6 +112,14 @@ export default function DemoExperiencePage() {
   const suppressFetchUntilRef = useRef<number>(0);
   const suppressReasonRef = useRef<'close' | 'pause' | 'resume' | null>(null);
   const pausedPositionRef = useRef<number>(0);
+  const forceNew = (() => {
+    try {
+      const val = (searchParams?.get('forceNew') || searchParams?.get('force') || '').toString().toLowerCase();
+      return val === '1' || val === 'true' || val === 'yes';
+    } catch {
+      return false;
+    }
+  })();
 
   // Fetch demo data and start conversation
   useEffect(() => {
@@ -192,67 +211,55 @@ export default function DemoExperiencePage() {
           console.warn('⚠️ Unexpected error loading video titles', e);
         }
 
-        // Resolve conversation URL; prefer metadata, else attempt to start a new conversation
-        let candidateUrl: string | null = processedDemoData.metadata?.tavusShareableLink || null;
-        if (!candidateUrl && processedDemoData.tavus_conversation_id) {
-          // Legacy shareable link is not a Daily URL; only use as a display fallback, not for Daily join
-          candidateUrl = `https://app.tavus.io/conversation/${processedDemoData.tavus_conversation_id}`;
-        }
-
-        if (candidateUrl && isDailyRoomUrl(candidateUrl)) {
-          console.log('🔗 Using valid Daily conversation URL:', candidateUrl);
-          setConversationUrl(candidateUrl);
-          setUiState(UIState.CONVERSATION);
-        } else {
-          // Attempt to start a new conversation to obtain a Daily room URL
-          console.log('🚀 Starting a new conversation to obtain a Daily room URL');
+        // Always obtain a fresh/validated Daily conversation URL from the server
+        // Server will reuse valid existing rooms or create a new one if stale
+        console.log('🚀 Requesting Daily conversation URL from API (ignoring saved metadata)');
+        try {
+          // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
+          const win: any = typeof window !== 'undefined' ? window : undefined;
+          if (win) {
+            win.__startConvInflight = win.__startConvInflight || new Map<string, Promise<any>>();
+          }
+          const inflight: Map<string, Promise<any>> | undefined = win?.__startConvInflight;
+          let startPromise = inflight?.get(processedDemoData.id);
+          if (!startPromise) {
+            startPromise = fetch('/api/start-conversation', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ demoId: processedDemoData.id, forceNew }),
+            }).then(async (resp) => {
+              if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw err;
+              }
+              return resp.json();
+            });
+            inflight?.set(processedDemoData.id, startPromise);
+          } else {
+            console.log('⏳ Waiting for in-flight conversation start (deduped)');
+          }
+          let data: any;
           try {
-            // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
-            const win: any = typeof window !== 'undefined' ? window : undefined;
-            if (win) {
-              win.__startConvInflight = win.__startConvInflight || new Map<string, Promise<any>>();
-            }
-            const inflight: Map<string, Promise<any>> | undefined = win?.__startConvInflight;
-            let startPromise = inflight?.get(processedDemoData.id);
-            if (!startPromise) {
-              startPromise = fetch('/api/start-conversation', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ demoId: processedDemoData.id }),
-              }).then(async (resp) => {
-                if (!resp.ok) {
-                  const err = await resp.json().catch(() => ({}));
-                  throw err;
-                }
-                return resp.json();
-              });
-              inflight?.set(processedDemoData.id, startPromise);
-            } else {
-              console.log('⏳ Waiting for in-flight conversation start (deduped)');
-            }
-            let data: any;
-            try {
-              data = await startPromise;
-            } finally {
-              inflight?.delete(processedDemoData.id);
-            }
-            const url = data?.conversation_url as string | undefined;
-            if (url && isDailyRoomUrl(url)) {
-              console.log('✅ Received Daily conversation URL from API:', url);
-              setConversationUrl(url);
-              setUiState(UIState.CONVERSATION);
-            } else {
-              console.warn('Received non-Daily conversation URL from API:', url);
-              setError('Conversation URL invalid. Please verify Tavus configuration.');
-              setLoading(false);
-              return;
-            }
-          } catch (e) {
-            logError(e, 'Error starting conversation');
-            setError(getErrorMessage(e, 'Failed to start conversation'));
+            data = await startPromise;
+          } finally {
+            inflight?.delete(processedDemoData.id);
+          }
+          const url = data?.conversation_url as string | undefined;
+          if (url && isDailyRoomUrl(url)) {
+            console.log('✅ Received Daily conversation URL from API:', url);
+            setConversationUrl(url);
+            setUiState(UIState.CONVERSATION);
+          } else {
+            console.warn('Received non-Daily conversation URL from API:', url);
+            setError('Conversation URL invalid. Please verify Tavus configuration.');
             setLoading(false);
             return;
           }
+        } catch (e) {
+          logError(e, 'Error starting conversation');
+          setError(getErrorMessage(e, 'Failed to start conversation'));
+          setLoading(false);
+          return;
         }
       } catch (err: unknown) {
         logError(err, 'Error fetching demo');
@@ -263,6 +270,64 @@ export default function DemoExperiencePage() {
     };
 
     fetchDemoAndStartConversation();
+  }, [demoId]);
+
+  // Subscribe to Supabase Realtime broadcasts for this demo
+  useEffect(() => {
+    if (!demoId) return;
+
+    const channelName = `demo-${demoId}`;
+    const channel = supabase.channel(channelName);
+
+    channel
+      .on('broadcast', { event: 'play_video' }, (payload: any) => {
+        try {
+          const url = payload?.payload?.url as string | undefined;
+          console.log('Realtime: play_video received', payload);
+          if (url && typeof url === 'string') {
+            // New video source: reset any saved paused position
+            pausedPositionRef.current = 0;
+            setPlayingVideoUrl(url);
+            setUiState(UIState.VIDEO_PLAYING);
+            // Ensure CTA is hidden while playing and clear any alert banners
+            setShowCTA(false);
+            setAlert(null);
+          }
+        } catch (e) {
+          console.warn('Realtime play_video handler error', e);
+        }
+      })
+      .on('broadcast', { event: 'show_trial_cta' }, (payload: any) => {
+        try {
+          console.log('Realtime: show_trial_cta received', payload);
+          const p = payload?.payload || {};
+          setCtaOverrides({
+            cta_title: p?.cta_title ?? undefined,
+            cta_message: p?.cta_message ?? undefined,
+            cta_button_text: p?.cta_button_text ?? undefined,
+            cta_button_url: p?.cta_button_url ?? undefined,
+          });
+          setShowCTA(true);
+        } catch (e) {
+          console.warn('Realtime show_trial_cta handler error', e);
+          setShowCTA(true);
+        }
+      })
+      .on('broadcast', { event: 'analytics_updated' }, (payload: any) => {
+        console.log('Realtime: analytics_updated received', payload?.payload);
+        // Currently no analytics UI here; placeholder for potential refresh logic
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Client Realtime: SUBSCRIBED to ${channelName}`);
+        }
+      });
+
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+    };
   }, [demoId]);
 
   // Handle real-time tool calls from Daily.co
@@ -512,10 +577,10 @@ export default function DemoExperiencePage() {
   };
 
   // Derive CTA values with fallbacks to admin-level columns
-  const ctaTitle = demo?.cta_title || demo?.metadata?.ctaTitle || 'Ready to Get Started?';
-  const ctaMessage = demo?.cta_message || demo?.metadata?.ctaMessage || demo?.cta_text || 'Take the next step today!';
-  const ctaButtonText = demo?.cta_button_text || demo?.metadata?.ctaButtonText || 'Start Free Trial';
-  const ctaButtonUrl = demo?.cta_button_url || demo?.metadata?.ctaButtonUrl || demo?.cta_link || 'https://bolt.new';
+  const ctaTitle = ctaOverrides?.cta_title || demo?.cta_title || demo?.metadata?.ctaTitle || 'Ready to Get Started?';
+  const ctaMessage = ctaOverrides?.cta_message || demo?.cta_message || demo?.metadata?.ctaMessage || demo?.cta_text || 'Take the next step today!';
+  const ctaButtonText = ctaOverrides?.cta_button_text || demo?.cta_button_text || demo?.metadata?.ctaButtonText || 'Start Free Trial';
+  const ctaButtonUrl = ctaOverrides?.cta_button_url || demo?.cta_button_url || demo?.metadata?.ctaButtonUrl || demo?.cta_link || 'https://bolt.new';
 
   return (
     <CVIProvider>

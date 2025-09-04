@@ -11,7 +11,7 @@ interface Demo {
   id: string;
   name: string;
   user_id: string;
-  tavus_conversation_id: string;
+  tavus_conversation_id: string | null;
   metadata: {
     agentName?: string;
     agentPersonality?: string;
@@ -69,7 +69,7 @@ export default function DemoExperiencePage() {
             setConversationUrl(demoData.metadata.tavusShareableLink);
           } else {
             // Fallback: construct URL from conversation ID
-            const fallbackUrl = `https://tavus.daily.co/${demoData.tavus_conversation_id}`;
+            const fallbackUrl = `https://app.tavus.io/conversation/${demoData.tavus_conversation_id}`;
             console.log('🔗 Using fallback conversation URL:', fallbackUrl);
             setConversationUrl(fallbackUrl);
           }

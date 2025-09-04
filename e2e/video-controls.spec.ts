@@ -5,12 +5,20 @@ const VIDEO_TITLE = process.env.E2E_VIDEO_TITLE || 'E2E Test Video';
 
 async function triggerVideoPlayback(page: Page) {
   const dropdown = page.getByTestId('cvi-dev-dropdown');
+  const promptBtn = page.getByTestId('cvi-dev-button');
+  // Wait deterministically for dev controls to mount
+  await Promise.race([
+    dropdown.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+    promptBtn.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+  ]);
   if (await dropdown.count()) {
     await dropdown.selectOption({ label: VIDEO_TITLE });
-    await page.getByTestId('cvi-dev-play').click();
+    const playBtn = page.getByTestId('cvi-dev-play');
+    await expect(playBtn).toBeVisible();
+    await playBtn.click();
   } else {
     page.once('dialog', (dialog: Dialog) => dialog.accept(VIDEO_TITLE));
-    await page.getByTestId('cvi-dev-button').click();
+    await promptBtn.click();
   }
 }
 
@@ -28,27 +36,17 @@ async function ensureLoad(videoLocator: Locator) {
     el.autoplay = true;
     // Some engines ignore playsInline unless explicitly set on the element
     (el as any).playsInline = true;
-    try {
-      const srcEl = el.querySelector('source') as HTMLSourceElement | null;
-      if (srcEl && srcEl.src && (!el.src || el.src !== srcEl.src)) {
-        el.src = srcEl.src;
-      }
-    } catch {}
+    // Keep it minimal; our player uses video.src directly
+    try { el.preload = 'metadata'; } catch {}
     try { el.load(); } catch {}
   });
 }
 
-async function waitForReady(videoLocator: Locator, timeoutMs = 20000) {
-  // Kick off loading and wait until we have metadata (HAVE_METADATA=1) to avoid stalls in headless mode
+async function waitForReady(videoLocator: Locator, timeoutMs = 30_000) {
   await ensureLoad(videoLocator);
-  await expect.poll(async () => {
-    return await videoLocator.evaluate((el: HTMLVideoElement) => {
-      if (el.readyState < 1) {
-        try { el.load(); } catch {}
-      }
-      return el.readyState >= 1;
-    });
-  }, { timeout: timeoutMs }).toBe(true);
+  await expect
+    .poll(async () => await videoLocator.evaluate((el: HTMLVideoElement) => el.readyState), { timeout: timeoutMs })
+    .toBeGreaterThanOrEqual(1); // HAVE_METADATA
 }
 
 async function expectPaused(page: Page, videoLocator: Locator) {

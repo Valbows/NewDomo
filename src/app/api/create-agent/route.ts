@@ -107,10 +107,26 @@ async function handlePOST(req: NextRequest) {
       });
     }
 
-    // Read base system prompt and enhance it with knowledge
+    // Read base system prompt and enhance it with identity, objectives, knowledge, and videos
     const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
     const baseSystemPrompt = fs.readFileSync(promptPath, 'utf-8');
-    const enhancedSystemPrompt = baseSystemPrompt + knowledgeContext + videosContext;
+    // Identity section sourced from UI inputs
+    const identitySection = `\n\n## AGENT PROFILE\n- Name: ${agentName}\n- Personality: ${agentPersonality || 'Friendly and helpful assistant.'}\n- Initial Greeting (use at start of conversation): ${agentGreeting || 'Hello! How can I help you with the demo today?'}\n`;
+
+    // Objectives section sourced from demo metadata (3–5 concise goals)
+    const objectivesList: string[] = Array.isArray(demo.metadata?.objectives)
+      ? (demo.metadata!.objectives as string[]).filter((s) => typeof s === 'string' && s.trim()).slice(0, 5)
+      : [];
+    const objectivesSection = objectivesList.length
+      ? `\n\n## DEMO OBJECTIVES\nFollow these objectives throughout the conversation. Weave them naturally into dialog and video choices.\n${objectivesList
+          .map((o, i) => `- (${i + 1}) ${o.trim()}`)
+          .join('\n')}\n`
+      : '';
+
+    // Language handling guidance (multilingual smart detection)
+    const languageSection = `\n\n## LANGUAGE HANDLING\n- Automatically detect the user's language from their utterances and respond in that language.\n- Keep all tool calls and their arguments (function names, video titles) EXACT and un-translated.\n- Do not ask the user to choose a language; infer it from context and switch seamlessly while honoring all guardrails.\n`;
+
+    const enhancedSystemPrompt = baseSystemPrompt + identitySection + objectivesSection + languageSection + knowledgeContext + videosContext;
 
     console.log('Enhanced system prompt length:', enhancedSystemPrompt.length);
     console.log('Knowledge chunks:', knowledgeChunks?.length || 0);
@@ -217,6 +233,10 @@ async function handlePOST(req: NextRequest) {
         );
       }
     }
+    // Debug: log tool enablement and included tool names
+    try {
+      console.log('Tavus tools enabled:', tavusToolsEnabled, 'Tool names:', tools.map((t: any) => t?.function?.name).filter(Boolean));
+    } catch {}
 
     // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
     const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
