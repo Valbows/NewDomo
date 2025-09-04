@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(request: Request) {
@@ -43,7 +43,7 @@ async function handlePOST(request: Request) {
   }
 }
 
-export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
   method: 'POST',
   parameterizedRoute: '/api/tavus',
 });

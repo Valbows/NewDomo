@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { createClient } from '@/utils/supabase/server';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { v4 as uuidv4 } from 'uuid';
@@ -306,7 +306,7 @@ async function handlePOST(req: NextRequest) {
   }
 }
 
-export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
   method: 'POST',
   parameterizedRoute: '/api/create-agent',
 });

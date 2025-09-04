@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handleGET(req: NextRequest) {
@@ -51,7 +51,7 @@ async function handleGET(req: NextRequest) {
   }
 }
 
-export const GET = Sentry.wrapRouteHandlerWithSentry(handleGET, {
+export const GET = wrapRouteHandlerWithSentry(handleGET, {
   method: 'GET',
   parameterizedRoute: '/api/test-video-url',
 });

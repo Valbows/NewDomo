@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
 
@@ -141,7 +141,7 @@ async function handlePOST(req: NextRequest) {
   }
 }
 
-export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
   method: 'POST',
   parameterizedRoute: '/api/tavus-webhook',
 });

@@ -1,4 +1,11 @@
-import * as Sentry from '@sentry/nextjs';
+// Conditional Sentry import - fallback gracefully if not available
+let Sentry: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  Sentry = require('@sentry/nextjs');
+} catch (e) {
+  // Sentry not available; will fallback to console logging only
+}
 
 // Centralized, typed error utilities
 // Use these helpers to avoid `any` in catch blocks and ensure consistent messaging
@@ -32,7 +39,7 @@ export function logError(error: unknown, context?: string) {
 
   // Forward to Sentry in production only. This is safe even if Sentry isn't initialized.
   try {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && Sentry) {
       Sentry.withScope((scope) => {
         if (context) scope.setContext('logError', { context });
         scope.setLevel('error');

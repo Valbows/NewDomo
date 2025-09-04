@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 // Validate that a URL points to a Daily room
@@ -262,7 +262,7 @@ async function handlePOST(req: NextRequest) {
   }
 }
 
-export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
   method: 'POST',
   parameterizedRoute: '/api/start-conversation',
 });

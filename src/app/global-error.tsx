@@ -1,7 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import * as Sentry from '@sentry/nextjs';
+
+// Conditional Sentry import - fallback gracefully if not available
+let Sentry: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  Sentry = require('@sentry/nextjs');
+} catch (e) {
+  // Sentry not available; will fallback to simple error handling
+}
 
 export default function GlobalError({
   error,
@@ -18,10 +26,18 @@ export default function GlobalError({
     console.error('GlobalError captured:', error);
   }, [error]);
 
+  // Fallback component if Sentry is not available
+  const ErrorFallback = ({ children }: { children: React.ReactNode }) => {
+    if (Sentry?.ErrorBoundary) {
+      return <Sentry.ErrorBoundary fallback={<p>Something went wrong.</p>}>{children}</Sentry.ErrorBoundary>;
+    }
+    return <>{children}</>;
+  };
+
   return (
     <html>
       <body>
-        <Sentry.ErrorBoundary fallback={<p>Something went wrong.</p>}>
+        <ErrorFallback>
           <div style={{ padding: 24 }}>
             <h2 style={{ fontWeight: 600, marginBottom: 12 }}>Something went wrong</h2>
             <button
@@ -36,7 +52,7 @@ export default function GlobalError({
               Try again
             </button>
           </div>
-        </Sentry.ErrorBoundary>
+        </ErrorFallback>
       </body>
     </html>
   );

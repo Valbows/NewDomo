@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handleGET() {
@@ -31,7 +31,7 @@ async function handleGET() {
   }
 }
 
-export const GET = Sentry.wrapRouteHandlerWithSentry(handleGET, {
+export const GET = wrapRouteHandlerWithSentry(handleGET, {
   method: 'GET',
   parameterizedRoute: '/api/elevenlabs/voices',
 });

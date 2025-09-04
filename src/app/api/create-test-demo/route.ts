@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import * as Sentry from '@sentry/nextjs';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
@@ -144,12 +144,12 @@ async function handleGET(req: NextRequest) {
   }
 }
 
-export const POST = Sentry.wrapRouteHandlerWithSentry(handlePOST, {
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
   method: 'POST',
   parameterizedRoute: '/api/create-test-demo',
 });
 
-export const GET = Sentry.wrapRouteHandlerWithSentry(handleGET, {
+export const GET = wrapRouteHandlerWithSentry(handleGET, {
   method: 'GET',
   parameterizedRoute: '/api/create-test-demo',
 });
