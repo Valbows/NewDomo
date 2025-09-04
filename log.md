@@ -54,6 +54,16 @@ This log tracks important architectural decisions, errors encountered, and solut
   - Add CI/lint rules to reject direct `Sentry.captureException` and `console.error` in `src/app/api/**` to prevent regressions.
   - Keep adding unit tests for new error-handling branches as features evolve.
 
+### Daily SDK Upgrade to 0.83.1 (2025-09-01)
+- **Decision**: Upgrade `@daily-co/daily-js` to `^0.83.1` and remove any CDN-based loading to address Chrome 140 media track issues and ensure version consistency.
+- **Implementation**:
+  - Bumped dependency in `package.json`.
+  - Confirmed imports from npm in `src/app/demos/[demoId]/experience/components/DailyCallSingleton.ts` and `src/components/cvi/components/cvi-provider/index.tsx`.
+  - Verified no remaining `window.DailyIframe` or unpkg CDN usage across the app.
+- **Next Steps**:
+  - Install deps and run unit/E2E tests.
+  - Manual validation on Chrome 140: start a call and confirm it no longer ends immediately upon speech.
+
 ## Errors & Solutions
 
 - **Date**: 2025-08-18
@@ -1198,6 +1208,23 @@ if (toolName === 'play_video') {
  - Tests: Jest 7/7 passed; Playwright 6/6 passed (pause does not auto-resume; close returns to conversation without reopening).
  - Logging: Emits console warnings on suppressed duplicates/quiescence to aid field debugging.
 
-### Future Work
- - Add retry/backoff on `play()` failures with telemetry breadcrumbs.
- - Consider capturing `videoElement.error` codes in logs for analytics.
+ ### Errors & Solutions (2025-09-04)
+ - **Date**: 2025-09-04
+ - **Component**: Jest Tests / Tavus Tool Inclusion (Create Agent)
+ - **Error Description**: TypeScript typing mismatch in `global.fetch` Jest mocks and missing `supabase.from('demos').update(...)` stub caused `500` responses in `create-agent` tool inclusion tests.
+ - **Root Cause**:
+   1) Fetch mocks used `(input: RequestInfo | URL, init?: RequestInit)` which conflicts with Jest mock signature expectations.
+   2) Supabase server client mock did not implement `update(...).eq(...)` for the `demos` table, leading the route to throw.
+ - **Solution**:
+   - Switched all fetch mocks in `__tests__/api.create-agent-and-start-conversation.test.ts` to `(...args: unknown[])` and safely destructured `input`/`init` inside the mock.
+   - Added `update: () => ({ eq: () => Promise.resolve({ data: null, error: null }) })` to the `demos` table mock in the three tool-inclusion scenarios.
+ - **Verification**:
+   - Targeted file run: 6/6 tests passed for create-agent and start-conversation.
+   - Full Jest run: 12/12 suites, 74/74 tests passing.
+ - **Prevention**:
+   - Prefer a shared test helper for `fetch` mocks that uses variadic args.
+   - Provide a reusable Supabase table mock factory with common CRUD (`select/insert/update/delete`) stubs.
+
+ ### Future Work
+  - Add retry/backoff on `play()` failures with telemetry breadcrumbs.
+  - Consider capturing `videoElement.error` codes in logs for analytics.
