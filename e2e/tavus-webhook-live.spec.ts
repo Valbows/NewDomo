@@ -17,7 +17,27 @@ test.describe('Tavus webhook live ingestion', () => {
     await page.getByLabel(/Email address/i).fill('test@example.com');
     await page.getByLabel(/Password/i).fill('password123');
     await page.getByRole('button', { name: /^Sign in$/i }).click();
-    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible({ timeout: 30_000 });
+    // Wait for navigation to dashboard or surface sign-in errors for debugging
+    await page.waitForLoadState('networkidle');
+    try {
+      await Promise.race([
+        page.waitForURL(/\/dashboard$/, { timeout: 30_000 }),
+        (async () => {
+          // If an auth error message appears, throw with details
+          const errorMsg = page.locator('form >> text=/invalid|error|failed/i').first();
+          await errorMsg.waitFor({ timeout: 30_000 });
+          const msg = (await errorMsg.textContent())?.trim() || 'Sign-in error';
+          throw new Error(`Sign-in failed: ${msg}`);
+        })(),
+      ]);
+    } catch (err) {
+      const visibleErr =
+        ((await page.locator('form >> text=/invalid|error|failed/i').first().textContent()) || '').trim();
+      throw new Error(
+        `Did not reach /dashboard after sign-in within 30s.${visibleErr ? ' Visible error: ' + visibleErr : ''}`
+      );
+    }
+    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible({ timeout: 15_000 });
 
     // 2) Use the provided demoId directly
     const demoId = '42beb287-f385-4100-86a4-bfe7008d531b';
