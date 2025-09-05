@@ -1228,3 +1228,166 @@ if (toolName === 'play_video') {
  ### Future Work
   - Add retry/backoff on `play()` failures with telemetry breadcrumbs.
   - Consider capturing `videoElement.error` codes in logs for analytics.
+
+## Tavus Conversation Data Integration (2025-01-10) - Kelvin
+
+### Summary
+Successfully integrated Tavus conversation data (transcripts and perception analysis) into the Supabase database and frontend Reporting & Analytics tab. This enables comprehensive conversation tracking and analysis for demo sessions.
+
+### Issues Fixed
+
+#### 1. Missing TAVUS_REPLICA_ID Configuration
+- **Date**: 2025-01-10
+- **Component**: Environment Configuration / Tavus Agent
+- **Error Description**: "Missing replica_id: Set TAVUS_REPLICA_ID or assign a default replica to the persona" when starting demo conversations
+- **Root Cause**: Missing `TAVUS_REPLICA_ID` environment variable in `.env.local`
+- **Solution**: 
+  - Created comprehensive `.env.local` file with all required Tavus and Supabase environment variables
+  - Provided instructions for obtaining replica ID from Tavus API
+  - Added fallback to persona's `default_replica_id` if environment variable not set
+- **Prevention**: Document all required environment variables in `.env.example`
+
+#### 2. Database Schema for Conversation Details
+- **Date**: 2025-01-10
+- **Component**: Supabase Database Schema
+- **Error Description**: No table structure to store detailed conversation data from Tavus
+- **Root Cause**: Missing database table for conversation transcripts and perception analysis
+- **Solution**:
+  - Created `supabase/migrations/20241210000000_add_conversation_details.sql`
+  - Added `conversation_details` table with columns for:
+    - `tavus_conversation_id` (unique identifier)
+    - `demo_id` (foreign key to demos table)
+    - `conversation_name`, `status`, `created_at`, `updated_at`, `completed_at`
+    - `duration` (in seconds)
+    - `transcript` (JSONB for flexible transcript data)
+    - `perception_analysis` (JSONB for perception metrics)
+  - Implemented Row Level Security (RLS) policies for user data isolation
+  - Added proper indexes for performance
+- **Prevention**: Always create database schema before implementing features that depend on it
+
+#### 3. Tavus API Data Retrieval Issues
+- **Date**: 2025-01-10
+- **Component**: Tavus API Integration
+- **Error Description**: Transcript and perception analysis data not being retrieved from Tavus API
+- **Root Cause**: 
+  - Attempting to use non-existent endpoints (`/transcript`, `/perception`)
+  - Missing `?verbose=true` parameter on conversation endpoint
+  - Data nested within `events` array in verbose response
+- **Solution**:
+  - Updated API calls to use `?verbose=true` parameter on `/v2/conversations/{id}` endpoint
+  - Implemented parsing logic to extract data from `events` array:
+    - `application.transcription_ready` events for transcript data
+    - `application.perception_analysis` events for perception analysis
+  - Added comprehensive logging for debugging API responses
+- **Prevention**: Always verify API endpoints and response structures before implementation
+
+#### 4. Perception Analysis Configuration Requirement
+- **Date**: 2025-01-10
+- **Component**: Tavus Persona Configuration
+- **Error Description**: Perception analysis not being generated for conversations
+- **Root Cause**: Persona not configured with `perception_model: "raven-0"` (required for perception analysis)
+- **Solution**:
+  - Created `src/app/api/check-persona-config/route.ts` endpoint to check persona configuration
+  - Added functionality to update persona `perception_model` to `raven-0`
+  - Implemented both GET (check) and POST (update) methods
+  - Added proper error handling and validation
+- **Prevention**: Document all configuration requirements for third-party services
+
+#### 5. Frontend Data Display Issues
+- **Date**: 2025-01-10
+- **Component**: Reporting & Analytics Frontend
+- **Error Description**: Conversation details not displaying in frontend despite being stored in database
+- **Root Cause**: 
+  - Mismatch between stored data format and frontend parsing logic
+  - Missing proper handling for different transcript and perception analysis formats
+  - Incomplete data fetching from `conversation_details` table
+- **Solution**:
+  - Updated `src/app/demos/[demoId]/configure/components/Reporting.tsx` with:
+    - Proper data fetching from `conversation_details` table
+    - Enhanced `renderTranscript()` function to handle Tavus transcript format (array of `{role, content}` objects)
+    - Enhanced `renderPerceptionAnalysis()` function to handle both string and object formats
+    - Added expandable conversation cards with transcript and perception analysis sections
+    - Implemented "Sync from Tavus" functionality
+  - Added proper error handling and loading states
+  - Created robust display logic for various data formats
+- **Prevention**: Always test frontend components with actual data formats from APIs
+
+#### 6. Webhook Data Ingestion
+- **Date**: 2025-01-10
+- **Component**: Tavus Webhook Handler
+- **Error Description**: Webhook events not properly storing transcript and perception data
+- **Root Cause**: Webhook handler not parsing `events` array from incoming webhook payloads
+- **Solution**:
+  - Updated `src/app/api/tavus-webhook/handler.ts` to extract transcript and perception data from webhook events
+  - Implemented same parsing logic as sync API for consistency
+  - Added proper error handling for webhook data processing
+  - Ensured data is stored in `conversation_details` table during webhook processing
+- **Prevention**: Keep webhook and sync API data processing logic in sync
+
+#### 7. Data Synchronization API
+- **Date**: 2025-01-10
+- **Component**: Conversation Data Sync API
+- **Error Description**: No API endpoint to manually sync conversation data from Tavus
+- **Root Cause**: Missing API endpoint for data synchronization
+- **Solution**:
+  - Created `src/app/api/sync-tavus-conversations/route.ts` with:
+    - GET method to sync all conversations for a demo
+    - POST method to sync specific conversation
+    - Proper authentication and error handling
+    - Comprehensive logging for debugging
+  - Implemented upsert logic to handle both new and existing conversations
+  - Added support for both individual conversation sync and bulk sync
+- **Prevention**: Always provide both automated (webhook) and manual (API) data sync options
+
+### Technical Implementation Details
+
+#### Database Schema
+```sql
+CREATE TABLE IF NOT EXISTS public.conversation_details (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tavus_conversation_id TEXT NOT NULL UNIQUE,
+  demo_id UUID REFERENCES public.demos(id) ON DELETE CASCADE NOT NULL,
+  conversation_name TEXT,
+  status TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  duration INTEGER, -- in seconds
+  transcript JSONB,
+  perception_analysis JSONB
+);
+```
+
+#### API Endpoints Created
+1. **`/api/sync-tavus-conversations`** - Sync conversation data from Tavus
+2. **`/api/check-persona-config`** - Check and update persona configuration
+3. **`/api/debug-tavus-conversation`** - Debug Tavus API responses
+4. **`/api/debug-conversation-data`** - Debug stored conversation data
+
+#### Frontend Components Updated
+- **`Reporting.tsx`** - Enhanced with conversation details display
+- **`page.tsx`** - Integrated Reporting component in configure page
+
+### Key Learnings
+1. **Tavus API Structure**: Data is nested in `events` array with specific event types
+2. **Perception Analysis**: Requires `perception_model: "raven-0"` configuration
+3. **Data Formats**: Transcripts are arrays of `{role, content}` objects
+4. **Webhook Integration**: Must parse same data structure as sync API
+5. **Frontend Flexibility**: Must handle multiple data formats gracefully
+
+### Prevention Guidelines
+1. Always verify API response structures before implementation
+2. Document all configuration requirements for third-party services
+3. Test frontend components with actual API data formats
+4. Keep webhook and sync API logic consistent
+5. Provide both automated and manual data sync options
+6. Implement comprehensive logging for debugging
+7. Use JSONB for flexible data storage when dealing with varying API formats
+
+### Results
+- ✅ Conversation data successfully stored in Supabase
+- ✅ Frontend displays transcripts and perception analysis
+- ✅ Manual sync functionality working
+- ✅ Webhook integration for real-time updates
+- ✅ Persona configuration management
+- ✅ Comprehensive error handling and logging

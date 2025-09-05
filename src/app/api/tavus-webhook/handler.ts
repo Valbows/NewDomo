@@ -6,6 +6,92 @@ import { verifyHmacSha256Signature } from '@/lib/security/webhooks';
 import { shouldIngestEvent, ingestAnalyticsForEvent } from '@/lib/tavus/webhook_ingest';
 import crypto from 'crypto';
 
+// Store detailed conversation data (transcript, perception) in conversation_details table
+async function storeDetailedConversationData(supabase: any, conversationId: string, event: any) {
+  if (!conversationId) return;
+
+  try {
+    // Find the demo associated with this conversation
+    const { data: demo, error: demoError } = await supabase
+      .from('demos')
+      .select('id')
+      .eq('tavus_conversation_id', conversationId)
+      .single();
+
+    if (demoError || !demo) {
+      console.warn(`No demo found for conversation ${conversationId}`);
+      return;
+    }
+
+    // Extract transcript and perception data from the webhook event
+    // Handle both direct event data and events array format
+    let transcript = event?.data?.transcript || 
+                     event?.transcript || 
+                     event?.data?.messages ||
+                     event?.messages ||
+                     null;
+                     
+    let perceptionAnalysis = event?.data?.perception || 
+                            event?.perception ||
+                            event?.data?.analysis ||
+                            event?.analysis ||
+                            event?.data?.analytics ||
+                            event?.analytics ||
+                            null;
+
+    // Also check if data is in events array format (like API response)
+    const events = event?.events || event?.data?.events || [];
+    if (events.length > 0) {
+      const transcriptEvent = events.find((e: any) => 
+        e.event_type === 'application.transcription_ready'
+      );
+      if (transcriptEvent?.properties?.transcript) {
+        transcript = transcriptEvent.properties.transcript;
+      }
+      
+      const perceptionEvent = events.find((e: any) => 
+        e.event_type === 'application.perception_analysis'
+      );
+      if (perceptionEvent?.properties?.analysis) {
+        perceptionAnalysis = perceptionEvent.properties.analysis;
+      }
+    }
+
+    // Only update if we have transcript or perception data
+    if (!transcript && !perceptionAnalysis) {
+      console.log('No transcript or perception data in webhook event');
+      return;
+    }
+
+    console.log(`📊 Storing detailed conversation data for ${conversationId}:`);
+    console.log(`- Transcript entries: ${transcript ? (Array.isArray(transcript) ? transcript.length : 'present') : 'none'}`);
+    console.log(`- Perception data: ${perceptionAnalysis ? 'present' : 'none'}`);
+
+    // Upsert the conversation details
+    const { error: upsertError } = await supabase
+      .from('conversation_details')
+      .upsert({
+        tavus_conversation_id: conversationId,
+        demo_id: demo.id,
+        transcript: transcript,
+        perception_analysis: perceptionAnalysis,
+        status: 'completed', // Mark as completed when we receive webhook
+        completed_at: new Date().toISOString()
+      }, {
+        onConflict: 'tavus_conversation_id'
+      });
+
+    if (upsertError) {
+      console.error('Failed to store detailed conversation data:', upsertError);
+    } else {
+      console.log('✅ Successfully stored detailed conversation data');
+    }
+
+  } catch (error) {
+    console.error('Error storing detailed conversation data:', error);
+  }
+}
+
 // Testable handler for Tavus webhook; used by tests directly and by the route wrapper.
 export async function handlePOST(req: NextRequest) {
   const supabase = createClient();
@@ -79,7 +165,11 @@ export async function handlePOST(req: NextRequest) {
           return NextResponse.json({ received: true });
         }
 
+        // Store in legacy format (metadata.analytics) for backward compatibility
         await ingestAnalyticsForEvent(supabase, conversation_id, event);
+        
+        // ALSO store in detailed conversation_details table
+        await storeDetailedConversationData(supabase, conversation_id, event);
 
         // After successful ingestion, broadcast an update so UIs can refresh reporting in real-time
         try {
