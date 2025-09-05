@@ -32,7 +32,44 @@ async function handlePOST(req: NextRequest) {
       .single();
 
     if (existingDemo) {
-      console.log('Test demo already exists, skipping creation');
+      console.log('Test demo already exists, ensuring videos exist');
+
+      // Check if videos already exist for this demo
+      const { data: existingVideos, error: existingVideosError } = await supabase
+        .from('demo_videos')
+        .select('id')
+        .eq('demo_id', testDemoId);
+
+      if (existingVideosError) {
+        logError(existingVideosError, 'Existing videos check error');
+        return NextResponse.json(
+          { error: getErrorMessage(existingVideosError, 'Failed to check existing videos') },
+          { status: 500 }
+        );
+      }
+
+      if (!existingVideos || existingVideos.length === 0) {
+        console.log('No videos found for existing demo. Inserting default test videos...');
+        const testVideosWhenDemoExists = [
+          { demo_id: testDemoId, title: 'First Video',  storage_url: 'test-videos/first-video.mp4',  order_index: 1, duration_seconds: 120 },
+          { demo_id: testDemoId, title: 'Second Video', storage_url: 'test-videos/second-video.mp4', order_index: 2, duration_seconds: 180 },
+          { demo_id: testDemoId, title: 'Third Video',  storage_url: 'test-videos/third-video.mp4',  order_index: 3, duration_seconds: 150 },
+          { demo_id: testDemoId, title: 'Fourth Video', storage_url: 'test-videos/fourth-video.mp4', order_index: 4, duration_seconds: 200 },
+        ];
+
+        const { error: insertMissingVideosError } = await supabase
+          .from('demo_videos')
+          .insert(testVideosWhenDemoExists);
+
+        if (insertMissingVideosError) {
+          logError(insertMissingVideosError, 'Insert default videos for existing demo error');
+          return NextResponse.json(
+            { error: getErrorMessage(insertMissingVideosError, 'Failed to create test videos for existing demo') },
+            { status: 500 }
+          );
+        }
+      }
+
       return NextResponse.json({ 
         success: true, 
         message: 'Test demo already exists',
@@ -47,7 +84,7 @@ async function handlePOST(req: NextRequest) {
         id: testDemoId,
         name: 'Test Demo',
         user_id: testUserId,
-        tavus_conversation_id: 'test-conversation-id',
+        tavus_persona_id: null,
         video_storage_path: 'test-videos/',
         metadata: {
           // Required fields for database validation
@@ -60,9 +97,7 @@ async function handlePOST(req: NextRequest) {
           // Demo-specific fields
           agentName: 'Test Agent',
           agentPersonality: 'Helpful and knowledgeable',
-          agentGreeting: 'Hello! I can help you with demo videos.',
-          tavusAgentId: 'test-agent-id',
-          tavusShareableLink: 'https://tavus.daily.co/test-conversation-id'
+          agentGreeting: 'Hello! I can help you with demo videos.'
         }
       })
       .select()
@@ -80,30 +115,30 @@ async function handlePOST(req: NextRequest) {
       {
         demo_id: testDemoId,
         title: 'First Video',
-        description: 'Introduction to our platform',
         storage_url: 'test-videos/first-video.mp4',
-        metadata: { duration: 120, category: 'intro' }
+        order_index: 1,
+        duration_seconds: 120
       },
       {
         demo_id: testDemoId,
         title: 'Second Video',
-        description: 'Advanced features walkthrough',
         storage_url: 'test-videos/second-video.mp4',
-        metadata: { duration: 180, category: 'features' }
+        order_index: 2,
+        duration_seconds: 180
       },
       {
         demo_id: testDemoId,
         title: 'Third Video',
-        description: 'Integration examples',
         storage_url: 'test-videos/third-video.mp4',
-        metadata: { duration: 150, category: 'integration' }
+        order_index: 3,
+        duration_seconds: 150
       },
       {
         demo_id: testDemoId,
         title: 'Fourth Video',
-        description: 'Success stories and case studies',
         storage_url: 'test-videos/fourth-video.mp4',
-        metadata: { duration: 200, category: 'success' }
+        order_index: 4,
+        duration_seconds: 200
       }
     ];
 

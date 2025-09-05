@@ -1,4 +1,10 @@
 # Domo AI MVP - Interactive Demo Platform
+### Conversation URL Ends Immediately
+
+- Our CVI uses Daily.co. The client must join a valid Daily room URL (e.g., `https://tavus.daily.co/<room>`).
+- If an older `tavusShareableLink` points to `app.tavus.io`, the app will now automatically call `POST /api/start-conversation` to obtain a valid Daily room URL.
+- If starting a conversation fails with `Missing replica_id`, set `TAVUS_REPLICA_ID` or add a default replica to the persona in Tavus.
+
 
 A Next.js application that creates interactive AI-powered demos using Tavus Agent integration, Supabase backend, and ElevenLabs transcription services.
 
@@ -56,6 +62,10 @@ SUPABASE_SECRET_KEY=your_local_service_key
 # API Keys
 TAVUS_API_KEY=your_tavus_api_key
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
+
+# Tavus Persona/Replica
+# Optional: override the persona's default replica. If not set, we fetch persona.default_replica_id.
+TAVUS_REPLICA_ID=
 
 # Tavus LLM model override (optional, default: tavus-llama-4)
 TAVUS_LLM_MODEL=tavus-llama-4
@@ -203,6 +213,7 @@ Update your `.env.local` with production Supabase URLs and API keys.
 - Verify Tavus API key is correct
 - Check webhook URL configuration
 - Ensure persona is created successfully
+- Ensure the persona has a `default_replica_id` or set `TAVUS_REPLICA_ID` in your environment. Conversations require a replica.
 
 **Transcription Not Working**
 - Verify ElevenLabs API key

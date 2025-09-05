@@ -7,13 +7,21 @@ const VIDEO_TITLE = process.env.E2E_VIDEO_TITLE || 'E2E Test Video';
 // Helper to optionally use dropdown path or prompt path for manual tool call
 async function triggerVideoPlayback(page: Page) {
   const dropdown = page.getByTestId('cvi-dev-dropdown');
+  const promptBtn = page.getByTestId('cvi-dev-button');
+  // Wait deterministically for dev controls to mount
+  await Promise.race([
+    dropdown.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+    promptBtn.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+  ]);
   if (await dropdown.count()) {
     await dropdown.selectOption({ label: VIDEO_TITLE });
-    await page.getByTestId('cvi-dev-play').click();
+    const playBtn = page.getByTestId('cvi-dev-play');
+    await expect(playBtn).toBeVisible();
+    await playBtn.click();
   } else {
     // Fallback: prompt button
     page.once('dialog', (dialog: Dialog) => dialog.accept(VIDEO_TITLE));
-    await page.getByTestId('cvi-dev-button').click();
+    await promptBtn.click();
   }
 }
 
@@ -24,7 +32,9 @@ async function triggerVideoPlayback(page: Page) {
 // - Close video, conversation returns full screen, CTA shows
 
 test('PiP flow: conversation -> video -> close -> CTA', async ({ page }) => {
-  await page.goto(`/demos/${DEMO_ID}/experience`);
+  // Allow extra time for media/network before final assertions
+  test.setTimeout(60_000);
+  await page.goto(`/demos/${DEMO_ID}/experience`, { waitUntil: 'domcontentloaded' });
 
   const conversation = page.getByTestId('conversation-container');
   await expect(conversation).toBeVisible();
@@ -50,9 +60,10 @@ test('PiP flow: conversation -> video -> close -> CTA', async ({ page }) => {
   await expect(conversation).toHaveAttribute('data-pip', 'false');
 
   // CTA banner should now be visible
-  await expect(page.getByTestId('cta-banner')).toBeVisible();
+  const cta = page.getByTestId('cta-banner');
+  await expect(cta).toBeVisible();
 
   // Assert CTA anchor uses the ADMIN-configured URL (admin fields take precedence over metadata)
-  const ctaAnchor = page.locator('[data-testid="cta-banner"] a');
+  const ctaAnchor = cta.locator('a');
   await expect(ctaAnchor).toHaveAttribute('href', 'https://example.com/admin-start');
 });

@@ -49,3 +49,49 @@ jobs:
 
       - name: E2E Tests
         run: npm run e2e:ci
+
+  e2e-real:
+    name: Real Backend E2E
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Supabase and webhook secrets must be configured in repository settings
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      TAVUS_WEBHOOK_SECRET: ${{ secrets.TAVUS_WEBHOOK_SECRET }}
+      # Optional, but useful for tool call UI fallbacks
+      NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK: "true"
+      # Port used by playwright.real.config.ts (default 3102)
+      PW_E2E_PORT: "3102"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers and system deps
+        run: npx playwright install --with-deps
+
+      - name: Seed E2E user and demo
+        run: npm run seed:e2e
+
+      - name: Run real-backend E2E
+        run: npm run e2e:real
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-real
+          path: playwright-report
+          if-no-files-found: ignore

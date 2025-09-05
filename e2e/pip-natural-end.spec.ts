@@ -7,13 +7,21 @@ const VIDEO_TITLE = process.env.E2E_VIDEO_TITLE || 'E2E Test Video';
 // Helper to optionally use dropdown path or prompt path for manual tool call
 async function triggerVideoPlayback(page: Page) {
   const dropdown = page.getByTestId('cvi-dev-dropdown');
+  const promptBtn = page.getByTestId('cvi-dev-button');
+  // Wait deterministically for dev controls to mount
+  await Promise.race([
+    dropdown.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+    promptBtn.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {}),
+  ]);
   if (await dropdown.count()) {
     await dropdown.selectOption({ label: VIDEO_TITLE });
-    await page.getByTestId('cvi-dev-play').click();
+    const playBtn = page.getByTestId('cvi-dev-play');
+    await expect(playBtn).toBeVisible();
+    await playBtn.click();
   } else {
     // Fallback: prompt button
     page.once('dialog', (dialog: Dialog) => dialog.accept(VIDEO_TITLE));
-    await page.getByTestId('cvi-dev-button').click();
+    await promptBtn.click();
   }
 }
 

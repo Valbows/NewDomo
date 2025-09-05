@@ -6,6 +6,25 @@ import { getErrorMessage, logError } from '@/lib/errors';
 // Validate that a URL points to a Daily room
 const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
 
+// Parse a Daily URL into { domain, room } or null if invalid
+function parseDailyUrl(url: string): { domain: string; room: string } | null {
+  const m = url.match(/^https?:\/\/([a-z0-9-]+)\.daily\.co\/([^\/?#]+)/i);
+  if (!m) return null;
+  return { domain: m[1], room: decodeURIComponent(m[2]) };
+}
+
+// Check if a Daily room exists by calling gs.daily.co rooms/check endpoint
+async function dailyRoomExists(url: string): Promise<boolean> {
+  const parsed = parseDailyUrl(url);
+  if (!parsed) return false;
+  try {
+    const resp = await fetch(`https://gs.daily.co/rooms/check/${parsed.domain}/${parsed.room}`);
+    return resp.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
 // Simple in-memory lock to dedupe concurrent starts per demo within a single server instance
 const startLocks = new Map<string, Promise<unknown>>();
 
@@ -18,7 +37,7 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { demoId } = await req.json();
+    const { demoId, forceNew = false } = await req.json();
 
     if (!demoId) {
       return NextResponse.json({ error: 'Missing demoId' }, { status: 400 });
@@ -39,22 +58,30 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: 'This demo does not have a configured agent persona.' }, { status: 400 });
     }
 
-    // Reuse existing active conversation if a valid Daily room URL is already saved
-    try {
-      const md = typeof (demo as any).metadata === 'string' ? JSON.parse((demo as any).metadata as string) : (demo as any).metadata;
-      const existingUrl = md?.tavusShareableLink as string | undefined;
-      if (existingUrl && isDailyRoomUrl(existingUrl)) {
-        return NextResponse.json({
-          conversation_id: (demo as any).tavus_conversation_id || null,
-          conversation_url: existingUrl,
-        });
+    // Reuse existing active conversation if a valid Daily room URL is already saved AND still exists
+    if (!forceNew) {
+      try {
+        const md = typeof (demo as any).metadata === 'string' ? JSON.parse((demo as any).metadata as string) : (demo as any).metadata;
+        const existingUrl = md?.tavusShareableLink as string | undefined;
+        if (existingUrl && isDailyRoomUrl(existingUrl)) {
+          if (await dailyRoomExists(existingUrl)) {
+            return NextResponse.json({
+              conversation_id: (demo as any).tavus_conversation_id || null,
+              conversation_url: existingUrl,
+            });
+          } else {
+            console.warn('Existing Daily URL appears stale or missing. Creating a new conversation:', existingUrl);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse demo metadata while checking for existing conversation URL:', e);
       }
-    } catch (e) {
-      console.warn('Failed to parse demo metadata while checking for existing conversation URL:', e);
+    } else {
+      console.log('forceNew=true: will create a new conversation even if an existing URL is present.');
     }
 
     // If another request is already starting a conversation for this demo, wait and then reuse the result
-    if (startLocks.has(demoId)) {
+    if (!forceNew && startLocks.has(demoId)) {
       console.log('Conversation start already in progress for demo', demoId, '— waiting');
       try {
         await startLocks.get(demoId);
@@ -115,9 +142,14 @@ async function handlePOST(req: NextRequest) {
     }
 
     // Per Tavus docs, conversations accept callback_url for webhooks
+    // If Tavus doesn't send HMAC signatures, we include a fallback URL token (?t=...) for auth.
+    const baseUrlForWebhook = (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const urlToken = (process.env.TAVUS_WEBHOOK_TOKEN || '').trim();
+    const callbackUrl = `${baseUrlForWebhook}/api/tavus-webhook${urlToken ? `?t=${encodeURIComponent(urlToken)}` : ''}`;
+
     const conversationPayload: any = {
       persona_id: demo.tavus_persona_id,
-      callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/tavus-webhook`,
+      callback_url: callbackUrl,
       ...(finalReplicaId ? { replica_id: finalReplicaId } : {}),
     };
     if (!conversationPayload.replica_id) {

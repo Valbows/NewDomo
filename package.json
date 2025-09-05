@@ -9,14 +9,16 @@
     "lint": "next lint",
     "test": "jest",
     "e2e": "playwright test",
-    "e2e:ci": "playwright test --reporter=github,html"
+    "e2e:ci": "playwright test --reporter=github,html",
+    "e2e:real": "playwright test -c playwright.real.config.ts",
+    "seed:e2e": "node scripts/seed-e2e.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@daily-co/daily-js": "^0.81.0",
+    "@daily-co/daily-js": "^0.83.1",
     "@daily-co/daily-react": "^0.23.1",
     "@elevenlabs/elevenlabs-js": "^2.7.0",
     "@radix-ui/react-dialog": "^1.0.0",
@@ -38,13 +40,15 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.47.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/jest": "^30.0.0",
     "@types/react": "^18.3.23",
-    "@playwright/test": "^1.47.2",
     "autoprefixer": "^10.4.21",
     "dotenv": "^17.2.1",
+    "eslint": "9.34.0",
+    "eslint-config-next": "15.5.2",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "msw": "^2.10.4",

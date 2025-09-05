@@ -9,8 +9,6 @@ interface CTASettingsProps {
   setCTAMessage: (message: string) => void;
   ctaButtonText: string;
   setCTAButtonText: (text: string) => void;
-  ctaButtonUrl: string;
-  setCTAButtonUrl: (url: string) => void;
   onSaveCTA: () => void;
 }
 
@@ -22,10 +20,9 @@ export const CTASettings = ({
   setCTAMessage,
   ctaButtonText,
   setCTAButtonText,
-  ctaButtonUrl,
-  setCTAButtonUrl,
   onSaveCTA
 }: CTASettingsProps) => {
+  const effectiveUrl = demo?.cta_button_url || demo?.metadata?.ctaButtonUrl || '';
   return (
     <div className="space-y-6">
       <div>
@@ -77,17 +74,18 @@ export const CTASettings = ({
         </div>
 
         <div>
-          <label htmlFor="cta-button-url" className="block text-sm font-medium text-gray-700 mb-2">
-            Primary Button URL
-          </label>
-          <input
-            type="url"
-            id="cta-button-url"
-            value={ctaButtonUrl}
-            onChange={(e) => setCTAButtonUrl(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="https://yourapp.com/signup"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Primary Button URL
+            </label>
+            <span className="text-xs text-gray-500">🔒 Admin-controlled</span>
+          </div>
+          <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 break-all">
+            {effectiveUrl || 'Not configured'}
+          </div>
+          {demo?.metadata?.ctaButtonUrl && !demo?.cta_button_url && (
+            <p className="mt-1 text-xs text-amber-600">Using legacy metadata URL. Contact an admin to set the official CTA URL.</p>
+          )}
         </div>
 
         <div className="pt-4">
@@ -130,7 +128,7 @@ export const CTASettings = ({
           <li>• The AI agent will automatically show this CTA when it determines a user is ready to take action</li>
           <li>• Users can also explicitly ask for next steps or how to sign up</li>
           <li>• The CTA appears in the demo experience page alongside the conversation</li>
-          <li>• Make sure your button URL leads to a working signup or contact page</li>
+          <li>• The CTA button URL is managed by your organization admin</li>
         </ul>
       </div>
     </div>

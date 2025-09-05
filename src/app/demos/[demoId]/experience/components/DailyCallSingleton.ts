@@ -1,6 +1,7 @@
 // Singleton class to manage Daily.co call instances globally
 import { logError } from '@/lib/errors';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
+import DailyIframe from '@daily-co/daily-js';
 
 class DailyCallSingleton {
   private static instance: DailyCallSingleton;
@@ -96,21 +97,8 @@ class DailyCallSingleton {
   }
 
   private async createDailyCall(conversationUrl: string, onToolCall: (toolName: string, args: any) => void): Promise<any> {
-    // Load Daily.co SDK if not already loaded
-    if (typeof window !== 'undefined' && !(window as any).DailyIframe) {
-      await new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@daily-co/daily-js';
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Failed to load Daily.co SDK'));
-        document.head.appendChild(script);
-      });
-    }
-
-    const Daily = (window as any).DailyIframe;
-    if (!Daily) {
-      throw new Error('Daily.co SDK not loaded');
-    }
+    // Use bundled Daily.co SDK via npm import to avoid CDN version drift
+    const Daily = DailyIframe;
 
     // Find container
     const container = document.getElementById('daily-call-container');
@@ -162,13 +150,21 @@ class DailyCallSingleton {
 
       console.log('Parsed tool call result (DailyCallSingleton):', parsed);
 
-      if (parsed.toolName === 'fetch_video') {
-        if (!parsed.toolArgs) {
-          console.warn('fetch_video detected but args missing/null; ignoring');
+      const KNOWN_TOOLS = ['fetch_video', 'pause_video', 'play_video', 'next_video', 'close_video', 'show_trial_cta'];
+      if (parsed.toolName && KNOWN_TOOLS.includes(parsed.toolName)) {
+        if (parsed.toolName === 'fetch_video') {
+          if (!parsed.toolArgs) {
+            console.warn('fetch_video detected but args missing/null; ignoring');
+            return;
+          }
+          console.log('🎬 Triggering real-time video fetch (parsed):', parsed.toolArgs);
+          onToolCall('fetch_video', parsed.toolArgs);
           return;
         }
-        console.log('🎬 Triggering real-time video fetch (parsed):', parsed.toolArgs);
-        onToolCall('fetch_video', parsed.toolArgs);
+        // Forward all other supported tools (no-arg tools may provide null or {})
+        const args = parsed.toolArgs ?? {};
+        console.log(`➡️ Forwarding tool "${parsed.toolName}" to UI with args:`, args);
+        onToolCall(parsed.toolName, args);
         return;
       }
 

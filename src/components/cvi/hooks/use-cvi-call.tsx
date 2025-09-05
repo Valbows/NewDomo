@@ -9,9 +9,16 @@ export const useCVICall = (): {
 } => {
 	const daily = useDaily();
 
+	// Ensure URL is a Daily room URL (defensive check)
+	const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
+
 	const joinCall = useCallback(
 		({ url }: { url: string }) => {
 			if (!daily) return;
+			if (!isDailyRoomUrl(url)) {
+				console.warn(' CVI join aborted: not a Daily room URL', { url });
+				return;
+			}
 			const d: any = daily as any;
 			// Skip if we are already joining the same URL or already joined that URL
 			if (d.__CVI_JOINING__) {

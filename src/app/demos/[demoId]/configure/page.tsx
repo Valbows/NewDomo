@@ -12,6 +12,8 @@ import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
 import { AgentSettings } from './components/AgentSettings';
 import { VideoPlayer } from './components/VideoPlayer';
 import { CTASettings } from './components/CTASettings';
+import { Reporting } from './components/Reporting';
+import { AdminCTAUrlEditor } from './components/AdminCTAUrlEditor';
 
 import { getErrorMessage, logError } from '@/lib/errors';
 
@@ -32,8 +34,9 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [agentName, setAgentName] = useState('');
   const [agentPersonality, setAgentPersonality] = useState('Friendly and helpful assistant.');
   const [agentGreeting, setAgentGreeting] = useState('Hello! How can I help you with the demo today?');
+  const [objectives, setObjectives] = useState<string[]>(['', '', '']);
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
-  const [tavusPersonaId, setTavusPersonaId] = useState<string | null>(demo?.metadata?.tavusPersonaId || null);
+  const [tavusPersonaId, setTavusPersonaId] = useState<string | null>(demo?.tavus_persona_id || null);
   const [conversationData, setConversationData] = useState<any>(null);
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   
@@ -41,7 +44,6 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [ctaTitle, setCTATitle] = useState('Ready to Get Started?');
   const [ctaMessage, setCTAMessage] = useState('Start your free trial today and see the difference!');
   const [ctaButtonText, setCTAButtonText] = useState('Start Free Trial');
-  const [ctaButtonUrl, setCTAButtonUrl] = useState('');
 
   const fetchDemoData = useCallback(async () => {
     try {
@@ -52,13 +54,17 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setAgentName(demoData.metadata?.agentName || '');
       setAgentPersonality(demoData.metadata?.agentPersonality || 'Friendly and helpful assistant.');
       setAgentGreeting(demoData.metadata?.agentGreeting || 'Hello! How can I help you with the demo today?');
-      setTavusPersonaId(demoData.metadata?.tavusPersonaId || null);
+      setTavusPersonaId(demoData.tavus_persona_id || null);
+      // Initialize objectives: ensure 3–5 slots
+      const rawObjectives: string[] = Array.isArray(demoData.metadata?.objectives) ? demoData.metadata!.objectives! : [];
+      const trimmed = rawObjectives.filter((o) => typeof o === 'string').slice(0, 5);
+      const padded = trimmed.length >= 3 ? trimmed : [...trimmed, ...Array(Math.max(0, 3 - trimmed.length)).fill('')];
+      setObjectives(padded);
       
       // Initialize CTA settings from demo metadata
       setCTATitle(demoData.metadata?.ctaTitle || 'Ready to Get Started?');
       setCTAMessage(demoData.metadata?.ctaMessage || 'Start your free trial today and see the difference!');
       setCTAButtonText(demoData.metadata?.ctaButtonText || 'Start Free Trial');
-      setCTAButtonUrl(demoData.metadata?.ctaButtonUrl || '');
 
       const { data: videoData, error: videoError } = await supabase.from('demo_videos').select('*').eq('demo_id', demoId).order('order_index');
       if (videoError) console.warn('Could not fetch videos:', videoError.message);
@@ -95,6 +101,23 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         console.log('Received show_trial_cta event:', payload);
         setUiState(UIState.DEMO_COMPLETE);
       })
+      .on('broadcast', { event: 'analytics_updated' }, (payload) => {
+        console.log('Received analytics_updated event:', payload);
+        // Refresh demo data so Reporting reflects the latest analytics snapshot
+        fetchDemoData();
+      })
+      // Fallback: listen to Postgres changes on the demos row to auto-refresh
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'demos', filter: `id=eq.${demoId}` },
+        (payload) => {
+          try {
+            const changedCols = Object.keys(payload?.new || {});
+            console.log('Postgres change on demos row:', { changedCols });
+          } catch {}
+          fetchDemoData();
+        }
+      )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log(`Successfully subscribed to channel: demo-${demoId}`);
@@ -105,8 +128,30 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     return () => {
       supabase.removeChannel(channel);
     };
-
   }, [fetchDemoData, demoId]);
+
+  const handleSaveAdminCTAUrl = async (url: string) => {
+    try {
+      console.log('🔐 Saving admin CTA URL:', url);
+      const { error } = await supabase
+        .from('demos')
+        .update({ cta_button_url: url ? url : null })
+        .eq('id', demoId);
+      if (error) throw error;
+
+      // Update local demo state
+      if (demo) {
+        setDemo({
+          ...demo,
+          cta_button_url: url ? url : null,
+        });
+      }
+    } catch (err: unknown) {
+      logError(err, 'Error saving admin CTA URL');
+      alert('Failed to save Admin CTA URL.');
+      throw err; // rethrow so the editor can display inline error state
+    }
+  };
 
   useEffect(() => {
     const handler = setTimeout(async () => {
@@ -116,6 +161,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           agentName,
           agentPersonality,
           agentGreeting,
+          objectives: objectives.map((o) => (o || '').trim()).filter(Boolean).slice(0, 5),
         };
 
         if (JSON.stringify(newMetadata) === JSON.stringify(demo.metadata)) {
@@ -132,7 +178,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     return () => {
       clearTimeout(handler);
     };
-  }, [agentName, agentPersonality, agentGreeting, demo, demoId]);
+  }, [agentName, agentPersonality, agentGreeting, objectives, demo, demoId]);
 
   const handleVideoUpload = async () => {
     if (!selectedVideoFile || !videoTitle) {
@@ -365,8 +411,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       console.log('💾 Saving CTA data:', {
         ctaTitle,
         ctaMessage,
-        ctaButtonText,
-        ctaButtonUrl
+        ctaButtonText
       });
       
       const { error } = await supabase
@@ -376,8 +421,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             ...demo?.metadata,
             ctaTitle,
             ctaMessage,
-            ctaButtonText,
-            ctaButtonUrl
+            ctaButtonText
           }
         })
         .eq('id', demoId);
@@ -394,8 +438,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             ...demo.metadata,
             ctaTitle,
             ctaMessage,
-            ctaButtonText,
-            ctaButtonUrl
+            ctaButtonText
           }
         });
         console.log('🔄 Updated local demo state with CTA data');
@@ -467,6 +510,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             <Tabs.Trigger value="knowledge" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Knowledge Base</Tabs.Trigger>
             <Tabs.Trigger value="agent" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Agent Settings</Tabs.Trigger>
             <Tabs.Trigger value="cta" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Call-to-Action</Tabs.Trigger>
+            <Tabs.Trigger value="reporting" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Reporting</Tabs.Trigger>
           </Tabs.List>
           <div className="mt-6">
             <Tabs.Content value="videos">
@@ -507,6 +551,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setAgentPersonality={setAgentPersonality}
                 agentGreeting={agentGreeting}
                 setAgentGreeting={setAgentGreeting}
+                objectives={objectives}
+                setObjectives={setObjectives}
               />
               <div className="mt-6">
                 {!conversationData ? (
@@ -542,6 +588,11 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               )}
             </Tabs.Content>
             <Tabs.Content value="cta">
+              <div className="space-y-6">
+                <AdminCTAUrlEditor
+                  currentUrl={demo?.cta_button_url || null}
+                  onSave={handleSaveAdminCTAUrl}
+                />
               <CTASettings
                 demo={demo}
                 ctaTitle={ctaTitle}
@@ -550,10 +601,12 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setCTAMessage={setCTAMessage}
                 ctaButtonText={ctaButtonText}
                 setCTAButtonText={setCTAButtonText}
-                ctaButtonUrl={ctaButtonUrl}
-                setCTAButtonUrl={setCTAButtonUrl}
                 onSaveCTA={handleSaveCTA}
               />
+              </div>
+            </Tabs.Content>
+            <Tabs.Content value="reporting">
+              <Reporting demo={demo} />
             </Tabs.Content>
           </div>
         </Tabs.Root>
