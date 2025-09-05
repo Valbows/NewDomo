@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Lock, Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useUserStore } from '@/store/user';
+import { debugAuth } from '@/lib/debug';
 
 const SignInPage = () => {
   const [email, setEmail] = useState('');
@@ -19,14 +20,25 @@ const SignInPage = () => {
     setLoading(true);
     setError(null);
 
+    debugAuth('signIn submit', { email });
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    debugAuth('signInWithPassword response', {
+      hasUser: Boolean(data?.user),
+      hasError: Boolean(error),
+      error: (error as any)?.message || null,
+    });
 
     if (error) {
       setError(error.message);
+      debugAuth('signIn error', error.message);
     } else if (data.user) {
+      debugAuth('signIn success; setting user and navigating to /dashboard', {
+        userId: data.user.id,
+        email: data.user.email,
+      });
       setUser({ id: data.user.id, email: data.user.email || '', isAuthenticated: true });
       router.push('/dashboard');
     }
