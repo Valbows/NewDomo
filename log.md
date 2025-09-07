@@ -1416,13 +1416,17 @@ Implemented a comprehensive Tavus guardrails system following their recommended 
 
 #### **Guardrails Implemented**
 
-##### **Domo AI Core Guardrails (6 rules)**
+##### **Domo AI Core Guardrails (10 rules)**
 1. **Tool_Call_Silence** - Never verbalize tool calls or describe internal operations
 2. **Exact_Title_Requirement** - Only use exact video titles, never guess or fallback
 3. **No_Content_Hallucination** - Don't invent video titles, CTAs, or content not in context
 4. **Sensitive_Topics_Refusal** - Refuse race, gender, politics, religion discussions
 5. **No_Parroting_Echoing** - Don't repeat user utterances verbatim
 6. **Repeat_After_Me_Refusal** - Refuse "repeat after me" requests
+7. **No_Technical_Commentary** - Never mention technical video/screen sharing issues
+8. **No_Symbol_Names** - Don't read aloud symbol names from scripts
+9. **No_Competitor_Discussion** - Don't discuss or compare competitor products
+10. **Vulgarity_Handling** - Handle inappropriate language professionally
 
 ##### **Demo Flow Guardrails (2 rules)**
 1. **Progressive_Demo_Flow** - Guide users through logical feature sequence
@@ -1623,3 +1627,110 @@ DEMO_FLOW_GUARDRAILS_ID=g77b762f68956
 
 ### Status: ✅ COMPLETE
 The Tavus guardrails implementation is fully functional, tested, and documented. All personas now automatically use proper guardrails managed via Tavus API, ensuring consistent and safe AI behavior across the platform.
+
+## Guardrails Enhancement - Additional Behavioral Rules (2025-09-07) - Kelvin
+
+### Overview
+Enhanced the existing Tavus guardrails system with 4 additional critical behavioral rules based on real-world usage feedback and transcript analysis.
+
+### New Guardrails Added
+
+#### **No_Technical_Commentary**
+- **Purpose**: Prevent AI from mentioning technical video conference issues
+- **Trigger**: Phrases like "the image is completely black", "user is sharing their screen", "difficult to analyze their appearance"
+- **Solution**: Focus only on demo content and user questions, ignore technical status
+
+#### **No_Symbol_Names** 
+- **Purpose**: Prevent AI from reading aloud symbol names from scripts
+- **Trigger**: Reading "$", "@", "#", or other formatting symbols
+- **Solution**: Focus on meaning and substance rather than literal symbols
+
+#### **No_Competitor_Discussion**
+- **Purpose**: Avoid discussing competitor products or services
+- **Trigger**: Mentions of competing solutions or comparisons
+- **Solution**: Acknowledge professionally but redirect to our unique value propositions
+
+#### **Vulgarity_Handling**
+- **Purpose**: Handle inappropriate language professionally
+- **Trigger**: User uses vulgar or inappropriate language
+- **Solution**: Respond professionally without repeating inappropriate words, redirect to demo
+
+### Implementation Details
+
+#### **Updated Guardrails Count**
+- **Before**: 6 core guardrails + 2 demo flow = 8 total
+- **After**: 10 core guardrails + 2 demo flow = 12 total
+- **New Guardrails ID**: `g7859caebed0c` (replaced `ga478f0046ec5`)
+
+#### **Technical Changes**
+1. **Enhanced guardrails-templates.ts** with 4 new behavioral rules
+2. **Updated guardrails-manager.ts** with delete-and-recreate logic for updates
+3. **Refreshed Tavus guardrails** by deleting old and creating new with updated rules
+4. **Updated documentation** in GUARDRAILS.md and log.md
+
+#### **API Management Enhancement**
+```typescript
+// New update strategy: delete and recreate for major changes
+if (existing) {
+  console.log('Deleting old guardrails to create updated version...');
+  await this.deleteGuardrails(existing.uuid);
+}
+
+// Create new guardrails with latest template
+const created = await this.createGuardrails(template);
+```
+
+### Real-World Problem Solved
+
+#### **Issue Identified**
+From transcript analysis: *"It seems like the user is sharing their screen or video conference, but the image is completely black, making it difficult for me to analyze their appearance or emotions."*
+
+#### **Root Cause**
+AI was providing technical commentary about video conference status instead of focusing on demo content.
+
+#### **Solution Implemented**
+**No_Technical_Commentary** guardrail prevents any mention of:
+- Video conference setup issues
+- Screen sharing status  
+- Camera or visual analysis problems
+- Technical observations about user's environment
+
+### Testing & Validation
+
+#### **Test Results**
+```bash
+✅ Found 2 guardrails sets
+  • Demo Flow Control (g77b762f68956)
+  • Domo AI Core Guardrails (g7859caebed0c)
+✅ All tests passed! Your guardrails are properly set up.
+```
+
+#### **Guardrails Verification**
+- ✅ All 10 core guardrails validated
+- ✅ All 2 demo flow guardrails validated  
+- ✅ API integration working correctly
+- ✅ Automatic persona creation functional
+
+### Impact & Benefits
+
+#### **User Experience Improvements**
+- ✅ No more technical commentary disrupting demo flow
+- ✅ Professional handling of inappropriate language
+- ✅ Focused conversations without competitor distractions
+- ✅ Clean, substance-focused interactions
+
+#### **AI Behavior Consistency**
+- ✅ Standardized responses across all personas
+- ✅ Professional tone maintained in all scenarios
+- ✅ Demo-focused conversations without technical distractions
+- ✅ Appropriate handling of edge cases
+
+### Prevention & Best Practices
+- Monitor real conversation transcripts for new behavioral issues
+- Implement guardrails proactively based on usage patterns
+- Use delete-and-recreate strategy for major guardrails updates
+- Test all guardrails after updates to ensure proper functionality
+- Document all behavioral rules with clear examples and triggers
+
+### Status: ✅ ENHANCED
+The Tavus guardrails system now includes 12 comprehensive behavioral rules covering all identified edge cases and ensuring professional, demo-focused AI interactions in all scenarios.

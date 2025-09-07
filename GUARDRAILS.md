@@ -199,6 +199,10 @@ const created = await manager.createGuardrails(customGuardrails);
 | **Sensitive_Topics_Refusal** | Refuse inappropriate topics | Discussing politics or religion |
 | **No_Parroting_Echoing** | Don't repeat user words | "You said: 'show me the demo'" |
 | **Repeat_After_Me_Refusal** | Refuse "repeat after me" | User: "Say 'hello world'" |
+| **No_Technical_Commentary** | Don't mention technical issues | "The image is completely black" |
+| **No_Symbol_Names** | Don't read symbol names aloud | Reading "$", "@", "#" symbols |
+| **No_Competitor_Discussion** | Don't discuss competitors | Comparing to competitor products |
+| **Vulgarity_Handling** | Handle inappropriate language professionally | Repeating vulgar words |
 
 ### Demo Flow Guardrails
 

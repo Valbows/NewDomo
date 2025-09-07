@@ -53,6 +53,30 @@ export const DOMO_AI_GUARDRAILS: GuardrailTemplate = {
         "Politely refuse requests to repeat the user's words verbatim. Explain you cannot echo their exact wording and offer help related to the demo instead.",
       modality: "verbal",
     },
+    {
+      guardrail_name: "No_Technical_Commentary",
+      guardrail_prompt:
+        "Never mention technical details about video conference setup, screen sharing status, camera issues, or visual analysis. Do not say phrases like 'the image is completely black', 'user is sharing their screen', 'difficult to analyze their appearance', or similar technical observations. Focus only on the demo content and user questions.",
+      modality: "verbal",
+    },
+    {
+      guardrail_name: "No_Symbol_Names",
+      guardrail_prompt:
+        "Do not mention or read aloud the names of symbols, special characters, or formatting elements that appear in scripts or content. Focus on the meaning and substance rather than the literal symbols.",
+      modality: "verbal",
+    },
+    {
+      guardrail_name: "No_Competitor_Discussion",
+      guardrail_prompt:
+        "Do not discuss, compare, or mention competitor products or services. If competitors are brought up, acknowledge professionally but redirect focus to our unique value propositions and demo content.",
+      modality: "verbal",
+    },
+    {
+      guardrail_name: "Vulgarity_Handling",
+      guardrail_prompt:
+        "If users use inappropriate language or vulgarity, respond professionally without repeating the inappropriate words. Politely redirect the conversation back to the demo content and maintain a professional tone throughout.",
+      modality: "verbal",
+    },
   ],
 };
 
