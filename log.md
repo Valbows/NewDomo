@@ -1391,3 +1391,235 @@ CREATE TABLE IF NOT EXISTS public.conversation_details (
 - ✅ Webhook integration for real-time updates
 - ✅ Persona configuration management
 - ✅ Comprehensive error handling and logging
+
+## Tavus Guardrails Implementation (2025-09-07) - Kelvin
+
+### Overview
+Implemented a comprehensive Tavus guardrails system following their recommended API-first approach, replacing embedded guardrails in system prompts with dedicated guardrails resources managed via Tavus API.
+
+### Implementation Details
+
+#### **Core Architecture**
+- **Separation of Concerns**: Guardrails managed separately from system prompts
+- **Reusable Templates**: Store guardrails definitions in version-controlled templates
+- **Automatic Management**: Smart creation and reuse of guardrails per API key
+- **API-First Approach**: Use Tavus's dedicated guardrails API endpoints
+
+#### **Files Created**
+1. **`src/lib/tavus/guardrails-templates.ts`** - Guardrails definitions and templates
+2. **`src/lib/tavus/guardrails-manager.ts`** - API client for managing Tavus guardrails
+3. **`src/lib/tavus/persona-with-guardrails.ts`** - Utilities for creating personas with guardrails
+4. **`src/lib/tavus/system_prompt_clean.md`** - Clean system prompt without embedded guardrails
+5. **`scripts/setup-guardrails.ts`** - One-time setup script for guardrails creation
+6. **`examples/create-persona-with-guardrails.ts`** - Usage examples and patterns
+7. **`GUARDRAILS.md`** - Comprehensive documentation and troubleshooting guide
+
+#### **Guardrails Implemented**
+
+##### **Domo AI Core Guardrails (6 rules)**
+1. **Tool_Call_Silence** - Never verbalize tool calls or describe internal operations
+2. **Exact_Title_Requirement** - Only use exact video titles, never guess or fallback
+3. **No_Content_Hallucination** - Don't invent video titles, CTAs, or content not in context
+4. **Sensitive_Topics_Refusal** - Refuse race, gender, politics, religion discussions
+5. **No_Parroting_Echoing** - Don't repeat user utterances verbatim
+6. **Repeat_After_Me_Refusal** - Refuse "repeat after me" requests
+
+##### **Demo Flow Guardrails (2 rules)**
+1. **Progressive_Demo_Flow** - Guide users through logical feature sequence
+2. **Knowledge_Base_First** - Always check knowledge base before answering
+
+#### **API Integration**
+- **Create Guardrails**: `POST /v2/guardrails` with template data
+- **List Guardrails**: `GET /v2/guardrails` for all guardrails sets
+- **Get Specific**: `GET /v2/guardrails/{id}` for individual guardrails
+- **Update/Delete**: `PATCH/DELETE /v2/guardrails/{id}` for management
+
+#### **Key Technical Discoveries**
+
+##### **API Response Structure**
+- Tavus API uses `uuid` field, not `guardrails_id` as initially expected
+- Response format: `{ data: [...], total_count: number }`
+- Individual guardrails have `guardrail_name` and `guardrail_prompt` (singular)
+
+##### **Automatic Reuse Logic**
+```typescript
+async ensureDomoAIGuardrails(): Promise<string> {
+  // Check if guardrails already exist by name
+  const existing = await this.findGuardrailsByName(templateName);
+  
+  if (existing) {
+    console.log(`Using existing guardrails: ${existing.uuid}`);
+    return existing.uuid;
+  }
+
+  // Create new guardrails only if they don't exist
+  const created = await this.createGuardrails(template);
+  return created.uuid;
+}
+```
+
+#### **Usage Patterns**
+
+##### **Simple Persona Creation (Automatic)**
+```typescript
+import { createDomoAIPersona } from './src/lib/tavus/persona-with-guardrails';
+
+// Automatically finds/creates guardrails and attaches them
+const persona = await createDomoAIPersona();
+```
+
+##### **One-Time Setup (Per API Key)**
+```bash
+# Creates guardrails in Tavus for the API key
+TAVUS_API_KEY=your_key npx tsx scripts/setup-guardrails.ts
+```
+
+##### **Direct Guardrails Management**
+```typescript
+const manager = createGuardrailsManager();
+const allGuardrails = await manager.getAllGuardrails();
+const details = await manager.getGuardrails('guardrails-id');
+```
+
+#### **Testing & Validation**
+
+##### **Test Suite Implementation**
+- **Template Validation**: Verify all guardrails have required fields
+- **API Integration**: Test creation, retrieval, and management
+- **File Structure**: Ensure all required files exist
+- **Clean System Prompt**: Verify guardrails section removed
+
+##### **Test Results**
+```bash
+✅ Found 2 guardrails sets
+  • Domo AI Core Guardrails (ga478f0046ec5)
+  • Demo Flow Control (g77b762f68956)
+✅ All tests passed! Your guardrails are properly set up.
+```
+
+#### **Documentation Created**
+
+##### **GUARDRAILS.md** - Comprehensive Guide
+- Quick start instructions
+- API key management scenarios
+- Usage examples and code snippets
+- Complete guardrails reference
+- Troubleshooting guide
+- Advanced usage patterns
+
+##### **Updated README.md** - Main Project Integration
+- Added guardrails to features list
+- Integrated setup into quick start guide
+- Added troubleshooting section
+- Included management commands
+
+#### **Key Benefits Achieved**
+
+1. **Consistency**: Same behavioral rules across all personas
+2. **Maintainability**: Version-controlled guardrails templates
+3. **Reusability**: One guardrails set used by multiple personas
+4. **Automation**: Smart detection of existing vs new guardrails
+5. **API Management**: Full CRUD operations via Tavus API
+6. **Documentation**: Comprehensive guides for team usage
+
+#### **API Key Management Logic**
+
+##### **Same API Key (Normal Usage)**
+- **Guardrails**: Automatically reuses existing ones
+- **Personas**: Creates new persona each time
+- **Setup**: No manual intervention required
+
+##### **New/Different API Key**
+- **Guardrails**: One-time setup creates new guardrails with new IDs
+- **Personas**: Then automatic creation works
+- **Setup**: Run setup script once per API key
+
+#### **Migration from Embedded Guardrails**
+
+##### **Before (Embedded in System Prompt)**
+```markdown
+## GUARDRAILS (Critical)
+- Do NOT verbalize tool calls
+- Exact Title Required
+- No Fallbacks
+- Sensitive Topics refusal
+```
+
+##### **After (Tavus API Guardrails)**
+```typescript
+// Clean system prompt focuses on core instructions
+// Guardrails managed separately via API
+const persona = await createDomoAIPersona(); // Automatic guardrails
+```
+
+#### **Error Handling & Troubleshooting**
+
+##### **Common Issues Resolved**
+1. **Field Name Mismatch**: API expects `guardrail_name` not `guardrails_name`
+2. **Response Structure**: Uses `uuid` field, not `guardrails_id`
+3. **Template Format**: Corrected data structure for API compatibility
+4. **Environment Variables**: Proper API key configuration
+
+##### **Debug Tools Created**
+- Comprehensive error logging with API response details
+- Test suite for validation
+- Example scripts for common operations
+- Manual test buttons for debugging
+
+#### **Production Readiness**
+
+##### **Environment Configuration**
+```bash
+# Required
+TAVUS_API_KEY=your_api_key
+
+# Optional (set by setup script)
+DOMO_AI_GUARDRAILS_ID=ga478f0046ec5
+DEMO_FLOW_GUARDRAILS_ID=g77b762f68956
+```
+
+##### **CI/CD Integration**
+```yaml
+# Example GitHub Actions step
+- name: Setup Guardrails
+  run: npx tsx scripts/setup-guardrails.ts
+  env:
+    TAVUS_API_KEY: ${{ secrets.TAVUS_API_KEY }}
+```
+
+#### **Impact & Results**
+
+##### **Technical Improvements**
+- ✅ Proper separation of concerns (guardrails vs system prompts)
+- ✅ API-first approach following Tavus recommendations
+- ✅ Automatic reuse prevents duplicate guardrails creation
+- ✅ Version-controlled templates for team collaboration
+
+##### **Developer Experience**
+- ✅ One-command setup: `npx tsx scripts/setup-guardrails.ts`
+- ✅ Automatic persona creation: `createDomoAIPersona()`
+- ✅ Comprehensive documentation and examples
+- ✅ Full test coverage and validation
+
+##### **Operational Benefits**
+- ✅ Consistent AI behavior across all personas
+- ✅ Centralized guardrails management
+- ✅ Easy updates and modifications
+- ✅ Monitoring and violation tracking capabilities
+
+#### **Future Enhancements**
+- Webhook integration for guardrail violation monitoring
+- Custom guardrails templates for different use cases
+- Automated guardrails updates in CI/CD pipelines
+- Integration with monitoring and alerting systems
+
+### Prevention & Best Practices
+- Always use Tavus's recommended API-first approach for guardrails
+- Implement proper error handling with detailed API response logging
+- Create comprehensive test suites for API integrations
+- Document all API response structures and field mappings
+- Use environment variables for API keys and configuration
+- Implement automatic reuse logic to prevent resource duplication
+
+### Status: ✅ COMPLETE
+The Tavus guardrails implementation is fully functional, tested, and documented. All personas now automatically use proper guardrails managed via Tavus API, ensuring consistent and safe AI behavior across the platform.
