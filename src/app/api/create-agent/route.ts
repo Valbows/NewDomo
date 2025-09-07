@@ -131,6 +131,15 @@ async function handlePOST(req: NextRequest) {
     console.log('Enhanced system prompt length:', enhancedSystemPrompt.length);
     console.log('Knowledge chunks:', knowledgeChunks?.length || 0);
     console.log('Available videos:', demoVideos?.length || 0);
+    
+    // Log guardrails section for verification
+    const guardrailsSection = enhancedSystemPrompt.match(/## GUARDRAILS \(Critical\)(.*?)(?=##|$)/s);
+    if (guardrailsSection) {
+      console.log('✅ Guardrails section found in system prompt');
+      console.log('Guardrails length:', guardrailsSection[0].length);
+    } else {
+      console.warn('⚠️  Guardrails section NOT found in system prompt');
+    }
 
     const allowedTitles = (demoVideos || []).map(v => v.title).filter(Boolean);
 

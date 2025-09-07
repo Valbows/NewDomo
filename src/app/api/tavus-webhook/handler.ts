@@ -229,6 +229,15 @@ export async function handlePOST(req: NextRequest) {
       const video_title = toolArgs?.video_title || toolArgs?.title;
       if (!video_title || typeof video_title !== 'string' || !video_title.trim()) {
         logError('Webhook: Missing or invalid video title for fetch_video/play_video', 'ToolCall Validation');
+        
+        // Alert: Guardrail violation detected
+        console.warn('🚨 GUARDRAIL VIOLATION: Invalid video title in tool call', {
+          conversation_id,
+          toolName,
+          toolArgs,
+          timestamp: new Date().toISOString()
+        });
+        
         return NextResponse.json({ message: 'Invalid or missing video title.' });
       }
       console.log('Extracted video title:', video_title);

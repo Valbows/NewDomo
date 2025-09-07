@@ -1229,7 +1229,7 @@ if (toolName === 'play_video') {
   - Add retry/backoff on `play()` failures with telemetry breadcrumbs.
   - Consider capturing `videoElement.error` codes in logs for analytics.
 
-## Tavus Conversation Data Integration (2025-01-10) - Kelvin
+## Tavus Conversation Data Integration (2025-09-06) - Kelvin
 
 ### Summary
 Successfully integrated Tavus conversation data (transcripts and perception analysis) into the Supabase database and frontend Reporting & Analytics tab. This enables comprehensive conversation tracking and analysis for demo sessions.
@@ -1237,7 +1237,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 ### Issues Fixed
 
 #### 1. Missing TAVUS_REPLICA_ID Configuration
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Environment Configuration / Tavus Agent
 - **Error Description**: "Missing replica_id: Set TAVUS_REPLICA_ID or assign a default replica to the persona" when starting demo conversations
 - **Root Cause**: Missing `TAVUS_REPLICA_ID` environment variable in `.env.local`
@@ -1248,7 +1248,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 - **Prevention**: Document all required environment variables in `.env.example`
 
 #### 2. Database Schema for Conversation Details
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Supabase Database Schema
 - **Error Description**: No table structure to store detailed conversation data from Tavus
 - **Root Cause**: Missing database table for conversation transcripts and perception analysis
@@ -1266,7 +1266,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 - **Prevention**: Always create database schema before implementing features that depend on it
 
 #### 3. Tavus API Data Retrieval Issues
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Tavus API Integration
 - **Error Description**: Transcript and perception analysis data not being retrieved from Tavus API
 - **Root Cause**: 
@@ -1282,7 +1282,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 - **Prevention**: Always verify API endpoints and response structures before implementation
 
 #### 4. Perception Analysis Configuration Requirement
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Tavus Persona Configuration
 - **Error Description**: Perception analysis not being generated for conversations
 - **Root Cause**: Persona not configured with `perception_model: "raven-0"` (required for perception analysis)
@@ -1294,7 +1294,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 - **Prevention**: Document all configuration requirements for third-party services
 
 #### 5. Frontend Data Display Issues
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Reporting & Analytics Frontend
 - **Error Description**: Conversation details not displaying in frontend despite being stored in database
 - **Root Cause**: 
@@ -1313,7 +1313,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 - **Prevention**: Always test frontend components with actual data formats from APIs
 
 #### 6. Webhook Data Ingestion
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Tavus Webhook Handler
 - **Error Description**: Webhook events not properly storing transcript and perception data
 - **Root Cause**: Webhook handler not parsing `events` array from incoming webhook payloads
@@ -1325,7 +1325,7 @@ Successfully integrated Tavus conversation data (transcripts and perception anal
 - **Prevention**: Keep webhook and sync API data processing logic in sync
 
 #### 7. Data Synchronization API
-- **Date**: 2025-01-10
+- **Date**: 2025-09-06
 - **Component**: Conversation Data Sync API
 - **Error Description**: No API endpoint to manually sync conversation data from Tavus
 - **Root Cause**: Missing API endpoint for data synchronization
