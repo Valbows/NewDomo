@@ -9,6 +9,7 @@ import * as path from 'path';
 export interface PersonaConfig {
   system_prompt?: string;
   guardrails_id?: string;
+  objectives_id?: string;
   // Add other persona properties as needed
   [key: string]: any;
 }
@@ -17,6 +18,7 @@ export interface PersonaResponse {
   persona_id: string;
   system_prompt: string;
   guardrails_id?: string;
+  objectives_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -34,10 +36,10 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
   const manager = createGuardrailsManager();
   const guardrailsId = await manager.ensureDomoAIGuardrails();
 
-  // Load clean system prompt if not provided
+  // Load system prompt if not provided
   let systemPrompt = config.system_prompt;
   if (!systemPrompt) {
-    const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt_clean.md');
+    const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
     systemPrompt = fs.readFileSync(promptPath, 'utf-8');
   }
 
@@ -47,6 +49,8 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
     system_prompt: systemPrompt,
     guardrails_id: guardrailsId
   };
+
+  // Debug logging removed for production
 
   const response = await fetch('https://tavusapi.com/v2/personas/', {
     method: 'POST',

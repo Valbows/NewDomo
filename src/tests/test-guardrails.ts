@@ -74,9 +74,9 @@ function testGuardrailsTemplates() {
 function testSystemPromptClean() {
   console.log('\n🔍 Testing Clean System Prompt...\n');
   
-  const cleanPromptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt_clean.md');
+  const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
   
-  if (!fs.existsSync(cleanPromptPath)) {
+  if (!fs.existsSync(promptPath)) {
     console.error('❌ Clean system prompt file not found!');
     return false;
   }
@@ -104,7 +104,7 @@ function testFileStructure() {
     'src/lib/tavus/guardrails-templates.ts',
     'src/lib/tavus/guardrails-manager.ts',
     'src/lib/tavus/persona-with-guardrails.ts',
-    'src/lib/tavus/system_prompt_clean.md',
+    'src/lib/tavus/system_prompt.md',
     'scripts/setup-guardrails.ts'
   ];
   

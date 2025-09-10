@@ -17,7 +17,7 @@ Instead of embedding guardrails directly in system prompts, we now use Tavus's d
 - `guardrails-templates.ts` - Defines guardrails templates for reuse
 - `guardrails-manager.ts` - Manages guardrails via Tavus API
 - `persona-with-guardrails.ts` - Utilities for creating personas with guardrails
-- `system_prompt_clean.md` - Clean system prompt without embedded guardrails
+- `system_prompt.md` - Main system prompt (guardrails managed separately)
 
 ### Legacy Files
 
@@ -134,7 +134,7 @@ npx tsx src/tests/test-guardrails.ts
 
 3. **Switch to clean system prompt:**
 
-   - Use `system_prompt_clean.md` instead of `system_prompt.md`
+   - Use `system_prompt.md` (guardrails now managed separately)
    - Remove guardrails section from your prompts
 
 4. **Test your personas:**

@@ -161,9 +161,12 @@ export class GuardrailsManager {
     // Create new guardrails with latest template
     console.log('Creating new Domo AI guardrails with updated rules...');
     const created = await this.createGuardrails(ALL_GUARDRAIL_TEMPLATES.DOMO_AI_GUARDRAILS);
-    console.log(`Created guardrails: ${created.uuid}`);
     
-    return created.uuid;
+    // The create API returns guardrails_id, not uuid
+    const guardrailsId = created.guardrails_id;
+    console.log(`Created guardrails: ${guardrailsId}`);
+    
+    return guardrailsId;
   }
 }
 
