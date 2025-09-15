@@ -43,11 +43,12 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
     systemPrompt = fs.readFileSync(promptPath, 'utf-8');
   }
 
-  // Create persona with guardrails
+  // Create persona with guardrails and raven-0 perception analysis
   const personaConfig: PersonaConfig = {
     ...config,
     system_prompt: systemPrompt,
-    guardrails_id: guardrailsId
+    guardrails_id: guardrailsId,
+    perception_model: 'raven-0' // Enable perception analysis by default
   };
 
   // Debug logging removed for production

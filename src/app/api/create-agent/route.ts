@@ -170,6 +170,7 @@ async function handlePOST(req: NextRequest) {
     console.log('Enhanced system prompt length:', enhancedSystemPrompt.length);
     console.log('Knowledge chunks:', knowledgeChunks?.length || 0);
     console.log('Available videos:', demoVideos?.length || 0);
+    console.log('🧠 Perception analysis: raven-0 enabled by default');
     
     // Log guardrails section for verification
     const guardrailsSection = enhancedSystemPrompt.match(/## GUARDRAILS \(Critical\)([\s\S]*?)(?=##|$)/);
@@ -334,6 +335,7 @@ async function handlePOST(req: NextRequest) {
         pipeline_mode: 'full',
         system_prompt: enhancedSystemPrompt,
         persona_name: agentName,
+        perception_model: 'raven-0', // Enable perception analysis for all new personas
         layers: {
           llm: {
             model: tavusLlmModel,

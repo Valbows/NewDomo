@@ -119,17 +119,41 @@ async function handleGET(req: NextRequest) {
         // Extract transcript and perception analysis from events array
         const events = (conversationData as any).events || [];
         
-        // Find transcript in events
+        // Find transcript in events - try multiple event types and locations
+        let transcript = null;
         const transcriptEvent = events.find((event: any) => 
-          event.event_type === 'application.transcription_ready'
+          event.event_type === 'application.transcription_ready' ||
+          event.event_type?.includes('transcription')
         );
-        const transcript = transcriptEvent?.properties?.transcript || null;
         
-        // Find perception analysis in events  
+        if (transcriptEvent) {
+          transcript = transcriptEvent.properties?.transcript || 
+                      transcriptEvent.data?.transcript || 
+                      transcriptEvent.transcript || null;
+        }
+        
+        // Also check if transcript is at the conversation level
+        if (!transcript && (conversationData as any).transcript) {
+          transcript = (conversationData as any).transcript;
+        }
+        
+        // Find perception analysis in events - try multiple event types and locations
+        let perceptionAnalysis = null;
         const perceptionEvent = events.find((event: any) => 
-          event.event_type === 'application.perception_analysis'
+          event.event_type === 'application.perception_analysis' ||
+          event.event_type?.includes('perception')
         );
-        const perceptionAnalysis = perceptionEvent?.properties?.analysis || null;
+        
+        if (perceptionEvent) {
+          perceptionAnalysis = perceptionEvent.properties?.analysis || 
+                              perceptionEvent.data?.analysis || 
+                              perceptionEvent.analysis || null;
+        }
+        
+        // Also check if perception analysis is at the conversation level
+        if (!perceptionAnalysis && (conversationData as any).perception_analysis) {
+          perceptionAnalysis = (conversationData as any).perception_analysis;
+        }
         
         console.log(`📋 Found ${events.length} events in conversation`);
         console.log(`🎯 Event types:`, events.map((e: any) => e.event_type).join(', '));

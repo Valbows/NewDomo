@@ -1,7 +1,8 @@
 import { Demo } from '@/app/demos/[demoId]/configure/types';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, RefreshCw, Calendar, Clock, MessageSquare, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, RefreshCw, Calendar, Clock, MessageSquare, BarChart3, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import RavenDebugPanel from '@/components/RavenDebugPanel';
 
 interface ReportingProps {
   demo: Demo | null;
@@ -58,6 +59,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   // Legacy analytics from metadata (keep for backward compatibility)
   const analytics = demo?.metadata?.analytics as
@@ -299,23 +301,38 @@ export const Reporting = ({ demo }: ReportingProps) => {
             View detailed conversation transcripts and perception analysis from Tavus.
           </p>
         </div>
-        <button
-          onClick={syncConversations}
-          disabled={syncing || !demo?.tavus_conversation_id}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
-          {syncing ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4 mr-2" />
-          )}
-          {syncing ? 'Syncing...' : 'Sync from Tavus'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className="inline-flex items-center px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Debug Raven-0
+          </button>
+          <button
+            onClick={syncConversations}
+            disabled={syncing || !demo?.tavus_conversation_id}
+            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {syncing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            {syncing ? 'Syncing...' : 'Sync from Tavus'}
+          </button>
+        </div>
       </div>
 
       {error && (
         <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-md">
           {error}
+        </div>
+      )}
+
+      {showDebugPanel && (
+        <div className="mb-6">
+          <RavenDebugPanel demoId={demo?.id} />
         </div>
       )}
 
