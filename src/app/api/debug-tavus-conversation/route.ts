@@ -69,7 +69,7 @@ async function handleGET(req: NextRequest) {
       console.log(`- Perception: ${debug.mainEndpoint.analysis.has_perception ? `✅ Found (${debug.mainEndpoint.analysis.perception_fields.join(', ')})` : '❌ Not found'}`);
     }
 
-    return NextResponse.json(debug, null, { status: 200 });
+    return NextResponse.json(debug, { status: 200 });
 
   } catch (error) {
     console.error('Debug error:', error);

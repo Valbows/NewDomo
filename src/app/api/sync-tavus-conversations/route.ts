@@ -117,7 +117,7 @@ async function handleGET(req: NextRequest) {
         });
 
         // Extract transcript and perception analysis from events array
-        const events = conversationData.events || [];
+        const events = (conversationData as any).events || [];
         
         // Find transcript in events
         const transcriptEvent = events.find((event: any) => 
@@ -326,5 +326,11 @@ async function handlePOST(req: NextRequest) {
   }
 }
 
-export const GET = wrapRouteHandlerWithSentry(handleGET, 'GET /api/sync-tavus-conversations');
-export const POST = wrapRouteHandlerWithSentry(handlePOST, 'POST /api/sync-tavus-conversations');
+export const GET = wrapRouteHandlerWithSentry(handleGET, {
+  method: 'GET',
+  parameterizedRoute: '/api/sync-tavus-conversations',
+});
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/sync-tavus-conversations',
+});

@@ -555,29 +555,16 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setObjectives={setObjectives}
               />
               <div className="mt-6">
-                {!conversationData ? (
-                  <>
-                    {uiState === UIState.SERVICE_ERROR && (
-                      <button
-                        onClick={createTavusAgent}
-                        className="mr-4 px-6 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75"
-                      >
-                        Retry
-                      </button>
-                    )}
-                    <button 
-                      onClick={createTavusAgent} 
-                      disabled={uiState === UIState.LOADING} 
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
-                    >
-                      {uiState === UIState.LOADING ? 'Initializing...' : 'Start Demo Conversation'}
-                    </button>
-                  </>
-                ) : (
+                {demo?.tavus_persona_id ? (
                   <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                    <p className="font-bold">Conversation Ready!</p>
-                    <p>Session ID: {conversationData.conversation_id}</p>
-                    <p>URL: <a href={conversationData.conversation_url} target="_blank" rel="noopener noreferrer" className="underline">{conversationData.conversation_url}</a></p>
+                    <p className="font-bold">✅ Agent Configured!</p>
+                    <p>Persona ID: {demo.tavus_persona_id}</p>
+                    <p className="text-sm mt-2">Your agent is ready to use. Go to the <strong>Experience</strong> tab to test it!</p>
+                  </div>
+                ) : (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded">
+                    <p className="font-medium">🤖 Agent Not Configured</p>
+                    <p className="text-sm mt-1">Use the "Create Agent" button above to configure your Tavus agent with system prompt, guardrails, and objectives.</p>
                   </div>
                 )}
               </div>

@@ -113,15 +113,54 @@ async function handlePOST(req: NextRequest) {
     // Identity section sourced from UI inputs
     const identitySection = `\n\n## AGENT PROFILE\n- Name: ${agentName}\n- Personality: ${agentPersonality || 'Friendly and helpful assistant.'}\n- Initial Greeting (use at start of conversation): ${agentGreeting || 'Hello! How can I help you with the demo today?'}\n`;
 
-    // Objectives section sourced from demo metadata (3–5 concise goals)
-    const objectivesList: string[] = Array.isArray(demo.metadata?.objectives)
-      ? (demo.metadata!.objectives as string[]).filter((s) => typeof s === 'string' && s.trim()).slice(0, 5)
-      : [];
-    const objectivesSection = objectivesList.length
-      ? `\n\n## DEMO OBJECTIVES\nFollow these objectives throughout the conversation. Weave them naturally into dialog and video choices.\n${objectivesList
+    // Objectives section - prioritize custom objectives, fall back to demo metadata
+    let objectivesSection = '';
+    try {
+      const { getActiveCustomObjective } = await import('@/lib/supabase/custom-objectives');
+      const activeCustomObjective = await getActiveCustomObjective(demoId);
+      
+      if (activeCustomObjective && activeCustomObjective.objectives.length > 0) {
+        // Use custom objectives with detailed prompts
+        console.log(`Using custom objectives for demo ${demoId}: ${activeCustomObjective.name}`);
+        objectivesSection = `\n\n## DEMO OBJECTIVES (${activeCustomObjective.name})\n`;
+        objectivesSection += `${activeCustomObjective.description ? activeCustomObjective.description + '\n\n' : ''}`;
+        objectivesSection += 'Follow these structured objectives throughout the conversation:\n\n';
+        
+        activeCustomObjective.objectives.forEach((obj, i) => {
+          objectivesSection += `### ${i + 1}. ${obj.objective_name}\n`;
+          objectivesSection += `**Objective:** ${obj.objective_prompt}\n`;
+          objectivesSection += `**Mode:** ${obj.confirmation_mode} confirmation, ${obj.modality} modality\n`;
+          if (obj.output_variables && obj.output_variables.length > 0) {
+            objectivesSection += `**Capture:** ${obj.output_variables.join(', ')}\n`;
+          }
+          objectivesSection += '\n';
+        });
+      } else {
+        // Fall back to simple objectives from demo metadata
+        const objectivesList: string[] = Array.isArray(demo.metadata?.objectives)
+          ? (demo.metadata!.objectives as string[]).filter((s) => typeof s === 'string' && s.trim()).slice(0, 5)
+          : [];
+        
+        if (objectivesList.length > 0) {
+          console.log(`Using simple objectives from demo metadata for demo ${demoId}`);
+          objectivesSection = `\n\n## DEMO OBJECTIVES\nFollow these objectives throughout the conversation. Weave them naturally into dialog and video choices.\n${objectivesList
+            .map((o, i) => `- (${i + 1}) ${o.trim()}`)
+            .join('\n')}\n`;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading custom objectives, falling back to demo metadata:', error);
+      // Fall back to demo metadata objectives
+      const objectivesList: string[] = Array.isArray(demo.metadata?.objectives)
+        ? (demo.metadata!.objectives as string[]).filter((s) => typeof s === 'string' && s.trim()).slice(0, 5)
+        : [];
+      
+      if (objectivesList.length > 0) {
+        objectivesSection = `\n\n## DEMO OBJECTIVES\nFollow these objectives throughout the conversation. Weave them naturally into dialog and video choices.\n${objectivesList
           .map((o, i) => `- (${i + 1}) ${o.trim()}`)
-          .join('\n')}\n`
-      : '';
+          .join('\n')}\n`;
+      }
+    }
 
     // Language handling guidance (multilingual smart detection)
     const languageSection = `\n\n## LANGUAGE HANDLING\n- Automatically detect the user's language from their utterances and respond in that language.\n- Keep all tool calls and their arguments (function names, video titles) EXACT and un-translated.\n- Do not ask the user to choose a language; infer it from context and switch seamlessly while honoring all guardrails.\n`;
@@ -133,7 +172,7 @@ async function handlePOST(req: NextRequest) {
     console.log('Available videos:', demoVideos?.length || 0);
     
     // Log guardrails section for verification
-    const guardrailsSection = enhancedSystemPrompt.match(/## GUARDRAILS \(Critical\)(.*?)(?=##|$)/s);
+    const guardrailsSection = enhancedSystemPrompt.match(/## GUARDRAILS \(Critical\)([\s\S]*?)(?=##|$)/);
     if (guardrailsSection) {
       console.log('✅ Guardrails section found in system prompt');
       console.log('Guardrails length:', guardrailsSection[0].length);

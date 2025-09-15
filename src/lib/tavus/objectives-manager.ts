@@ -184,7 +184,7 @@ export class ObjectivesManager {
     return (
       allObjectives.data.find((obj) => {
         // Simple heuristic: match by number of objectives and first objective name
-        return obj.objectives.length > 0;
+        return (obj.data?.length || 0) > 0;
       }) || null
     );
   }

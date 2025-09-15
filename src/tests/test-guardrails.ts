@@ -81,7 +81,7 @@ function testSystemPromptClean() {
     return false;
   }
   
-  const content = fs.readFileSync(cleanPromptPath, 'utf-8');
+  const content = fs.readFileSync(promptPath, 'utf-8');
   
   // Check that guardrails section is removed
   const hasGuardrailsSection = /## GUARDRAILS \(Critical\)/.test(content);

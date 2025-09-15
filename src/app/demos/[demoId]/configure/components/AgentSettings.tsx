@@ -1,4 +1,7 @@
 import { Demo } from '@/app/demos/[demoId]/configure/types';
+import { CustomObjectivesManager } from '@/components/CustomObjectivesManager';
+import { ObjectivesStatus } from '@/components/ObjectivesStatus';
+import { useState } from 'react';
 
 interface AgentSettingsProps {
   demo: Demo | null;
@@ -29,6 +32,9 @@ export const AgentSettings = ({
     : (Array.isArray(demo?.metadata?.objectives) && (demo!.metadata!.objectives as string[])) || ['', '', ''];
   const setObjectivesSafe = typeof setObjectives === 'function' ? setObjectives : (_: string[]) => {};
 
+  const [isCreatingAgent, setIsCreatingAgent] = useState(false);
+  const [agentCreationResult, setAgentCreationResult] = useState<any>(null);
+
   const handleObjectiveChange = (index: number, value: string) => {
     const next = [...objectivesSafe];
     next[index] = value;
@@ -44,6 +50,50 @@ export const AgentSettings = ({
     if (objectivesSafe.length <= 3) return; // enforce minimum of 3
     const next = objectivesSafe.filter((_, i) => i !== index);
     setObjectivesSafe(next);
+  };
+
+  const handleCreateEnhancedAgent = async () => {
+    if (!demo?.id || !agentName.trim()) {
+      alert('Please fill in the agent name');
+      return;
+    }
+
+    setIsCreatingAgent(true);
+    setAgentCreationResult(null);
+
+    try {
+      const response = await fetch('/api/create-enhanced-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          demoId: demo.id,
+          agentName: agentName.trim(),
+          agentPersonality: agentPersonality.trim(),
+          agentGreeting: agentGreeting.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to create agent: ${error}`);
+      }
+
+      const result = await response.json();
+      setAgentCreationResult(result);
+      
+      console.log('🎉 Enhanced agent created successfully!', result);
+      
+    } catch (error) {
+      console.error('❌ Failed to create enhanced agent:', error);
+      setAgentCreationResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setIsCreatingAgent(false);
+    }
   };
 
   return (
@@ -85,41 +135,77 @@ export const AgentSettings = ({
               placeholder="e.g., Hello! How can I help you today?"
             ></textarea>
           </div>
+          {/* Demo Objectives Section */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Demo Objectives (3–5)</label>
-            <p className="text-xs text-gray-500 mb-2">These guide the agent to focus the conversation. Add 3–5 concise objectives.</p>
-            <div className="space-y-2">
-              {objectivesSafe.map((obj, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={obj}
-                    onChange={(e) => handleObjectiveChange(idx, e.target.value)}
-                    className="flex-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder={`Objective ${idx + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeObjective(idx)}
-                    disabled={objectivesSafe.length <= 3}
-                    className="px-2 py-1 text-xs rounded border border-gray-300 text-gray-700 disabled:opacity-50"
-                    title={objectivesSafe.length <= 3 ? 'Minimum 3 objectives required' : 'Remove objective'}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+            <label className="block text-sm font-medium text-gray-700 mb-2">Demo Objectives</label>
+            
+            {/* Objectives Status */}
+            <div className="mb-4">
+              <ObjectivesStatus demoId={demo?.id || ''} />
             </div>
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={addObjective}
-                disabled={objectivesSafe.length >= 5}
-                className="px-3 py-1 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                Add Objective
-              </button>
-              <span className="ml-2 text-xs text-gray-500">{objectivesSafe.length}/5</span>
+
+            {/* Custom Objectives Manager */}
+            <CustomObjectivesManager demoId={demo?.id || ''} />
+          </div>
+
+          {/* Agent Creation */}
+          <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-900 mb-2">Create Agent</h3>
+            <p className="text-sm text-blue-700 mb-4">
+              Creates a Tavus agent. If you have active custom objectives, a new persona will be created with those objectives. Otherwise, uses the existing persona with preset objectives.
+            </p>
+            
+            {/* Show current agent status */}
+            {demo?.tavus_persona_id && !agentCreationResult && (
+              <div className="mb-4 p-3 rounded bg-green-100 border border-green-300 text-green-800">
+                <p className="font-medium">✅ Agent Already Configured</p>
+                <p className="text-sm mt-1">Persona ID: {demo.tavus_persona_id}</p>
+                <p className="text-sm">You can update the configuration by creating a new agent.</p>
+              </div>
+            )}
+            
+            {agentCreationResult && (
+              <div className={`mb-4 p-3 rounded ${
+                agentCreationResult.success 
+                  ? 'bg-green-100 border border-green-300 text-green-800'
+                  : 'bg-red-100 border border-red-300 text-red-800'
+              }`}>
+                {agentCreationResult.success ? (
+                  <div>
+                    <p className="font-medium">✅ Agent Created Successfully!</p>
+                    <p className="text-sm mt-1">Persona ID: {agentCreationResult.personaId}</p>
+                    <p className="text-sm">System Prompt ✅ Guardrails ✅ Objectives ✅</p>
+                    {agentCreationResult.configuration?.customObjectives && (
+                      <p className="text-sm">Custom Objectives: {agentCreationResult.configuration.customObjectives.name} ({agentCreationResult.configuration.customObjectives.steps} steps) ✅</p>
+                    )}
+                    <p className="text-sm mt-2 font-medium">🚀 Ready to test! Go to the Experience tab and start a conversation.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="font-medium">❌ Agent Creation Failed</p>
+                    <p className="text-sm mt-1">{agentCreationResult.error}</p>
+                    {agentCreationResult.error?.includes('Failed to verify Tavus persona') && (
+                      <p className="text-sm mt-2 text-red-600">
+                        This might be a temporary Tavus API issue. Please try again in a moment.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={handleCreateEnhancedAgent}
+              disabled={isCreatingAgent || !agentName.trim()}
+              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCreatingAgent ? 'Creating Agent...' : demo?.tavus_persona_id ? 'Update Agent' : 'Create Agent'}
+            </button>
+            
+            <div className="mt-3 text-xs text-blue-600">
+              <p>✅ System Prompt + Guardrails always included</p>
+              <p>✅ Custom Objectives: Creates new persona if active</p>
+              <p>✅ Preset Objectives: Uses existing persona if no custom objectives</p>
             </div>
           </div>
         </div>

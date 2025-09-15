@@ -28,7 +28,7 @@ async function dailyRoomExists(url: string): Promise<boolean> {
 // Simple in-memory lock to dedupe concurrent starts per demo within a single server instance
 const startLocks = new Map<string, Promise<unknown>>();
 
-async function handlePOST(req: NextRequest) {
+async function handlePOST(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
 
   try {
@@ -147,10 +147,22 @@ async function handlePOST(req: NextRequest) {
     const urlToken = (process.env.TAVUS_WEBHOOK_TOKEN || '').trim();
     const callbackUrl = `${baseUrlForWebhook}/api/tavus-webhook${urlToken ? `?t=${encodeURIComponent(urlToken)}` : ''}`;
 
+    // Note: We don't override objectives here because:
+    // 1. If persona was created with custom objectives, those are already baked in
+    // 2. If persona uses default objectives, those are also baked in
+    // 3. Tavus personas have their objectives set at creation time
+    console.log('\n🎭 CONVERSATION PERSONA SELECTION');
+    console.log('='.repeat(40));
+    console.log(`Demo ID: ${demoId}`);
+    console.log(`Persona ID from DB: ${demo.tavus_persona_id}`);
+    console.log(`Using persona with its configured objectives (no override)`);
+    console.log('='.repeat(40));
+
     const conversationPayload: any = {
       persona_id: demo.tavus_persona_id,
       callback_url: callbackUrl,
       ...(finalReplicaId ? { replica_id: finalReplicaId } : {}),
+      // Note: No objectives_id override - persona already has the correct objectives
     };
     if (!conversationPayload.replica_id) {
       const msg = 'Missing replica_id: Set TAVUS_REPLICA_ID or assign a default replica to the persona.';
@@ -165,7 +177,7 @@ async function handlePOST(req: NextRequest) {
     }
 
     // Define the creation flow so we can run it under the lock
-    const doStart = async (): Promise<Response | any> => {
+    const doStart = async (): Promise<NextResponse | any> => {
       const conversationResponse = await fetch('https://tavusapi.com/v2/conversations', {
         method: 'POST',
         headers: {
@@ -282,8 +294,8 @@ async function handlePOST(req: NextRequest) {
       startLocks.delete(demoId);
     }
 
-    if (result instanceof Response) {
-      return result as Response;
+    if (result instanceof NextResponse) {
+      return result;
     }
     return NextResponse.json(result);
 

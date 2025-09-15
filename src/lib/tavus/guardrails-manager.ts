@@ -163,7 +163,7 @@ export class GuardrailsManager {
     const created = await this.createGuardrails(ALL_GUARDRAIL_TEMPLATES.DOMO_AI_GUARDRAILS);
     
     // The create API returns guardrails_id, not uuid
-    const guardrailsId = created.guardrails_id;
+    const guardrailsId = (created as any).guardrails_id;
     console.log(`Created guardrails: ${guardrailsId}`);
     
     return guardrailsId;

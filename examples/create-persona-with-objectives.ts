@@ -130,12 +130,12 @@ async function example4_ManageObjectives() {
 
     allObjectives.data.forEach((obj, index) => {
       console.log(`  ${index + 1}. ID: ${obj.uuid}`);
-      console.log(`     Objectives: ${obj.objectives.length}`);
+      console.log(`     Objectives: ${obj.data?.length || 0}`);
       console.log(
         `     Created: ${new Date(obj.created_at).toLocaleDateString()}`
       );
       console.log(
-        `     First objective: ${obj.objectives[0]?.objective_name || "None"}`
+        `     First objective: ${obj.data?.[0]?.objective_name || "None"}`
       );
       console.log("");
     });
@@ -143,13 +143,13 @@ async function example4_ManageObjectives() {
     // Get details of first objectives set
     if (allObjectives.data.length > 0) {
       const firstObj = allObjectives.data[0];
-      const details = await manager.getObjectives(firstObj.uuid);
+      const details = await manager.getObjectives(firstObj.uuid!);
 
       console.log(`📋 Details for objectives ${details.uuid}:`);
-      console.log(`   Total objectives: ${details.objectives.length}`);
+      console.log(`   Total objectives: ${details.data?.length || 0}`);
       console.log(`   Objective flow:`);
 
-      details.objectives.forEach((obj, index) => {
+      details.data?.forEach((obj, index) => {
         console.log(`     ${index + 1}. ${obj.objective_name}`);
         console.log(`        Mode: ${obj.confirmation_mode}`);
         console.log(

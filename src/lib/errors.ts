@@ -40,7 +40,7 @@ export function logError(error: unknown, context?: string) {
   // Forward to Sentry in production only. This is safe even if Sentry isn't initialized.
   try {
     if (process.env.NODE_ENV === 'production' && Sentry) {
-      Sentry.withScope((scope) => {
+      Sentry.withScope((scope: any) => {
         if (context) scope.setContext('logError', { context });
         scope.setLevel('error');
         scope.setTag('from', 'logError');

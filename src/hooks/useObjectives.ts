@@ -7,9 +7,9 @@ import { createObjectivesManager } from '@/lib/tavus/objectives-manager';
 import type { ObjectivesTemplate } from '@/lib/tavus/objectives-templates';
 
 interface ObjectivesData {
-  uuid: string;
-  name: string;
-  data: any[];
+  uuid?: string;
+  name?: string;
+  data?: any[];
   created_at: string;
 }
 
