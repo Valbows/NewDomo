@@ -22,6 +22,10 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
   const meetingState = useMeetingState();
   const [selectedTitle, setSelectedTitle] = useState<string>('');
   const lastForwardRef = useRef<{ key: string; ts: number } | null>(null);
+  const lastUserSpeechRef = useRef<string>('');
+  const lastAssistantSpeechRef = useRef<string>('');
+  const lastFallbackTsRef = useRef<number>(0);
+  const fallbackEnabled = (process.env.NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK ?? 'true').toLowerCase() !== 'false';
 
   const shouldForward = useCallback((toolName: string, args: any) => {
     const argKey = toolName === 'fetch_video'
@@ -61,6 +65,15 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
       try {
         console.log('Event.data (json):', JSON.stringify(data, null, 2));
       } catch {}
+
+      // Track latest utterances for voice-based fallback
+      const role = data?.properties?.role as string | undefined;
+      const speech = typeof data?.properties?.speech === 'string' ? data.properties.speech : '';
+      if (role === 'user' && speech) {
+        lastUserSpeechRef.current = speech;
+      } else if ((role === 'replica' || role === 'assistant') && speech) {
+        lastAssistantSpeechRef.current = speech;
+      }
 
       // Unified parsing using shared helper on multiple shapes
       let parsed = parseToolCallFromEvent(data);
@@ -143,6 +156,65 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
           }
         }
       }
+
+      // Conservative voice-based fallback: only when assistant explicitly promises a video
+      // and no explicit tool call was forwarded above
+      try {
+        if (fallbackEnabled && (role === 'replica' || role === 'assistant')) {
+          const text = (speech || '').toString();
+          const lower = text.toLowerCase();
+          const promised = /\b(show|play|fetch|get|pull|bring up)\b.{0,60}\b(video|demo)\b/.test(lower)
+            || /\b(i'm going to fetch a video|let me (show|play) you a video)\b/.test(lower);
+
+          if (promised) {
+            // Extract a quoted title if present, else pick best match from known titles or last user request
+            const quotedMatch = text.match(/"([^"\n]{2,120})"/);
+            const candidateRaw = quotedMatch?.[1]?.trim();
+
+            const pickBestTitle = (input: string | undefined | null): string | null => {
+              if (!input || !Array.isArray(debugVideoTitles) || debugVideoTitles.length === 0) return null;
+              const cleaned = input.toLowerCase();
+              let best: string | null = null;
+              let bestScore = 0;
+              for (const t of debugVideoTitles) {
+                const tl = (t || '').toLowerCase();
+                if (!tl) continue;
+                let score = 0;
+                if (cleaned.includes(tl) || tl.includes(cleaned)) {
+                  score += 5;
+                } else {
+                  const words = cleaned.split(/[^a-z0-9]+/i).filter(w => w.length >= 3);
+                  const uniq = Array.from(new Set(words));
+                  const hits = uniq.reduce((acc, w) => acc + (tl.includes(w) ? 1 : 0), 0);
+                  score += hits;
+                }
+                if (score > bestScore) {
+                  bestScore = score;
+                  best = t;
+                }
+              }
+              return bestScore > 0 ? best : null;
+            };
+
+            const inferred = candidateRaw
+              ? (pickBestTitle(candidateRaw) || candidateRaw)
+              : (pickBestTitle(lastUserSpeechRef.current) || pickBestTitle(text));
+
+            if (inferred && Date.now() - lastFallbackTsRef.current > 2500) {
+              lastFallbackTsRef.current = Date.now();
+              const args = { title: inferred.replace(/^['"]|['"]$/g, '') };
+              if (!shouldForward('fetch_video', args)) return;
+              console.log('🎯 Voice-fallback triggering fetch_video with inferred title:', args);
+              onToolCall?.('fetch_video', args);
+              return;
+            } else if (!inferred) {
+              console.warn('Voice-fallback detected promise to show video but could not infer a matching title');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Voice-fallback processing error (ignored)', e);
+      }
     };
 
     // Add event listener
@@ -152,7 +224,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
     return () => {
       daily.off('app-message', handleAppMessage);
     };
-  }, [daily, onToolCall, meetingState]);
+  }, [daily, onToolCall, meetingState, debugVideoTitles]);
 
   return (
     <div className="w-full h-full">

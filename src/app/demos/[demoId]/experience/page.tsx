@@ -377,34 +377,51 @@ export default function DemoExperiencePage() {
           setAlert({ type: 'info', message: 'Preparing demo… please try again in a moment.' });
           return;
         }
-        // First attempt: exact title match
-        const { data: videoExact, error: videoExactError } = await supabase
+        // First attempt: exact title match (avoid .single() to prevent 406 when duplicates exist)
+        const { data: videoExactRows, error: videoExactError } = await supabase
           .from('demo_videos')
           .select('storage_url')
           .eq('demo_id', demoKey)
           .eq('title', normalizedTitle)
-          .single();
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
         let storagePath: string | null = null;
-        if (!videoExactError && videoExact) {
-          storagePath = videoExact.storage_url as string;
+        if (!videoExactError && Array.isArray(videoExactRows) && videoExactRows.length > 0) {
+          storagePath = (videoExactRows[0] as any).storage_url as string;
         } else {
           console.warn('Exact title match not found, attempting case-insensitive lookup for:', normalizedTitle);
-          // Fallback: case-insensitive exact match (no wildcards)
+          // Fallback 1: case-insensitive exact (no wildcards)
           const { data: videosILike, error: ilikeError } = await supabase
             .from('demo_videos')
             .select('storage_url')
             .eq('demo_id', demoKey)
             .ilike('title', normalizedTitle)
+            .order('updated_at', { ascending: false })
             .limit(1);
 
           if (!ilikeError && Array.isArray(videosILike) && videosILike.length > 0) {
             storagePath = (videosILike[0] as any).storage_url as string;
           }
+
+          // Fallback 2: case-insensitive partial match (wildcards)
+          if (!storagePath) {
+            const pattern = `%${normalizedTitle}%`;
+            const { data: videosPartial, error: partialError } = await supabase
+              .from('demo_videos')
+              .select('storage_url')
+              .eq('demo_id', demoKey)
+              .ilike('title', pattern)
+              .order('updated_at', { ascending: false })
+              .limit(1);
+            if (!partialError && Array.isArray(videosPartial) && videosPartial.length > 0) {
+              storagePath = (videosPartial[0] as any).storage_url as string;
+            }
+          }
         }
 
         if (!storagePath) {
-          logError(videoExactError || `Video not found: ${normalizedTitle}`, 'Video lookup');
+          logError(videoExactError || 'No matching demo_videos row found', 'Video lookup');
           setAlert({ type: 'error', message: `Could not find a video titled "${normalizedTitle}".` });
           return;
         }
