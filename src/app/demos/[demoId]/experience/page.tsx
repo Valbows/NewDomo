@@ -340,7 +340,7 @@ export default function DemoExperiencePage() {
         return;
       }
       // Normalize incoming title (trim and remove a single leading/trailing quote)
-      const normalizedTitle = videoTitle.trim().replace(/^["']|["']$/g, '');
+      let normalizedTitle = videoTitle.trim().replace(/^["']|["']$/g, '');
       console.log('Processing real-time video request:', normalizedTitle);
 
       // Ensure CTA banner is hidden while a video is starting and clear prior alerts
@@ -421,9 +421,86 @@ export default function DemoExperiencePage() {
         }
 
         if (!storagePath) {
-          logError(videoExactError || 'No matching demo_videos row found', 'Video lookup');
-          setAlert({ type: 'error', message: `Could not find a video titled "${normalizedTitle}".` });
-          return;
+          // Title best-match fallback using loaded videoTitles
+          try {
+            if (Array.isArray(videoTitles) && videoTitles.length > 0) {
+              const q = normalizedTitle.toLowerCase();
+              let best: string | null = null;
+              let bestScore = 0;
+              for (const t of videoTitles) {
+                if (typeof t !== 'string' || !t.trim()) continue;
+                const tl = t.toLowerCase();
+                let score = 0;
+                if (tl === q) score += 1000; // exact (case-insensitive)
+                if (tl.includes(q)) score += 8; // DB title contains requested phrase
+                if (q.includes(tl)) score += 7; // requested phrase contains DB title (common when user over-specifies)
+                const tokens = q.split(/[^a-z0-9]+/i).filter(w => w.length >= 3);
+                const uniq = Array.from(new Set(tokens));
+                const hits = uniq.reduce((acc, w) => acc + (tl.includes(w) ? 1 : 0), 0);
+                score += hits;
+                if (score > bestScore) {
+                  bestScore = score;
+                  best = t;
+                }
+              }
+              if (best && best.toLowerCase() !== q && bestScore > 0) {
+                console.warn('🎯 Title best-match fallback selected:', best, '(from requested:', normalizedTitle, ')');
+                // Retry lookups with best candidate title
+                const { data: bestExactRows, error: bestExactErr } = await supabase
+                  .from('demo_videos')
+                  .select('storage_url')
+                  .eq('demo_id', demoKey)
+                  .eq('title', best)
+                  .order('updated_at', { ascending: false })
+                  .limit(1);
+                if (!bestExactErr && Array.isArray(bestExactRows) && bestExactRows.length > 0) {
+                  storagePath = (bestExactRows[0] as any).storage_url as string;
+                }
+                if (!storagePath) {
+                  const { data: bestILikeRows, error: bestILikeErr } = await supabase
+                    .from('demo_videos')
+                    .select('storage_url')
+                    .eq('demo_id', demoKey)
+                    .ilike('title', best)
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+                  if (!bestILikeErr && Array.isArray(bestILikeRows) && bestILikeRows.length > 0) {
+                    storagePath = (bestILikeRows[0] as any).storage_url as string;
+                  }
+                }
+                if (!storagePath) {
+                  const pattern2 = `%${best}%`;
+                  const { data: bestPartialRows, error: bestPartialErr } = await supabase
+                    .from('demo_videos')
+                    .select('storage_url')
+                    .eq('demo_id', demoKey)
+                    .ilike('title', pattern2)
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+                  if (!bestPartialErr && Array.isArray(bestPartialRows) && bestPartialRows.length > 0) {
+                    storagePath = (bestPartialRows[0] as any).storage_url as string;
+                  }
+                }
+
+                // If we succeeded using best title, propagate that title forward
+                if (storagePath) {
+                  // Override normalizedTitle reference for downstream state updates
+                  console.log('✅ Using best-match title for playback:', best);
+                  // Update current title/index later with best
+                  // Continue to signing/playing block below
+                  normalizedTitle = best;
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Best-match title fallback failed (ignored)', e);
+          }
+
+          if (!storagePath) {
+            logError(videoExactError || 'No matching demo_videos row found', 'Video lookup');
+            setAlert({ type: 'error', message: `Could not find a video titled "${normalizedTitle}".` });
+            return;
+          }
         }
 
         // If storagePath is already a full URL, don't try to sign it
