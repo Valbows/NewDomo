@@ -30,6 +30,7 @@ const HomePageClient = () => {
             <div className="ml-10 space-x-4 flex items-center">
                 <Link href="#" className="text-domo-light-text hover:text-white px-3 py-2 rounded-md text-sm font-medium">Features</Link>
                 <Link href="#" className="text-domo-light-text hover:text-white px-3 py-2 rounded-md text-sm font-medium">Pricing</Link>
+                <Link href="/brand-kit" className="text-domo-light-text hover:text-white px-3 py-2 rounded-md text-sm font-medium">Brand Kit</Link>
                 <Link href="#" className="text-domo-light-text hover:text-white px-3 py-2 rounded-md text-sm font-medium">About</Link>
                 {user ? (
                     <button onClick={() => router.push('/dashboard')} className="bg-domo-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg text-sm">Dashboard</button>

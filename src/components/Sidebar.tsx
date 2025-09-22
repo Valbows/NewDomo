@@ -42,6 +42,16 @@ const Sidebar = () => {
         >
           Demos
         </Link>
+        <Link 
+          href="/brand-kit" 
+          className={`block py-2.5 px-4 rounded transition duration-200 ${
+            pathname === '/brand-kit' 
+              ? 'bg-domo-blue-accent text-white' 
+              : 'hover:bg-gray-200'
+          }`}
+        >
+          Brand Kit
+        </Link>
         <span className="block py-2.5 px-4 rounded transition duration-200 text-gray-400 cursor-not-allowed">
           Settings
         </span>

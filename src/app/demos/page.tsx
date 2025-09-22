@@ -91,14 +91,32 @@ function DemosPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {demos.map((demo) => (
-          <Link href={`/demos/${demo.id}/configure`} key={demo.id}>
-            <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 transition-colors">
-              <h5 className="mb-2 text-xl font-bold tracking-tight text-domo-dark-text">{demo.name}</h5>
-              <p className="font-normal text-domo-light-text">
-                Created on: {new Date(demo.created_at).toLocaleDateString()}
-              </p>
+          <div key={demo.id} className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 transition-colors">
+            <h5 className="mb-2 text-xl font-bold tracking-tight text-domo-dark-text">{demo.name}</h5>
+            <p className="font-normal text-domo-light-text mb-4">
+              Created on: {new Date(demo.created_at).toLocaleDateString()}
+            </p>
+            <div className="flex space-x-2">
+              <Link 
+                href={`/demos/${demo.id}/onboarding`}
+                className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Setup Guide
+              </Link>
+              <Link 
+                href={`/demos/${demo.id}/configure`}
+                className="px-3 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors"
+              >
+                Advanced
+              </Link>
+              <Link 
+                href={`/demos/${demo.id}/experience`}
+                className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+              >
+                View Demo
+              </Link>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </DashboardLayout>

@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { Demo, DemoVideo, KnowledgeChunk, ProcessingStatus } from './types';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, AlertCircle, Wand2 } from 'lucide-react';
+import { Loader2, AlertCircle, Wand2, ToggleLeft, ToggleRight } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { VideoManagement } from './components/VideoManagement';
 import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
@@ -14,6 +14,7 @@ import { VideoPlayer } from './components/VideoPlayer';
 import { CTASettings } from './components/CTASettings';
 import { Reporting } from './components/Reporting';
 import { AdminCTAUrlEditor } from './components/AdminCTAUrlEditor';
+import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 
 import { getErrorMessage, logError } from '@/lib/errors';
 
@@ -39,6 +40,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [tavusPersonaId, setTavusPersonaId] = useState<string | null>(demo?.tavus_persona_id || null);
   const [conversationData, setConversationData] = useState<any>(null);
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
+  const [useOnboardingFlow, setUseOnboardingFlow] = useState(false);
   
   // CTA Settings State
   const [ctaTitle, setCTATitle] = useState('Ready to Get Started?');
@@ -451,8 +453,59 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     }
   };
 
+  const handleStepComplete = (step: number) => {
+    console.log(`Step ${step} completed`);
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-12 h-12 animate-spin" /></div>;
   if (error) return <div className="flex items-center justify-center min-h-screen"><AlertCircle className="w-12 h-12 text-red-500" /><p className="ml-4">{error}</p></div>;
+
+  // If using onboarding flow, render that instead
+  if (useOnboardingFlow) {
+    return (
+      <OnboardingFlow
+        demoId={demoId}
+        demo={demo}
+        demoVideos={demoVideos}
+        knowledgeChunks={knowledgeChunks}
+        onStepComplete={handleStepComplete}
+        onVideoUpload={handleVideoUpload}
+        onKnowledgeAdd={handleAddQAPair}
+        onCTASave={handleSaveCTA}
+        onAgentCreate={createTavusAgent}
+        selectedVideoFile={selectedVideoFile}
+        setSelectedVideoFile={setSelectedVideoFile}
+        videoTitle={videoTitle}
+        setVideoTitle={setVideoTitle}
+        handleVideoUpload={handleVideoUpload}
+        processingStatus={processingStatus}
+        newQuestion={newQuestion}
+        setNewQuestion={setNewQuestion}
+        newAnswer={newAnswer}
+        setNewAnswer={setNewAnswer}
+        handleAddQAPair={handleAddQAPair}
+        knowledgeDoc={knowledgeDoc}
+        setKnowledgeDoc={setKnowledgeDoc}
+        handleKnowledgeDocUpload={handleKnowledgeDocUpload}
+        ctaTitle={ctaTitle}
+        setCTATitle={setCTATitle}
+        ctaMessage={ctaMessage}
+        setCTAMessage={setCTAMessage}
+        ctaButtonText={ctaButtonText}
+        setCTAButtonText={setCTAButtonText}
+        handleSaveCTA={handleSaveCTA}
+        agentName={agentName}
+        setAgentName={setAgentName}
+        agentPersonality={agentPersonality}
+        setAgentPersonality={setAgentPersonality}
+        agentGreeting={agentGreeting}
+        setAgentGreeting={setAgentGreeting}
+        objectives={objectives}
+        setObjectives={setObjectives}
+        createTavusAgent={createTavusAgent}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -462,7 +515,23 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             <h1 className="text-2xl font-bold text-gray-900">Configure: {demo?.name}</h1>
             <p className="text-sm text-gray-500">Manage your demo videos, knowledge base, and agent settings.</p>
           </div>
-          <div className="flex space-x-4">
+          <div className="flex items-center space-x-4">
+            {/* View Toggle */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Tabs</span>
+              <button
+                onClick={() => setUseOnboardingFlow(!useOnboardingFlow)}
+                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    useOnboardingFlow ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-sm text-gray-600">Onboarding</span>
+            </div>
+            
             <a
               href={`/demos/${demoId}/experience`}
               className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"

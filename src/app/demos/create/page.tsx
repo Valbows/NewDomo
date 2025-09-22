@@ -59,7 +59,7 @@ const CreateDemoPage = () => {
       if (insertError) throw insertError;
       if (!newDemo) throw new Error('Failed to create demo. Please try again.');
 
-      router.push(`/demos/${newDemo.id}/configure`);
+      router.push(`/demos/${newDemo.id}/onboarding`);
 
     } catch (err: any) {
       console.error('Error creating demo:', err);

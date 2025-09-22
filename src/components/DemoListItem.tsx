@@ -58,12 +58,18 @@
          >
            View
          </Link>
-         <Link
-           href={`/demos/${demo.id}/configure`}
-           className="text-xs px-3 py-1 rounded bg-gray-50 text-gray-700 hover:bg-gray-100"
-         >
-           Manage
-         </Link>
+        <Link
+          href={`/demos/${demo.id}/onboarding`}
+          className="text-xs px-3 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100"
+        >
+          Setup
+        </Link>
+        <Link
+          href={`/demos/${demo.id}/configure`}
+          className="text-xs px-3 py-1 rounded bg-gray-50 text-gray-700 hover:bg-gray-100"
+        >
+          Manage
+        </Link>
          <button className="text-domo-light-text hover:text-domo-dark-text">
            <MoreVertical size={20} />
          </button>
