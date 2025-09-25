@@ -251,7 +251,7 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
         <div className="text-center py-8 text-gray-500">
           <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
           <div className="text-sm">No demos with personas found</div>
-          <div className="text-xs mt-1">Create a demo with a Tavus persona to see status here</div>
+          <div className="text-xs mt-1">Create a demo with a Domo persona to see status here</div>
         </div>
       )}
     </div>

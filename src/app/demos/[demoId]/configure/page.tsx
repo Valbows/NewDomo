@@ -564,7 +564,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 ) : (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded">
                     <p className="font-medium">🤖 Agent Not Configured</p>
-                    <p className="text-sm mt-1">Use the "Create Agent" button above to configure your Tavus agent with system prompt, guardrails, and objectives.</p>
+                    <p className="text-sm mt-1">Use the "Create Agent" button above to configure your Domo agent with system prompt, guardrails, and objectives.</p>
                   </div>
                 )}
               </div>
