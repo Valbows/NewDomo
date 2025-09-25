@@ -99,7 +99,7 @@ export const AgentSettings = ({
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Agent Settings</h2>
-      <p className="text-gray-600 mb-6">Configure your Tavus agent's personality, appearance, and initial greeting.</p>
+      <p className="text-gray-600 mb-6">Configure your Domo agent's personality, appearance, and initial greeting.</p>
       <div className="bg-white p-8 rounded-lg shadow max-w-2xl mx-auto">
         <div className="space-y-6">
           <div>
@@ -152,7 +152,7 @@ export const AgentSettings = ({
           <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="text-lg font-semibold text-blue-900 mb-2">Create Agent</h3>
             <p className="text-sm text-blue-700 mb-4">
-              Creates a Tavus agent. If you have active custom objectives, a new persona will be created with those objectives. Otherwise, uses the existing persona with preset objectives.
+              Creates a Domo agent. If you have active custom objectives, a new persona will be created with those objectives. Otherwise, uses the existing persona with preset objectives.
             </p>
             
             {/* Show current agent status */}
@@ -184,9 +184,9 @@ export const AgentSettings = ({
                   <div>
                     <p className="font-medium">❌ Agent Creation Failed</p>
                     <p className="text-sm mt-1">{agentCreationResult.error}</p>
-                    {agentCreationResult.error?.includes('Failed to verify Tavus persona') && (
+                    {agentCreationResult.error?.includes('Failed to verify Domo persona') && (
                       <p className="text-sm mt-2 text-red-600">
-                        This might be a temporary Tavus API issue. Please try again in a moment.
+                        This might be a temporary Domo API issue. Please try again in a moment.
                       </p>
                     )}
                   </div>

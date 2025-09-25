@@ -128,7 +128,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
       console.log(`✅ Sync completed: ${syncedCount} conversations, transcript: ${hasTranscript}, perception: ${hasPerception}`);
     } catch (err) {
       console.error('Failed to sync conversations:', err);
-      setError('Failed to sync conversations from Tavus');
+      setError('Failed to sync conversations from Domo');
     } finally {
       setSyncing(false);
     }
@@ -298,7 +298,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
         <div>
           <h2 className="text-xl font-semibold">Reporting & Analytics</h2>
           <p className="text-gray-600 mt-1">
-            View detailed conversation transcripts and perception analysis from Tavus.
+            View detailed conversation transcripts and perception analysis from Domo.
           </p>
         </div>
         <div className="flex gap-2">
@@ -319,7 +319,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
             ) : (
               <RefreshCw className="w-4 h-4 mr-2" />
             )}
-            {syncing ? 'Syncing...' : 'Sync from Tavus'}
+            {syncing ? 'Syncing...' : 'Sync from Domo'}
           </button>
         </div>
       </div>
@@ -371,7 +371,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
       <div className="bg-white rounded-lg shadow border border-gray-100">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold">Conversation Details</h3>
-          <p className="text-sm text-gray-600 mt-1">Detailed transcripts and perception analysis from Tavus conversations.</p>
+          <p className="text-sm text-gray-600 mt-1">Detailed transcripts and perception analysis from Domo conversations.</p>
         </div>
         
         {loading ? (
@@ -385,7 +385,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
             <div className="text-gray-600 mb-2">No detailed conversations found</div>
             <div className="text-sm text-gray-500">
               {demo?.tavus_conversation_id 
-                ? 'Click "Sync from Tavus" to fetch conversation data'
+                ? 'Click "Sync from Domo" to fetch conversation data'
                 : 'Start a demo conversation to see analytics here'
               }
             </div>

@@ -37,7 +37,7 @@ async function handlePOST(req: NextRequest) {
 
     const tavusApiKey = process.env.TAVUS_API_KEY;
     if (!tavusApiKey) {
-      return NextResponse.json({ error: 'Tavus API key is not configured.' }, { status: 500 });
+      return NextResponse.json({ error: 'Domo API key is not configured.' }, { status: 500 });
     }
 
     // Fetch knowledge base content for this demo
@@ -348,7 +348,7 @@ async function handlePOST(req: NextRequest) {
     if (!personaResponse.ok) {
       const errorBody = await personaResponse.text();
       logError(errorBody, 'Tavus Persona API Error');
-      return NextResponse.json({ error: `Failed to create Tavus persona: ${personaResponse.statusText}` }, { status: personaResponse.status });
+      return NextResponse.json({ error: `Failed to create Domo persona: ${personaResponse.statusText}` }, { status: personaResponse.status });
     }
 
     const personaData = await personaResponse.json();

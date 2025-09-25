@@ -63,7 +63,7 @@ async function handleGET(req: NextRequest) {
 
     if (!demos || demos.length === 0) {
       return NextResponse.json({ 
-        message: 'No demos with Tavus conversations found',
+        message: 'No demos with Domo conversations found',
         synced: 0 
       });
     }

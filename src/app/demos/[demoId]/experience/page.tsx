@@ -251,7 +251,7 @@ export default function DemoExperiencePage() {
             setUiState(UIState.CONVERSATION);
           } else {
             console.warn('Received non-Daily conversation URL from API:', url);
-            setError('Conversation URL invalid. Please verify Tavus configuration.');
+            setError('Conversation URL invalid. Please verify Domo configuration.');
             setLoading(false);
             return;
           }

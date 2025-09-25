@@ -13,7 +13,7 @@ async function handleGET(req: NextRequest) {
 
     const tavusApiKey = process.env.TAVUS_API_KEY;
     if (!tavusApiKey) {
-      return NextResponse.json({ error: 'Tavus API key not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'Domo API key not configured' }, { status: 500 });
     }
 
     const url = new URL(req.url);
@@ -123,7 +123,7 @@ async function handlePOST(req: NextRequest) {
 
     const tavusApiKey = process.env.TAVUS_API_KEY;
     if (!tavusApiKey) {
-      return NextResponse.json({ error: 'Tavus API key not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'Domo API key not configured' }, { status: 500 });
     }
 
     const { personaId, perception_model, default_replica_id } = await req.json();
