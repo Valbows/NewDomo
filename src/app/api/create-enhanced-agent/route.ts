@@ -135,85 +135,164 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
 
     console.log(`✅ Enhanced system prompt built (${enhancedSystemPrompt.length} characters)`);
 
-    // Step 4: Create or Use Persona Based on Objectives
-    console.log('\n🎭 Determining Persona Strategy...');
+    // Step 4: Always Create New Persona
+    console.log('\n🎭 Creating New Persona...');
     
     const GUARDRAILS_ID = process.env.DOMO_AI_GUARDRAILS_ID || 'g178c7c5e032b';
     const DEFAULT_OBJECTIVES_ID = process.env.DOMO_AI_OBJECTIVES_ID || 'o4f2d4eb9b217';
-    const EXISTING_PERSONA_ID = process.env.COMPLETE_PERSONA_ID || 'pe9ed46b7319';
+    
+    console.log('🔧 Using Configuration:');
+    console.log(`   Guardrails ID: ${GUARDRAILS_ID}`);
+    console.log(`   Default Objectives ID: ${DEFAULT_OBJECTIVES_ID}`);
     
     let persona: { persona_id: string };
     let objectivesId: string;
     
+    // Determine which objectives to use
     if (activeCustomObjective && activeCustomObjective.tavus_objectives_id) {
-      // Option A: Create new persona with custom objectives
-      console.log(`🎯 Creating new persona with custom objectives: ${activeCustomObjective.name}`);
+      console.log(`🎯 Will use custom objectives: ${activeCustomObjective.name}`);
       objectivesId = activeCustomObjective.tavus_objectives_id;
-      
-      try {
-        const personaPayload = {
-          persona_name: `${agentName} - ${demo.name}`,
-          system_prompt: enhancedSystemPrompt,
-          objectives_id: objectivesId,
-          guardrails_id: GUARDRAILS_ID,
-          default_replica_id: process.env.TAVUS_REPLICA_ID,
-        };
-
-        console.log('📡 Creating Tavus persona with custom objectives...');
-        const response = await fetch(`${process.env.TAVUS_BASE_URL}/personas`, {
-          method: 'POST',
-          headers: {
-            'x-api-key': process.env.TAVUS_API_KEY!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(personaPayload),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Failed to create persona with custom objectives:', errorText);
-          
-          // Fallback to existing persona
-          console.log('⚠️  Falling back to existing persona (custom objectives will be in system prompt only)');
-          persona = { persona_id: EXISTING_PERSONA_ID };
-          objectivesId = DEFAULT_OBJECTIVES_ID;
-        } else {
-          const personaData = await response.json();
-          persona = { persona_id: personaData.persona_id };
-          console.log(`✅ Created new persona: ${personaData.persona_id}`);
-        }
-      } catch (error) {
-        console.error('❌ Error creating persona:', error);
-        // Fallback to existing persona
-        console.log('⚠️  Falling back to existing persona');
-        persona = { persona_id: EXISTING_PERSONA_ID };
-        objectivesId = DEFAULT_OBJECTIVES_ID;
-      }
     } else {
-      // Option B: Use existing persona with preset objectives
-      console.log(`📋 Using existing persona with preset objectives`);
-      persona = { persona_id: EXISTING_PERSONA_ID };
+      console.log(`📋 Will use default objectives`);
       objectivesId = DEFAULT_OBJECTIVES_ID;
-      
-      // Verify the existing persona is accessible
-      try {
-        const response = await fetch(`${process.env.TAVUS_BASE_URL}/personas/${EXISTING_PERSONA_ID}`, {
-          method: 'GET',
-          headers: {
-            'x-api-key': process.env.TAVUS_API_KEY!,
-            'Content-Type': 'application/json',
-          },
-        });
+    }
+    
+    // Always create a new persona
+    try {
+      // Debug environment variables
+      console.log('🔍 Environment Variables Check:');
+      console.log(`   TAVUS_BASE_URL: ${process.env.TAVUS_BASE_URL || 'NOT SET'}`);
+      console.log(`   TAVUS_API_KEY: ${process.env.TAVUS_API_KEY ? 'SET (' + process.env.TAVUS_API_KEY.length + ' chars)' : 'NOT SET'}`);
+      console.log(`   TAVUS_REPLICA_ID: ${process.env.TAVUS_REPLICA_ID || 'NOT SET'}`);
+      console.log(`   GUARDRAILS_ID: ${GUARDRAILS_ID}`);
+      console.log(`   OBJECTIVES_ID: ${objectivesId}`);
 
-        if (response.ok) {
-          const personaData = await response.json();
-          console.log(`✅ Verified existing persona: ${personaData.persona_name}`);
-        } else {
-          console.log('⚠️  Could not verify existing persona, but proceeding');
-        }
-      } catch (error) {
-        console.log('⚠️  Error verifying existing persona, but proceeding');
+      // Check if system prompt is too long and truncate if necessary
+      let finalSystemPrompt = enhancedSystemPrompt;
+      const MAX_PROMPT_LENGTH = 8000; // Conservative limit
+      
+      if (enhancedSystemPrompt.length > MAX_PROMPT_LENGTH) {
+        console.warn(`⚠️ System prompt is too long (${enhancedSystemPrompt.length} chars). Truncating to ${MAX_PROMPT_LENGTH} chars.`);
+        finalSystemPrompt = enhancedSystemPrompt.substring(0, MAX_PROMPT_LENGTH) + '\n\n[Truncated for length]';
       }
+
+      // Create persona payload with all fields
+      const personaPayload: any = {
+        persona_name: `${agentName} - ${demo.name} (${new Date().toISOString().split('T')[0]})`,
+        system_prompt: finalSystemPrompt,
+        objectives_id: objectivesId,
+        guardrails_id: GUARDRAILS_ID,
+      };
+
+      // Add optional fields only if they exist
+      if (process.env.TAVUS_REPLICA_ID) {
+        personaPayload.default_replica_id = process.env.TAVUS_REPLICA_ID;
+      }
+
+      console.log('🎭 Creating persona with full configuration...');
+      console.log('📡 Creating new Tavus persona...');
+      console.log(`   Name: ${personaPayload.persona_name}`);
+      console.log(`   System Prompt Length: ${finalSystemPrompt.length} chars`);
+      
+      // Log payload without the full system prompt to avoid cluttering logs
+      const logPayload = { ...personaPayload };
+      logPayload.system_prompt = `[${finalSystemPrompt.length} characters]`;
+      console.log(`   Payload:`, JSON.stringify(logPayload, null, 2));
+      
+      const apiUrl = `${process.env.TAVUS_BASE_URL}/personas`;
+      console.log(`   API URL: ${apiUrl}`);
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'x-api-key': process.env.TAVUS_API_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(personaPayload),
+      });
+
+      console.log(`📡 Tavus API Response: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to create new persona:', errorText);
+        console.error('❌ Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        // Try to parse as JSON first, then fall back to text
+        let errorDetails;
+        try {
+          errorDetails = JSON.parse(errorText);
+        } catch {
+          errorDetails = errorText.substring(0, 500); // Limit error text length
+        }
+        
+        // If it's a 500 error with HTML, it might be a system prompt issue
+        if (response.status === 500 && typeof errorDetails === 'string' && errorDetails.includes('<!doctype html>')) {
+          console.error('❌ Received HTML error page, likely system prompt issue');
+          
+          // Try with a much simpler system prompt
+          console.log('🔄 Retrying with simplified system prompt...');
+          const simplePayload = {
+            persona_name: personaPayload.persona_name,
+            system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
+            objectives_id: objectivesId,
+            guardrails_id: GUARDRAILS_ID,
+          };
+          
+          if (process.env.TAVUS_REPLICA_ID) {
+            simplePayload.default_replica_id = process.env.TAVUS_REPLICA_ID;
+          }
+          
+          const retryResponse = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'x-api-key': process.env.TAVUS_API_KEY!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(simplePayload),
+          });
+          
+          if (retryResponse.ok) {
+            const retryData = await retryResponse.json();
+            persona = { persona_id: retryData.persona_id };
+            console.log(`✅ Created persona with simplified prompt: ${retryData.persona_id}`);
+          } else {
+            const retryError = await retryResponse.text();
+            console.error('❌ Retry also failed:', retryError);
+            
+            return NextResponse.json({
+              success: false,
+              error: 'Failed to create Tavus persona',
+              details: {
+                status: response.status,
+                statusText: response.statusText,
+                error: 'System prompt may be too complex or contain invalid characters',
+                suggestion: 'Try with a simpler agent configuration or contact support.'
+              }
+            }, { status: 500 });
+          }
+        } else {
+          // Return a more user-friendly error
+          return NextResponse.json({
+            success: false,
+            error: 'Failed to create Tavus persona',
+            details: {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorDetails,
+              suggestion: 'This might be a temporary Tavus API issue. Please try again in a moment.'
+            }
+          }, { status: 500 });
+        }
+      } else {
+        const personaData = await response.json();
+        persona = { persona_id: personaData.persona_id };
+        console.log(`✅ Created new persona: ${personaData.persona_id}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error creating new persona:', error);
+      throw error; // Don't fallback, let the user know it failed
     }
 
     console.log(`Final Configuration:`);
@@ -276,16 +355,13 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     console.log(`Guardrails: ${GUARDRAILS_ID}`);
     console.log(`Active Objectives: ${objectivesId}`);
     
-    if (activeCustomObjective && persona.persona_id !== EXISTING_PERSONA_ID) {
+    if (activeCustomObjective) {
       console.log(`✅ NEW PERSONA CREATED with custom objectives: ${activeCustomObjective.name}`);
       console.log(`   Custom Objectives: ${activeCustomObjective.objectives.length} steps`);
       console.log(`   Persona has the actual custom objectives baked in`);
-    } else if (activeCustomObjective && persona.persona_id === EXISTING_PERSONA_ID) {
-      console.log(`⚠️  FALLBACK: Using existing persona (custom objectives in system prompt only)`);
-      console.log(`   Custom objectives may not work as expected`);
     } else {
-      console.log(`✅ EXISTING PERSONA used with preset objectives`);
-      console.log(`   Preset Objectives: ${DEFAULT_OBJECTIVES_ID}`);
+      console.log(`✅ NEW PERSONA CREATED with default objectives`);
+      console.log(`   Default Objectives: ${DEFAULT_OBJECTIVES_ID}`);
     }
 
     return NextResponse.json({
@@ -306,12 +382,10 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         } : null,
         enhancedSystemPrompt: enhancedSystemPrompt.length
       },
-      message: activeCustomObjective && persona.persona_id !== EXISTING_PERSONA_ID
+      message: activeCustomObjective
         ? `New persona created with custom objectives: ${activeCustomObjective.name}`
-        : activeCustomObjective && persona.persona_id === EXISTING_PERSONA_ID
-        ? `Using existing persona (custom objectives in system prompt only)`
-        : 'Using existing persona with preset objectives',
-      personaType: activeCustomObjective && persona.persona_id !== EXISTING_PERSONA_ID ? 'new' : 'existing'
+        : 'New persona created with default objectives',
+      personaType: 'new'
     });
 
   } catch (error: unknown) {

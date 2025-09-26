@@ -272,6 +272,31 @@ export default function DemoExperiencePage() {
     fetchDemoAndStartConversation();
   }, [demoId]);
 
+  // Handle browser window close/refresh to end conversation
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (demo?.tavus_conversation_id) {
+        // Use sendBeacon for reliable delivery during page unload
+        const endPayload = JSON.stringify({
+          conversationId: demo.tavus_conversation_id,
+          demoId: demo.id,
+        });
+        
+        try {
+          navigator.sendBeacon('/api/end-conversation', endPayload);
+          console.log('📡 Sent conversation end beacon');
+        } catch (error) {
+          console.warn('Failed to send conversation end beacon:', error);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [demo?.tavus_conversation_id, demo?.id]);
+
   // Subscribe to Supabase Realtime broadcasts for this demo
   useEffect(() => {
     if (!demoId) return;
@@ -546,10 +571,73 @@ export default function DemoExperiencePage() {
     }
   };
 
-  const handleConversationEnd = () => {
+  const handleConversationEnd = async () => {
     console.log('Conversation ended');
+    
+    // End the Tavus conversation via API if we have a conversation ID
+    if (demo?.tavus_conversation_id) {
+      try {
+        console.log('🔚 Ending Tavus conversation:', {
+          conversationId: demo.tavus_conversation_id,
+          demoId: demo.id,
+          demoData: demo
+        });
+        const response = await fetch('/api/end-conversation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversationId: demo.tavus_conversation_id,
+            demoId: demo.id,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Tavus conversation ended successfully:', result);
+          
+          // Automatically sync conversation data after ending
+          try {
+            console.log('🔄 Syncing conversation data...');
+            const syncResponse = await fetch(`/api/sync-tavus-conversations?demoId=${demo.id}`, {
+              method: 'GET',
+            });
+            
+            if (syncResponse.ok) {
+              const syncResult = await syncResponse.json();
+              console.log('✅ Conversation data synced successfully:', syncResult);
+            } else {
+              console.warn('⚠️ Failed to sync conversation data, but continuing...');
+            }
+          } catch (syncError) {
+            console.warn('⚠️ Error syncing conversation data:', syncError);
+            // Don't block the flow for sync errors
+          }
+          
+          // Small delay to ensure sync completes before redirect
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          const error = await response.json().catch(() => ({}));
+          console.warn('⚠️ Failed to end Tavus conversation:', {
+            status: response.status,
+            error: error,
+            sentData: {
+              conversationId: demo.tavus_conversation_id,
+              demoId: demo.id
+            }
+          });
+          // Don't block the UI flow for this error
+        }
+      } catch (error) {
+        console.warn('⚠️ Error ending Tavus conversation:', error);
+        // Don't block the UI flow for this error
+      }
+    }
+    
     setUiState(UIState.IDLE);
-    router.push(`/demos/${demoId}`);
+    // Redirect to the reporting page (configure page with reporting tab)
+    router.push(`/demos/${demoId}/configure?tab=reporting`);
   };
 
   const handleVideoEnd = () => {

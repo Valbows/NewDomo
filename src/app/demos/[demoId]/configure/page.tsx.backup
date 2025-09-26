@@ -523,7 +523,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           />
         )}
 
-        <Tabs.Root defaultValue={initialTab}>
+        <Tabs.Root defaultValue={initialTab}
           <Tabs.List className="border-b border-gray-200">
             <Tabs.Trigger value="videos" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Videos</Tabs.Trigger>
             <Tabs.Trigger value="knowledge" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Knowledge Base</Tabs.Trigger>

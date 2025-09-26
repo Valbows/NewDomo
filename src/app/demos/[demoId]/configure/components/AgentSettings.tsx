@@ -150,17 +150,17 @@ export const AgentSettings = ({
 
           {/* Agent Creation */}
           <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Create Agent</h3>
+            <h3 className="text-lg font-semibold text-blue-900 mb-2">Create New Agent</h3>
             <p className="text-sm text-blue-700 mb-4">
-              Creates a Domo agent. If you have active custom objectives, a new persona will be created with those objectives. Otherwise, uses the existing persona with preset objectives.
+              Creates a new Tavus persona with the current settings. Each time you click this button, a completely new agent will be created with a new persona ID, preserving your previous agents.
             </p>
             
             {/* Show current agent status */}
             {demo?.tavus_persona_id && !agentCreationResult && (
               <div className="mb-4 p-3 rounded bg-green-100 border border-green-300 text-green-800">
-                <p className="font-medium">✅ Agent Already Configured</p>
+                <p className="font-medium">✅ Current Agent</p>
                 <p className="text-sm mt-1">Persona ID: {demo.tavus_persona_id}</p>
-                <p className="text-sm">You can update the configuration by creating a new agent.</p>
+                <p className="text-sm">Creating a new agent will generate a new persona ID and preserve this one.</p>
               </div>
             )}
             
@@ -199,13 +199,13 @@ export const AgentSettings = ({
               disabled={isCreatingAgent || !agentName.trim()}
               className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isCreatingAgent ? 'Creating Agent...' : demo?.tavus_persona_id ? 'Update Agent' : 'Create Agent'}
+              {isCreatingAgent ? 'Creating New Agent...' : 'Create New Agent'}
             </button>
             
             <div className="mt-3 text-xs text-blue-600">
+              <p>✅ Always creates a new persona with new ID</p>
               <p>✅ System Prompt + Guardrails always included</p>
-              <p>✅ Custom Objectives: Creates new persona if active</p>
-              <p>✅ Preset Objectives: Uses existing persona if no custom objectives</p>
+              <p>✅ Uses custom objectives if active, otherwise default objectives</p>
             </div>
           </div>
         </div>

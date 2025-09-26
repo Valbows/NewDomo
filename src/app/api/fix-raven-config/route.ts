@@ -126,7 +126,7 @@ async function handlePOST(req: NextRequest) {
         .not('tavus_persona_id', 'is', null);
 
       if (demos) {
-        targetPersonas = [...new Set(demos.map(d => d.tavus_persona_id).filter(Boolean))];
+        targetPersonas = Array.from(new Set(demos.map(d => d.tavus_persona_id).filter(Boolean)));
       }
     } else if (demoId) {
       // Get persona ID from demo

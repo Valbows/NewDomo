@@ -44,7 +44,7 @@ async function handleGET(req: NextRequest) {
     }
 
     // Get unique persona IDs
-    const personaIds = [...new Set(demos.map(d => d.tavus_persona_id).filter(Boolean))];
+    const personaIds = Array.from(new Set(demos.map(d => d.tavus_persona_id).filter(Boolean)));
     
     // Check status of all personas (without updating)
     const { checkPersonaPerception } = await import('@/lib/tavus/ensure-raven-perception');
@@ -114,7 +114,7 @@ async function handlePOST(req: NextRequest) {
         .not('tavus_persona_id', 'is', null);
 
       if (demos) {
-        targetPersonaIds = [...new Set(demos.map(d => d.tavus_persona_id).filter(Boolean))];
+        targetPersonaIds = Array.from(new Set(demos.map(d => d.tavus_persona_id).filter(Boolean)));
       }
     }
 
