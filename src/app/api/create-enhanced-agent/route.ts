@@ -45,17 +45,24 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
 
     console.log(`✅ Demo verified: ${demo.name}`);
 
-    // Step 2: Check for active custom objectives
+    // Step 2: Check for active custom objectives and validate override behavior
     console.log('\n🎯 Checking Custom Objectives...');
     let activeCustomObjective = null;
     try {
       const { getActiveCustomObjective } = await import('@/lib/supabase/custom-objectives');
+      const { validateObjectivesOverride } = await import('@/lib/tavus/custom-objectives-integration');
+      
       activeCustomObjective = await getActiveCustomObjective(demoId);
+      
+      // Validate the override logic
+      const validation = await validateObjectivesOverride(demoId);
+      console.log(`🔍 Objectives Override Validation: ${validation.overrideStatus}`);
       
       if (activeCustomObjective) {
         console.log(`✅ Active custom objective: ${activeCustomObjective.name}`);
         console.log(`   Steps: ${activeCustomObjective.objectives.length}`);
         console.log(`   Tavus ID: ${activeCustomObjective.tavus_objectives_id}`);
+        console.log(`   🎯 WILL OVERRIDE DEFAULT OBJECTIVES`);
       } else {
         console.log('📋 No active custom objectives, will use preset objectives');
       }
@@ -96,14 +103,15 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         objectivesSection += '\n';
       });
       
-      // Add preset objectives as supporting guidelines
-      objectivesSection += `### Supporting Guidelines (Preset Objectives)\n`;
-      objectivesSection += `Always maintain these core principles throughout the conversation:\n`;
+      // Add preset objectives as supporting guidelines (custom objectives take priority)
+      objectivesSection += `### Supporting Guidelines (Default Templates - Secondary Priority)\n`;
+      objectivesSection += `While following your custom objectives above, also maintain these core principles:\n`;
       objectivesSection += `- Welcome users and understand their needs\n`;
       objectivesSection += `- Show relevant product features and videos\n`;
       objectivesSection += `- Answer questions using knowledge base\n`;
       objectivesSection += `- Guide toward appropriate next steps\n`;
       objectivesSection += `- Capture contact information when appropriate\n\n`;
+      objectivesSection += `**IMPORTANT: Your custom objectives above take priority over these general guidelines.**\n\n`;
       
     } else {
       // Use preset objectives as primary when no custom objectives
@@ -148,12 +156,20 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     let persona: { persona_id: string };
     let objectivesId: string;
     
-    // Determine which objectives to use
+    // Determine which objectives to use - CUSTOM OBJECTIVES ALWAYS OVERRIDE DEFAULTS
     if (activeCustomObjective && activeCustomObjective.tavus_objectives_id) {
-      console.log(`🎯 Will use custom objectives: ${activeCustomObjective.name}`);
+      console.log(`🎯 USING CUSTOM OBJECTIVES (overriding defaults): ${activeCustomObjective.name}`);
+      console.log(`   Custom Objectives ID: ${activeCustomObjective.tavus_objectives_id}`);
+      console.log(`   Steps: ${activeCustomObjective.objectives.length}`);
+      console.log(`   ✅ Custom objectives will override any default templates`);
       objectivesId = activeCustomObjective.tavus_objectives_id;
+    } else if (activeCustomObjective && !activeCustomObjective.tavus_objectives_id) {
+      console.log(`⚠️  Custom objective exists but missing Tavus ID - falling back to defaults`);
+      console.log(`   Custom objective: ${activeCustomObjective.name} (needs sync)`);
+      objectivesId = DEFAULT_OBJECTIVES_ID;
     } else {
-      console.log(`📋 Will use default objectives`);
+      console.log(`📋 No custom objectives found - using default template objectives`);
+      console.log(`   Default Objectives ID: ${DEFAULT_OBJECTIVES_ID}`);
       objectivesId = DEFAULT_OBJECTIVES_ID;
     }
     
@@ -226,50 +242,120 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           errorDetails = errorText.substring(0, 500); // Limit error text length
         }
         
-        // If it's a 500 error with HTML, it might be a system prompt issue
+        // If it's a 500 error with HTML, it might be a custom objectives issue
         if (response.status === 500 && typeof errorDetails === 'string' && errorDetails.includes('<!doctype html>')) {
-          console.error('❌ Received HTML error page, likely system prompt issue');
+          console.error('❌ Received HTML error page, likely custom objectives issue');
           
-          // Try with a much simpler system prompt
-          console.log('🔄 Retrying with simplified system prompt...');
-          const simplePayload = {
-            persona_name: personaPayload.persona_name,
-            system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
-            objectives_id: objectivesId,
-            guardrails_id: GUARDRAILS_ID,
-          };
-          
-          if (process.env.TAVUS_REPLICA_ID) {
-            simplePayload.default_replica_id = process.env.TAVUS_REPLICA_ID;
-          }
-          
-          const retryResponse = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'x-api-key': process.env.TAVUS_API_KEY!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(simplePayload),
-          });
-          
-          if (retryResponse.ok) {
-            const retryData = await retryResponse.json();
-            persona = { persona_id: retryData.persona_id };
-            console.log(`✅ Created persona with simplified prompt: ${retryData.persona_id}`);
-          } else {
-            const retryError = await retryResponse.text();
-            console.error('❌ Retry also failed:', retryError);
+          // Try with default objectives ID instead of custom one
+          if (activeCustomObjective && objectivesId !== DEFAULT_OBJECTIVES_ID) {
+            console.log('🔄 Retrying with default objectives ID...');
+            const fallbackPayload = {
+              ...personaPayload,
+              objectives_id: DEFAULT_OBJECTIVES_ID,
+              persona_name: personaPayload.persona_name + ' (Fallback)'
+            };
             
-            return NextResponse.json({
-              success: false,
-              error: 'Failed to create Tavus persona',
-              details: {
-                status: response.status,
-                statusText: response.statusText,
-                error: 'System prompt may be too complex or contain invalid characters',
-                suggestion: 'Try with a simpler agent configuration or contact support.'
+            const fallbackResponse = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'x-api-key': process.env.TAVUS_API_KEY!,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(fallbackPayload),
+            });
+            
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json();
+              persona = { persona_id: fallbackData.persona_id };
+              objectivesId = DEFAULT_OBJECTIVES_ID; // Update for response
+              console.log(`✅ Created persona with default objectives: ${fallbackData.persona_id}`);
+              console.log(`⚠️  Note: Custom objectives ID ${activeCustomObjective.tavus_objectives_id} appears to be invalid in Tavus`);
+            } else {
+              // Try with simplified system prompt as last resort
+              console.log('🔄 Retrying with simplified system prompt...');
+              const simplePayload = {
+                persona_name: personaPayload.persona_name + ' (Simple)',
+                system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
+                objectives_id: DEFAULT_OBJECTIVES_ID,
+                guardrails_id: GUARDRAILS_ID,
+              };
+              
+              if (process.env.TAVUS_REPLICA_ID) {
+                simplePayload.default_replica_id = process.env.TAVUS_REPLICA_ID;
               }
-            }, { status: 500 });
+              
+              const retryResponse = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                  'x-api-key': process.env.TAVUS_API_KEY!,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(simplePayload),
+              });
+              
+              if (retryResponse.ok) {
+                const retryData = await retryResponse.json();
+                persona = { persona_id: retryData.persona_id };
+                objectivesId = DEFAULT_OBJECTIVES_ID; // Update for response
+                console.log(`✅ Created persona with simplified prompt: ${retryData.persona_id}`);
+              } else {
+                const retryError = await retryResponse.text();
+                console.error('❌ All retry attempts failed:', retryError);
+                
+                return NextResponse.json({
+                  success: false,
+                  error: 'Failed to create Tavus persona',
+                  details: {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: 'Custom objectives may be invalid or system prompt too complex',
+                    suggestion: 'Try recreating your custom objectives or contact support.'
+                  }
+                }, { status: 500 });
+              }
+            }
+          } else {
+            // Already using default objectives, try simplified prompt
+            console.log('🔄 Retrying with simplified system prompt...');
+            const simplePayload = {
+              persona_name: personaPayload.persona_name + ' (Simple)',
+              system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
+              objectives_id: objectivesId,
+              guardrails_id: GUARDRAILS_ID,
+            };
+            
+            if (process.env.TAVUS_REPLICA_ID) {
+              simplePayload.default_replica_id = process.env.TAVUS_REPLICA_ID;
+            }
+            
+            const retryResponse = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'x-api-key': process.env.TAVUS_API_KEY!,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(simplePayload),
+            });
+            
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              persona = { persona_id: retryData.persona_id };
+              console.log(`✅ Created persona with simplified prompt: ${retryData.persona_id}`);
+            } else {
+              const retryError = await retryResponse.text();
+              console.error('❌ Retry also failed:', retryError);
+              
+              return NextResponse.json({
+                success: false,
+                error: 'Failed to create Tavus persona',
+                details: {
+                  status: response.status,
+                  statusText: response.statusText,
+                  error: 'System prompt may be too complex or contain invalid characters',
+                  suggestion: 'Try with a simpler agent configuration or contact support.'
+                }
+              }, { status: 500 });
+            }
           }
         } else {
           // Return a more user-friendly error

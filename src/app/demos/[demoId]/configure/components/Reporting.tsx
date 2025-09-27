@@ -47,6 +47,16 @@ interface PerceptionMetrics {
   key_insights: string[];
 }
 
+interface ContactInfo {
+  id: string;
+  conversation_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  position: string | null;
+  received_at: string;
+}
+
 function formatDate(iso?: string) {
   try {
     return iso ? new Date(iso).toLocaleString() : "—";
@@ -63,16 +73,71 @@ function SafeJSON({ value }: { value: any }) {
   );
 }
 
+function ContactInfoCard({ contact }: { contact: ContactInfo | null }) {
+  if (!contact) {
+    return (
+      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+          👤 Contact Information
+        </h5>
+        <p className="text-sm text-gray-500">No contact information captured for this conversation</p>
+      </div>
+    );
+  }
+
+  const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+  
+  return (
+    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <h5 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+        👤 Contact Information
+        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+          Captured
+        </span>
+      </h5>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <div>
+            <span className="text-xs font-medium text-blue-700">Full Name:</span>
+            <p className="text-sm text-blue-900 font-medium">
+              {fullName || 'Not provided'}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-medium text-blue-700">Email:</span>
+            <p className="text-sm text-blue-900">
+              {contact.email || 'Not provided'}
+            </p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div>
+            <span className="text-xs font-medium text-blue-700">Position:</span>
+            <p className="text-sm text-blue-900">
+              {contact.position || 'Not provided'}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-medium text-blue-700">Captured:</span>
+            <p className="text-xs text-blue-600">
+              {formatDate(contact.received_at)}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Reporting = ({ demo }: ReportingProps) => {
   const [conversationDetails, setConversationDetails] = useState<
     ConversationDetail[]
   >([]);
+  const [contactInfo, setContactInfo] = useState<Record<string, ContactInfo>>({});
   const [loading, setLoading] = useState(false);
+  const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedConversation, setExpandedConversation] = useState<
-    string | null
-  >(null);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   // Legacy analytics from metadata (keep for backward compatibility)
@@ -111,6 +176,28 @@ export const Reporting = ({ demo }: ReportingProps) => {
     }
   }, [demo?.id]);
 
+  // Fetch contact information for conversations
+  const fetchContactInfo = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("qualification_data")
+        .select("*")
+        .order("received_at", { ascending: false });
+
+      if (error) throw error;
+      
+      // Create a map of conversation_id to contact info
+      const contactMap: Record<string, ContactInfo> = {};
+      data?.forEach((contact) => {
+        contactMap[contact.conversation_id] = contact;
+      });
+      
+      setContactInfo(contactMap);
+    } catch (err) {
+      console.error("Failed to fetch contact information:", err);
+    }
+  }, []);
+
   // Sync conversations from Tavus
   const syncConversations = async () => {
     if (!demo?.id) return;
@@ -141,8 +228,9 @@ export const Reporting = ({ demo }: ReportingProps) => {
         }))
       );
 
-      // Refresh the conversation details to show new data immediately
+      // Refresh the conversation details and contact info to show new data immediately
       await fetchConversationDetails();
+      await fetchContactInfo();
 
       // Show success message with details about what was synced
       const syncedCount = result.results?.length || 0;
@@ -162,10 +250,11 @@ export const Reporting = ({ demo }: ReportingProps) => {
     }
   };
 
-  // Load conversation details on component mount
+  // Load conversation details and contact info on component mount
   useEffect(() => {
     fetchConversationDetails();
-  }, [fetchConversationDetails]);
+    fetchContactInfo();
+  }, [fetchConversationDetails, fetchContactInfo]);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return "—";
@@ -489,16 +578,23 @@ export const Reporting = ({ demo }: ReportingProps) => {
                         ID: {conversation.tavus_conversation_id}
                       </div>
                     </div>
-                    <div
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        conversation.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : conversation.status === "active"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {conversation.status}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          conversation.status === "completed"
+                            ? "bg-green-100 text-green-800"
+                            : conversation.status === "active"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {conversation.status}
+                      </div>
+                      {contactInfo[conversation.tavus_conversation_id] && (
+                        <div className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          👤 Contact Info
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -539,6 +635,11 @@ export const Reporting = ({ demo }: ReportingProps) => {
 
                 {expandedConversation === conversation.id && (
                   <div className="space-y-6">
+                    {/* Contact Information */}
+                    <ContactInfoCard 
+                      contact={contactInfo[conversation.tavus_conversation_id] || null} 
+                    />
+
                     {/* Perception Analysis */}
                     {conversation.perception_analysis && (
                       <div>

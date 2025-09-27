@@ -22,6 +22,7 @@ const EMPTY_OBJECTIVE: ObjectiveDefinition = {
   confirmation_mode: 'auto',
   output_variables: [],
   modality: 'verbal',
+  callback_url: '',
 };
 
 export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps) {
@@ -128,7 +129,7 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Custom Demo Objectives</h3>
           <p className="text-sm text-gray-600">
-            Create custom conversation flows for your agent to follow during demos
+            Create custom conversation flows that will <strong>override default objectives</strong> when active
           </p>
         </div>
         <button
@@ -168,6 +169,11 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
                 )}
                 <p className="text-xs text-gray-500 mt-2">
                   {objective.objectives.length} steps • Created {new Date(objective.created_at).toLocaleDateString()}
+                  {objective.objectives.some(step => step.callback_url) && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      📡 Webhook
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -345,6 +351,22 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
                             className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                             placeholder="e.g., user_name, company_name, interest_level"
                           />
+                        </div>
+
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Webhook URL (optional)
+                          </label>
+                          <input
+                            type="url"
+                            value={obj.callback_url || ''}
+                            onChange={(e) => updateObjectiveStep(index, 'callback_url', e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="https://your-server.com/webhook/endpoint"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Webhook will receive output variables when this objective completes
+                          </p>
                         </div>
                       </div>
                     ))}

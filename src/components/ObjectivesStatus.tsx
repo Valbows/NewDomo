@@ -31,7 +31,7 @@ export function ObjectivesStatus({ demoId }: ObjectivesStatusProps) {
             Active: {activeObjective.name}
           </p>
           <p className="text-xs text-green-600">
-            {activeObjective.objectives.length} steps configured
+            {activeObjective.objectives.length} steps configured • Overriding default objectives
           </p>
         </div>
       </div>
@@ -43,10 +43,10 @@ export function ObjectivesStatus({ demoId }: ObjectivesStatusProps) {
       <AlertCircle className="w-4 h-4 text-yellow-600" />
       <div className="flex-1">
         <p className="text-sm font-medium text-yellow-800">
-          Using Default Objectives
+          Using Default Template Objectives
         </p>
         <p className="text-xs text-yellow-600">
-          Create custom objectives below for personalized demo flows
+          Create custom objectives below to override defaults with personalized flows
         </p>
       </div>
     </div>

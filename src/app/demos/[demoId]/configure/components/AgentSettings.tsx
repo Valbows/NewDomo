@@ -139,6 +139,17 @@ export const AgentSettings = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Demo Objectives</label>
             
+            {/* Override Behavior Notice */}
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800 font-medium">
+                🎯 Objectives Priority System
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Custom objectives will <strong>always override</strong> default template objectives when active. 
+                Default templates are only used when no custom objectives are set.
+              </p>
+            </div>
+            
             {/* Objectives Status */}
             <div className="mb-4">
               <ObjectivesStatus demoId={demo?.id || ''} />

@@ -135,6 +135,7 @@ export async function getDemoObjectivesStatus(demoId: string) {
       objectivesId: activeCustomObjective?.tavus_objectives_id || null,
       objectivesName: activeCustomObjective?.name || 'Default Product Demo',
       objectivesCount: activeCustomObjective?.objectives.length || 0,
+      isOverridingDefaults: !!(activeCustomObjective && activeCustomObjective.tavus_objectives_id),
     };
   } catch (error) {
     console.error('Error getting demo objectives status:', error);
@@ -144,6 +145,53 @@ export async function getDemoObjectivesStatus(demoId: string) {
       objectivesId: null,
       objectivesName: 'Default Product Demo',
       objectivesCount: 0,
+      isOverridingDefaults: false,
+    };
+  }
+}
+
+/**
+ * Validate that custom objectives will properly override defaults
+ * Returns detailed information about the objectives selection process
+ */
+export async function validateObjectivesOverride(demoId: string) {
+  try {
+    const activeCustomObjective = await getActiveCustomObjective(demoId);
+    const DEFAULT_OBJECTIVES_ID = process.env.DOMO_AI_OBJECTIVES_ID || 'o4f2d4eb9b217';
+    
+    const result = {
+      demoId,
+      timestamp: new Date().toISOString(),
+      hasActiveCustomObjective: !!activeCustomObjective,
+      customObjectiveName: activeCustomObjective?.name || null,
+      customObjectivesId: activeCustomObjective?.tavus_objectives_id || null,
+      defaultObjectivesId: DEFAULT_OBJECTIVES_ID,
+      willUseCustom: !!(activeCustomObjective && activeCustomObjective.tavus_objectives_id),
+      finalObjectivesId: (activeCustomObjective && activeCustomObjective.tavus_objectives_id) 
+        ? activeCustomObjective.tavus_objectives_id 
+        : DEFAULT_OBJECTIVES_ID,
+      overrideStatus: activeCustomObjective && activeCustomObjective.tavus_objectives_id 
+        ? 'CUSTOM_OVERRIDING_DEFAULT' 
+        : activeCustomObjective && !activeCustomObjective.tavus_objectives_id
+        ? 'CUSTOM_EXISTS_BUT_NO_TAVUS_ID'
+        : 'USING_DEFAULT_TEMPLATES',
+      validation: {
+        customObjectiveExists: !!activeCustomObjective,
+        customObjectiveHasTavusId: !!(activeCustomObjective?.tavus_objectives_id),
+        customObjectiveIsActive: !!(activeCustomObjective?.is_active),
+        customObjectiveHasSteps: !!(activeCustomObjective?.objectives?.length > 0),
+      }
+    };
+
+    console.log('🔍 Objectives Override Validation:', result);
+    return result;
+  } catch (error) {
+    console.error('Error validating objectives override:', error);
+    return {
+      demoId,
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+      overrideStatus: 'ERROR_DURING_VALIDATION'
     };
   }
 }
