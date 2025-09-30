@@ -13,7 +13,9 @@
     "e2e:real": "playwright test -c playwright.real.config.ts",
     "seed:e2e": "node scripts/seed-e2e.js",
     "webhook": "node simple-webhook.js",
-    "webhook:auto": "./auto-webhook.sh"
+    "webhook:auto": "./auto-webhook.sh",
+    "webhook:setup": "node setup-webhooks.js",
+    "ngrok": "ngrok http 3000"
   },
   "keywords": [],
   "author": "",

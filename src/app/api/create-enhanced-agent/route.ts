@@ -10,6 +10,7 @@ import { getErrorMessage, logError } from '@/lib/errors';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getWebhookUrl } from '@/lib/tavus/webhook-objectives';
 
 async function handlePOST(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
@@ -30,6 +31,8 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     console.log('='.repeat(50));
     console.log(`Demo ID: ${demoId}`);
     console.log(`Agent Name: ${agentName}`);
+    console.log(`🔗 Webhook URL: ${getWebhookUrl()}`);
+    console.log('📋 Objectives will automatically include webhook URLs for data collection');
 
     // Step 1: Verify demo ownership
     const { data: demo, error: demoError } = await supabase
@@ -77,66 +80,29 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
     const baseSystemPrompt = fs.readFileSync(promptPath, 'utf-8');
     
-    // Identity section
-    const identitySection = `\n\n## AGENT PROFILE\n- Name: ${agentName}\n- Personality: ${agentPersonality || 'Friendly and helpful assistant.'}\n- Initial Greeting: ${agentGreeting || 'Hello! How can I help you with the demo today?'}\n`;
+    // Enhanced identity section
+    const identitySection = `\n\n## AGENT IDENTITY\nYou are ${agentName}, ${agentPersonality || 'a friendly and knowledgeable assistant'}.\nGreeting: "${agentGreeting || 'Hello! How can I help you with the demo today?'}"\n`;
 
-    // Objectives section - combine preset objectives WITH custom objectives
+    // Enhanced but concise objectives section
     let objectivesSection = '';
     
-    // Always include preset objectives as foundation
-    objectivesSection = `\n\n## DEMO OBJECTIVES\n`;
-    
     if (activeCustomObjective && activeCustomObjective.objectives.length > 0) {
-      // Use custom objectives as primary flow
       console.log(`📋 Using custom objectives: ${activeCustomObjective.name}`);
-      objectivesSection += `### Primary Flow: ${activeCustomObjective.name}\n`;
-      objectivesSection += `${activeCustomObjective.description ? activeCustomObjective.description + '\n\n' : ''}`;
-      objectivesSection += 'Follow these structured objectives as your primary conversation flow:\n\n';
+      objectivesSection = `\n\n## DEMO OBJECTIVES\n### ${activeCustomObjective.name}\n`;
+      objectivesSection += `Follow this structured flow:\n`;
       
       activeCustomObjective.objectives.forEach((obj, i) => {
-        objectivesSection += `**${i + 1}. ${obj.objective_name}**\n`;
-        objectivesSection += `- Objective: ${obj.objective_prompt}\n`;
-        objectivesSection += `- Mode: ${obj.confirmation_mode} confirmation, ${obj.modality} modality\n`;
-        if (obj.output_variables && obj.output_variables.length > 0) {
-          objectivesSection += `- Capture: ${obj.output_variables.join(', ')}\n`;
-        }
-        objectivesSection += '\n';
+        objectivesSection += `${i + 1}. **${obj.objective_name}**: ${obj.objective_prompt.substring(0, 100)}...\n`;
       });
       
-      // Add preset objectives as supporting guidelines (custom objectives take priority)
-      objectivesSection += `### Supporting Guidelines (Default Templates - Secondary Priority)\n`;
-      objectivesSection += `While following your custom objectives above, also maintain these core principles:\n`;
-      objectivesSection += `- Welcome users and understand their needs\n`;
-      objectivesSection += `- Show relevant product features and videos\n`;
-      objectivesSection += `- Answer questions using knowledge base\n`;
-      objectivesSection += `- Guide toward appropriate next steps\n`;
-      objectivesSection += `- Capture contact information when appropriate\n\n`;
-      objectivesSection += `**IMPORTANT: Your custom objectives above take priority over these general guidelines.**\n\n`;
-      
+      objectivesSection += `\nCapture key data points and guide users through each step naturally.\n`;
     } else {
-      // Use preset objectives as primary when no custom objectives
-      console.log(`📋 Using preset objectives as primary flow`);
-      objectivesSection += `Follow these objectives throughout the conversation:\n`;
-      objectivesSection += `- Welcome users and understand their needs\n`;
-      objectivesSection += `- Show relevant product features and videos\n`;
-      objectivesSection += `- Answer questions using knowledge base\n`;
-      objectivesSection += `- Guide toward appropriate next steps\n`;
-      objectivesSection += `- Capture contact information when appropriate\n\n`;
-      
-      // Include any simple objectives from demo metadata
-      const objectivesList: string[] = Array.isArray(demo.metadata?.objectives)
-        ? (demo.metadata!.objectives as string[]).filter((s) => typeof s === 'string' && s.trim()).slice(0, 5)
-        : [];
-      
-      if (objectivesList.length > 0) {
-        console.log(`📋 Including simple objectives from demo metadata`);
-        objectivesSection += `### Additional Demo-Specific Objectives\n`;
-        objectivesSection += `${objectivesList.map((o, i) => `- ${o.trim()}`).join('\n')}\n\n`;
-      }
+      console.log(`📋 Using default objectives`);
+      objectivesSection = `\n\n## DEMO OBJECTIVES\n1. Welcome users and understand their specific needs\n2. Show relevant product videos based on their interests\n3. Answer detailed questions using your knowledge base\n4. Guide qualified prospects toward trial signup\n`;
     }
 
-    // Language handling guidance
-    const languageSection = `\n\n## LANGUAGE HANDLING\n- Automatically detect the user's language from their utterances and respond in that language.\n- Keep all tool calls and their arguments (function names, video titles) EXACT and un-translated.\n- Do not ask the user to choose a language; infer it from context and switch seamlessly while honoring all guardrails.\n`;
+    // Language handling section
+    const languageSection = `\n\n## LANGUAGE SUPPORT\nAutomatically detect and respond in the user's language while keeping all tool calls (fetch_video, show_trial_cta) in English with exact titles.\n`;
 
     // Build enhanced system prompt
     const enhancedSystemPrompt = baseSystemPrompt + identitySection + objectivesSection + languageSection;
@@ -164,9 +130,26 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       console.log(`   ✅ Custom objectives will override any default templates`);
       objectivesId = activeCustomObjective.tavus_objectives_id;
     } else if (activeCustomObjective && !activeCustomObjective.tavus_objectives_id) {
-      console.log(`⚠️  Custom objective exists but missing Tavus ID - falling back to defaults`);
-      console.log(`   Custom objective: ${activeCustomObjective.name} (needs sync)`);
-      objectivesId = DEFAULT_OBJECTIVES_ID;
+      console.log(`🔄 CREATING NEW TAVUS OBJECTIVES for custom objective: ${activeCustomObjective.name}`);
+      console.log(`   Steps: ${activeCustomObjective.objectives.length}`);
+      console.log(`   Will create with webhook URLs`);
+      
+      // Create new objectives in Tavus with webhook URLs
+      try {
+        const { syncCustomObjectiveWithTavus } = await import('@/lib/tavus/custom-objectives-integration');
+        const newObjectivesId = await syncCustomObjectiveWithTavus(activeCustomObjective.id);
+        
+        if (newObjectivesId) {
+          console.log(`✅ Created new Tavus objectives: ${newObjectivesId}`);
+          objectivesId = newObjectivesId;
+        } else {
+          console.log(`❌ Failed to create new objectives - falling back to defaults`);
+          objectivesId = DEFAULT_OBJECTIVES_ID;
+        }
+      } catch (error) {
+        console.log(`❌ Error creating new objectives: ${error}`);
+        objectivesId = DEFAULT_OBJECTIVES_ID;
+      }
     } else {
       console.log(`📋 No custom objectives found - using default template objectives`);
       console.log(`   Default Objectives ID: ${DEFAULT_OBJECTIVES_ID}`);
@@ -186,10 +169,11 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       // Check if system prompt is too long and truncate if necessary
       let finalSystemPrompt = enhancedSystemPrompt;
       const MAX_PROMPT_LENGTH = 8000; // Conservative limit
+      const TRUNCATION_SUFFIX = '\n\n[Truncated for length]';
       
       if (enhancedSystemPrompt.length > MAX_PROMPT_LENGTH) {
         console.warn(`⚠️ System prompt is too long (${enhancedSystemPrompt.length} chars). Truncating to ${MAX_PROMPT_LENGTH} chars.`);
-        finalSystemPrompt = enhancedSystemPrompt.substring(0, MAX_PROMPT_LENGTH) + '\n\n[Truncated for length]';
+        finalSystemPrompt = enhancedSystemPrompt.substring(0, MAX_PROMPT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
       }
 
       // Create persona payload with all fields

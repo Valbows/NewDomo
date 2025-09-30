@@ -1,6 +1,7 @@
 import { Demo } from '@/app/demos/[demoId]/configure/types';
 import { CustomObjectivesManager } from '@/components/CustomObjectivesManager';
 import { ObjectivesStatus } from '@/components/ObjectivesStatus';
+import WebhookUrlDisplay from '@/components/WebhookUrlDisplay';
 import { useState } from 'react';
 
 interface AgentSettingsProps {
@@ -157,6 +158,11 @@ export const AgentSettings = ({
 
             {/* Custom Objectives Manager */}
             <CustomObjectivesManager demoId={demo?.id || ''} />
+          </div>
+
+          {/* Webhook URL Display */}
+          <div>
+            <WebhookUrlDisplay className="mb-4" />
           </div>
 
           {/* Agent Creation */}

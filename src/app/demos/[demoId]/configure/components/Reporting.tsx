@@ -57,6 +57,14 @@ interface ContactInfo {
   received_at: string;
 }
 
+interface ProductInterestData {
+  id: string;
+  conversation_id: string;
+  primary_interest: string | null;
+  pain_points: string[] | null;
+  received_at: string;
+}
+
 function formatDate(iso?: string) {
   try {
     return iso ? new Date(iso).toLocaleString() : "—";
@@ -129,11 +137,65 @@ function ContactInfoCard({ contact }: { contact: ContactInfo | null }) {
   );
 }
 
+function ProductInterestCard({ productInterest }: { productInterest: ProductInterestData | null }) {
+  if (!productInterest) {
+    return (
+      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+          🎯 Reason Why They Visited Website
+        </h5>
+        <p className="text-sm text-gray-500">No product interest data captured for this conversation</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+      <h5 className="font-medium text-green-900 mb-3 flex items-center gap-2">
+        🎯 Reason Why They Visited Website
+        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+          Captured
+        </span>
+      </h5>
+      <div className="space-y-4">
+        <div>
+          <span className="text-xs font-medium text-green-700">Primary Interest:</span>
+          <p className="text-sm text-green-900 font-medium mt-1">
+            {productInterest.primary_interest || 'Not specified'}
+          </p>
+        </div>
+        
+        {productInterest.pain_points && productInterest.pain_points.length > 0 && (
+          <div>
+            <span className="text-xs font-medium text-green-700">Pain Points:</span>
+            <ul className="mt-1 space-y-1">
+              {productInterest.pain_points.map((painPoint, index) => (
+                <li key={index} className="text-sm text-green-900 flex items-start gap-2">
+                  <span className="text-green-600 mt-1">•</span>
+                  <span>{painPoint}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        <div>
+          <span className="text-xs font-medium text-green-700">Captured:</span>
+          <p className="text-xs text-green-600">
+            {formatDate(productInterest.received_at)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Reporting = ({ demo }: ReportingProps) => {
   const [conversationDetails, setConversationDetails] = useState<
     ConversationDetail[]
   >([]);
   const [contactInfo, setContactInfo] = useState<Record<string, ContactInfo>>({});
+  const [productInterestData, setProductInterestData] = useState<Record<string, ProductInterestData>>({});
   const [loading, setLoading] = useState(false);
   const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -198,6 +260,28 @@ export const Reporting = ({ demo }: ReportingProps) => {
     }
   }, []);
 
+  // Fetch product interest data for conversations
+  const fetchProductInterestData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("product_interest_data")
+        .select("*")
+        .order("received_at", { ascending: false });
+
+      if (error) throw error;
+      
+      // Create a map of conversation_id to product interest data
+      const interestMap: Record<string, ProductInterestData> = {};
+      data?.forEach((interest) => {
+        interestMap[interest.conversation_id] = interest;
+      });
+      
+      setProductInterestData(interestMap);
+    } catch (err) {
+      console.error("Failed to fetch product interest data:", err);
+    }
+  }, []);
+
   // Sync conversations from Tavus
   const syncConversations = async () => {
     if (!demo?.id) return;
@@ -231,6 +315,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
       // Refresh the conversation details and contact info to show new data immediately
       await fetchConversationDetails();
       await fetchContactInfo();
+      await fetchProductInterestData();
 
       // Show success message with details about what was synced
       const syncedCount = result.results?.length || 0;
@@ -254,7 +339,8 @@ export const Reporting = ({ demo }: ReportingProps) => {
   useEffect(() => {
     fetchConversationDetails();
     fetchContactInfo();
-  }, [fetchConversationDetails, fetchContactInfo]);
+    fetchProductInterestData();
+  }, [fetchConversationDetails, fetchContactInfo, fetchProductInterestData]);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return "—";
@@ -595,6 +681,11 @@ export const Reporting = ({ demo }: ReportingProps) => {
                           👤 Contact Info
                         </div>
                       )}
+                      {productInterestData[conversation.tavus_conversation_id] && (
+                        <div className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                          🎯 Interest Data
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -638,6 +729,11 @@ export const Reporting = ({ demo }: ReportingProps) => {
                     {/* Contact Information */}
                     <ContactInfoCard 
                       contact={contactInfo[conversation.tavus_conversation_id] || null} 
+                    />
+
+                    {/* Product Interest Data */}
+                    <ProductInterestCard 
+                      productInterest={productInterestData[conversation.tavus_conversation_id] || null} 
                     />
 
                     {/* Perception Analysis */}

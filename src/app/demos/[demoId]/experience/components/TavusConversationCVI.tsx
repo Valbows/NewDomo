@@ -68,6 +68,30 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
 
       console.log('Parsed tool call result:', parsed);
 
+      // Handle objective completion events - forward to webhook
+      if (data?.event_type === 'conversation.objective.completed') {
+        console.log('🎯 Objective completion detected, forwarding to webhook...');
+        try {
+          fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          }).then(response => {
+            if (response.ok) {
+              console.log('✅ Objective completion forwarded to webhook successfully');
+            } else {
+              console.error('❌ Failed to forward objective completion to webhook:', response.status);
+            }
+          }).catch(error => {
+            console.error('❌ Error forwarding objective completion to webhook:', error);
+          });
+        } catch (error) {
+          console.error('❌ Error forwarding objective completion:', error);
+        }
+      }
+
       const SUPPORTED = new Set(['fetch_video','pause_video','play_video','next_video','close_video','show_trial_cta']);
       if (parsed.toolName && SUPPORTED.has(parsed.toolName) && onToolCall) {
         const args = parsed.toolArgs ?? {};

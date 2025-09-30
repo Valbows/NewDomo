@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const conversationId = searchParams.get('conversation_id');
     
     let query = supabase
-      .from('qualification_data')
+      .from('product_interest_data')
       .select('*')
       .order('received_at', { ascending: false });
     
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data || []);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch qualification data' }, 
+      { error: 'Failed to fetch product interest data' }, 
       { status: 500 }
     );
   }

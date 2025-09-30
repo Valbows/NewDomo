@@ -224,6 +224,91 @@ export async function handlePOST(req: NextRequest) {
       }
     }
 
+    // Handle objective completion events
+    console.log(`🔍 Checking event type: "${event.event_type}"`);
+    console.log(`🔍 Event type matches objective completion:`, 
+      event.event_type === 'application.objective_completed' || 
+      event.event_type === 'objective_completed' || 
+      event.event_type === 'conversation.objective.completed'
+    );
+    
+    if (event.event_type === 'application.objective_completed' || event.event_type === 'objective_completed' || event.event_type === 'conversation.objective.completed') {
+      const objectiveName = event?.properties?.objective_name || event?.data?.objective_name || event?.objective_name;
+      const outputVariables = event?.properties?.output_variables || event?.data?.output_variables || event?.output_variables || {};
+      
+      console.log(`🎯 Processing objective completion: ${objectiveName}`);
+      console.log(`📊 Output variables:`, JSON.stringify(outputVariables, null, 2));
+      console.log(`📋 Event structure:`, JSON.stringify({
+        event_type: event.event_type,
+        has_properties: !!event.properties,
+        has_data: !!event.data,
+        properties_keys: event.properties ? Object.keys(event.properties) : [],
+        data_keys: event.data ? Object.keys(event.data) : []
+      }, null, 2));
+      
+      if (objectiveName === 'product_interest_discovery') {
+        try {
+          // Store product interest data
+          // Handle pain_points - convert to array if it's a string
+          let painPointsArray = null;
+          if (outputVariables.pain_points) {
+            if (Array.isArray(outputVariables.pain_points)) {
+              painPointsArray = outputVariables.pain_points;
+            } else if (typeof outputVariables.pain_points === 'string') {
+              painPointsArray = [outputVariables.pain_points];
+            }
+          }
+
+          const { error: insertError } = await supabase
+            .from('product_interest_data')
+            .insert({
+              conversation_id: conversation_id,
+              objective_name: objectiveName,
+              primary_interest: outputVariables.primary_interest || null,
+              pain_points: painPointsArray,
+              event_type: event.event_type,
+              raw_payload: event,
+              received_at: new Date().toISOString()
+            });
+
+          if (insertError) {
+            console.error('Failed to store product interest data:', insertError);
+          } else {
+            console.log('✅ Successfully stored product interest data');
+          }
+        } catch (error) {
+          console.error('Error processing product interest discovery:', error);
+        }
+      } else if (objectiveName === 'contact_information_collection' || objectiveName === 'greeting_and_qualification') {
+        // Handle contact info objective (support both old and new objective names)
+        try {
+          const { error: insertError } = await supabase
+            .from('qualification_data')
+            .insert({
+              conversation_id: conversation_id,
+              first_name: outputVariables.first_name || null,
+              last_name: outputVariables.last_name || null,
+              email: outputVariables.email || null,
+              position: outputVariables.position || null,
+              objective_name: objectiveName,
+              event_type: event.event_type,
+              raw_payload: event,
+              received_at: new Date().toISOString()
+            });
+
+          if (insertError) {
+            console.error('Failed to store qualification data:', insertError);
+          } else {
+            console.log('✅ Successfully stored qualification data');
+          }
+        } catch (error) {
+          console.error('Error processing contact information collection:', error);
+        }
+      }
+      
+      return NextResponse.json({ received: true });
+    }
+
     // Process tool calls
     if (toolName === 'fetch_video' || toolName === 'play_video') {
       const video_title = toolArgs?.video_title || toolArgs?.title;

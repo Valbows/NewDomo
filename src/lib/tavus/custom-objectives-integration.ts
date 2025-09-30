@@ -5,6 +5,7 @@
 import { getActiveCustomObjective } from '@/lib/supabase/custom-objectives';
 import { createObjectivesManager } from './objectives-manager';
 import { OBJECTIVES_TEMPLATES } from './objectives-templates';
+import { addWebhookUrlsToObjectives, createEnhancedObjectivesWithWebhooks } from './webhook-objectives';
 
 /**
  * Get the objectives ID to use for a demo
@@ -57,18 +58,20 @@ export async function syncCustomObjectiveWithTavus(customObjectiveId: string): P
     let tavusObjectivesId = customObjective.tavus_objectives_id;
 
     if (tavusObjectivesId) {
-      // Update existing objectives in Tavus
+      // Update existing objectives in Tavus with webhook URLs
+      const enhancedObjectives = createEnhancedObjectivesWithWebhooks(customObjective.objectives);
       await objectivesManager.updateObjectives(tavusObjectivesId, {
         name: customObjective.name,
         description: customObjective.description || '',
-        objectives: customObjective.objectives,
+        objectives: enhancedObjectives,
       });
     } else {
-      // Create new objectives in Tavus
+      // Create new objectives in Tavus with webhook URLs
+      const enhancedObjectives = createEnhancedObjectivesWithWebhooks(customObjective.objectives);
       const result = await objectivesManager.createObjectives({
         name: customObjective.name,
         description: customObjective.description || '',
-        objectives: customObjective.objectives,
+        objectives: enhancedObjectives,
       });
       
       tavusObjectivesId = result.uuid!;
