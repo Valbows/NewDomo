@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
 import { verifyHmacSha256Signature } from '@/lib/security/webhooks';
@@ -94,7 +94,11 @@ async function storeDetailedConversationData(supabase: any, conversationId: stri
 
 // Testable handler for Tavus webhook; used by tests directly and by the route wrapper.
 export async function handlePOST(req: NextRequest) {
-  const supabase = createClient();
+  // Create Supabase client with service role for webhook authentication
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
 
   try {
     // Verify webhook authenticity using either:
@@ -158,70 +162,79 @@ export async function handlePOST(req: NextRequest) {
       }
     }
 
-    // If there is no tool call, attempt analytics/perception ingestion
+    // If there is no tool call, check if it's an objective completion or analytics event
     if (!toolName) {
-      try {
-        if (!shouldIngestEvent(event)) {
+      // Check if this is an objective completion event first
+      const isObjectiveCompletion = event.event_type === 'application.objective_completed' || 
+                                   event.event_type === 'objective_completed' || 
+                                   event.event_type === 'conversation.objective.completed';
+      
+      if (!isObjectiveCompletion) {
+        // Only do analytics ingestion for non-objective events
+        try {
+          if (!shouldIngestEvent(event)) {
+            return NextResponse.json({ received: true });
+          }
+
+          // Store in legacy format (metadata.analytics) for backward compatibility
+          await ingestAnalyticsForEvent(supabase, conversation_id, event);
+          
+          // ALSO store in detailed conversation_details table
+          await storeDetailedConversationData(supabase, conversation_id, event);
+
+          // After successful ingestion, broadcast an update so UIs can refresh reporting in real-time
+          try {
+            const { data: demoForBroadcast } = await supabase
+              .from('demos')
+              .select('id')
+              .eq('tavus_conversation_id', conversation_id)
+              .single();
+
+            if (demoForBroadcast?.id) {
+              const channelName = `demo-${demoForBroadcast.id}`;
+              const channel = supabase.channel(channelName);
+              // Ensure the realtime channel is subscribed before sending
+              await new Promise<void>((resolve, reject) => {
+                let settled = false;
+                channel.subscribe((status) => {
+                  if (status === 'SUBSCRIBED' && !settled) {
+                    settled = true;
+                    console.log(`Server Realtime: SUBSCRIBED to ${channelName}`);
+                    resolve();
+                  }
+                });
+                setTimeout(() => {
+                  if (!settled) {
+                    settled = true;
+                    reject(new Error('Server Realtime subscribe timeout'));
+                  }
+                }, 2000);
+              });
+
+              await channel.send({
+                type: 'broadcast',
+                event: 'analytics_updated',
+                payload: {
+                  conversation_id,
+                  event_type: event?.event_type || event?.type || null,
+                },
+              });
+              console.log(`Broadcasted analytics_updated for demo ${demoForBroadcast.id}`);
+
+              // Clean up channel
+              await supabase.removeChannel(channel);
+            }
+          } catch (broadcastErr) {
+            console.warn('Webhook: analytics_updated broadcast failed (non-fatal):', broadcastErr);
+          }
+
+          return NextResponse.json({ received: true });
+        } catch (ingestErr) {
+          logError(ingestErr, 'Webhook Ingest Error');
           return NextResponse.json({ received: true });
         }
-
-        // Store in legacy format (metadata.analytics) for backward compatibility
-        await ingestAnalyticsForEvent(supabase, conversation_id, event);
-        
-        // ALSO store in detailed conversation_details table
-        await storeDetailedConversationData(supabase, conversation_id, event);
-
-        // After successful ingestion, broadcast an update so UIs can refresh reporting in real-time
-        try {
-          const { data: demoForBroadcast } = await supabase
-            .from('demos')
-            .select('id')
-            .eq('tavus_conversation_id', conversation_id)
-            .single();
-
-          if (demoForBroadcast?.id) {
-            const channelName = `demo-${demoForBroadcast.id}`;
-            const channel = supabase.channel(channelName);
-            // Ensure the realtime channel is subscribed before sending
-            await new Promise<void>((resolve, reject) => {
-              let settled = false;
-              channel.subscribe((status) => {
-                if (status === 'SUBSCRIBED' && !settled) {
-                  settled = true;
-                  console.log(`Server Realtime: SUBSCRIBED to ${channelName}`);
-                  resolve();
-                }
-              });
-              setTimeout(() => {
-                if (!settled) {
-                  settled = true;
-                  reject(new Error('Server Realtime subscribe timeout'));
-                }
-              }, 2000);
-            });
-
-            await channel.send({
-              type: 'broadcast',
-              event: 'analytics_updated',
-              payload: {
-                conversation_id,
-                event_type: event?.event_type || event?.type || null,
-              },
-            });
-            console.log(`Broadcasted analytics_updated for demo ${demoForBroadcast.id}`);
-
-            // Clean up channel
-            await supabase.removeChannel(channel);
-          }
-        } catch (broadcastErr) {
-          console.warn('Webhook: analytics_updated broadcast failed (non-fatal):', broadcastErr);
-        }
-
-        return NextResponse.json({ received: true });
-      } catch (ingestErr) {
-        logError(ingestErr, 'Webhook Ingest Error');
-        return NextResponse.json({ received: true });
       }
+      // If it is an objective completion, continue to the objective processing below
     }
 
     // Handle objective completion events
@@ -281,6 +294,16 @@ export async function handlePOST(req: NextRequest) {
         }
       } else if (objectiveName === 'contact_information_collection' || objectiveName === 'greeting_and_qualification') {
         // Handle contact info objective (support both old and new objective names)
+        console.log('🔍 Processing qualification data insertion...');
+        console.log('📊 Data to insert:', {
+          conversation_id,
+          first_name: outputVariables.first_name,
+          last_name: outputVariables.last_name,
+          email: outputVariables.email,
+          position: outputVariables.position,
+          objective_name: objectiveName
+        });
+        
         try {
           const { error: insertError } = await supabase
             .from('qualification_data')
@@ -297,12 +320,12 @@ export async function handlePOST(req: NextRequest) {
             });
 
           if (insertError) {
-            console.error('Failed to store qualification data:', insertError);
+            console.error('❌ Failed to store qualification data:', insertError);
           } else {
             console.log('✅ Successfully stored qualification data');
           }
         } catch (error) {
-          console.error('Error processing contact information collection:', error);
+          console.error('❌ Error processing contact information collection:', error);
         }
       }
       

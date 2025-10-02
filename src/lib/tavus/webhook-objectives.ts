@@ -10,14 +10,20 @@ import { ObjectiveDefinition } from './objectives-templates';
  * Reads ngrok URL from environment variables to handle dynamic URLs
  */
 export function getWebhookUrl(): string {
-  // Read ngrok URL from environment variable (updates when ngrok restarts)
-  const ngrokUrl = process.env.NGROK_URL;
+  // Read tunnel URL from environment variable (permanent tunnel URL)
+  const tunnelUrl = process.env.TUNNEL_URL || process.env.NGROK_URL;
   
   // Fallback chain for different deployment scenarios
-  const baseUrl = ngrokUrl || 
-                  process.env.NEXT_PUBLIC_BASE_URL || 
-                  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                  'http://localhost:3000';
+  let baseUrl;
+  if (tunnelUrl) {
+    baseUrl = tunnelUrl;
+  } else if (process.env.NEXT_PUBLIC_BASE_URL) {
+    baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  } else if (process.env.VERCEL_URL) {
+    baseUrl = `https://${process.env.VERCEL_URL}`;
+  } else {
+    baseUrl = 'http://localhost:3000';
+  }
   
   const webhookToken = process.env.TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025';
   
