@@ -182,7 +182,7 @@ export async function validateObjectivesOverride(demoId: string) {
         customObjectiveExists: !!activeCustomObjective,
         customObjectiveHasTavusId: !!(activeCustomObjective?.tavus_objectives_id),
         customObjectiveIsActive: !!(activeCustomObjective?.is_active),
-        customObjectiveHasSteps: !!(activeCustomObjective?.objectives?.length > 0),
+        customObjectiveHasSteps: !!(activeCustomObjective?.objectives?.length && activeCustomObjective.objectives.length > 0),
       }
     };
 

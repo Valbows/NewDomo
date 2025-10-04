@@ -74,6 +74,15 @@ interface VideoShowcaseData {
   received_at: string;
 }
 
+interface CtaTrackingData {
+  id: string;
+  conversation_id: string;
+  demo_id: string;
+  cta_shown_at: string | null;
+  cta_clicked_at: string | null;
+  cta_url: string | null;
+}
+
 function formatDate(iso?: string) {
   try {
     return iso ? new Date(iso).toLocaleString() : "—";
@@ -269,6 +278,250 @@ function VideoShowcaseCard({ videoShowcase }: { videoShowcase: VideoShowcaseData
   );
 }
 
+// Calculate Domo Score based on data completeness
+function calculateDomoScore(
+  contact: ContactInfo | null,
+  productInterest: ProductInterestData | null,
+  videoShowcase: VideoShowcaseData | null,
+  ctaTracking: CtaTrackingData | null,
+  perceptionAnalysis: any
+): { score: number; maxScore: number; breakdown: { [key: string]: boolean } } {
+  const breakdown = {
+    contactConfirmation: !!(contact?.email || contact?.first_name || contact?.last_name),
+    reasonForVisit: !!(productInterest?.primary_interest || (productInterest?.pain_points && productInterest.pain_points.length > 0)),
+    platformFeatureInterest: !!(videoShowcase?.requested_videos && videoShowcase.requested_videos.length > 0) || 
+                             !!(videoShowcase?.videos_shown && videoShowcase.videos_shown.length > 0),
+    ctaExecution: !!(ctaTracking?.cta_clicked_at),
+    perceptionAnalysis: !!(perceptionAnalysis && typeof perceptionAnalysis === 'string' && perceptionAnalysis.trim().length > 0)
+  };
+
+  const score = Object.values(breakdown).filter(Boolean).length;
+  const maxScore = 5;
+
+  return { score, maxScore, breakdown };
+}
+
+function DomoScoreCard({ 
+  contact, 
+  productInterest, 
+  videoShowcase, 
+  ctaTracking, 
+  perceptionAnalysis 
+}: { 
+  contact: ContactInfo | null;
+  productInterest: ProductInterestData | null;
+  videoShowcase: VideoShowcaseData | null;
+  ctaTracking: CtaTrackingData | null;
+  perceptionAnalysis: any;
+}) {
+  const { score, maxScore, breakdown } = calculateDomoScore(
+    contact, 
+    productInterest, 
+    videoShowcase, 
+    ctaTracking, 
+    perceptionAnalysis
+  );
+
+  const scorePercentage = (score / maxScore) * 100;
+  const getScoreColor = (score: number) => {
+    if (score >= 4) return 'text-green-600 bg-green-50 border-green-200';
+    if (score >= 3) return 'text-blue-600 bg-blue-50 border-blue-200';
+    if (score >= 2) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    return 'text-red-600 bg-red-50 border-red-200';
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 4) return 'Excellent';
+    if (score >= 3) return 'Good';
+    if (score >= 2) return 'Fair';
+    return 'Poor';
+  };
+
+  return (
+    <div className={`p-4 border rounded-lg ${getScoreColor(score)}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h5 className="font-medium flex items-center gap-2">
+          🏆 Domo Score
+        </h5>
+        <div className="text-right">
+          <div className="text-2xl font-bold">
+            {score}/{maxScore}
+          </div>
+          <div className="text-sm font-medium">
+            {getScoreLabel(score)}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            {breakdown.contactConfirmation ? '✅' : '❌'} Contact Confirmation
+          </span>
+          <span className="font-medium">
+            {breakdown.contactConfirmation ? '1' : '0'} pt
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            {breakdown.reasonForVisit ? '✅' : '❌'} Reason Why They Visited Site
+          </span>
+          <span className="font-medium">
+            {breakdown.reasonForVisit ? '1' : '0'} pt
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            {breakdown.platformFeatureInterest ? '✅' : '❌'} Platform Feature Most Interested In
+          </span>
+          <span className="font-medium">
+            {breakdown.platformFeatureInterest ? '1' : '0'} pt
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            {breakdown.ctaExecution ? '✅' : '❌'} CTA Execution
+          </span>
+          <span className="font-medium">
+            {breakdown.ctaExecution ? '1' : '0'} pt
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            {breakdown.perceptionAnalysis ? '✅' : '❌'} Perception Analysis
+          </span>
+          <span className="font-medium">
+            {breakdown.perceptionAnalysis ? '1' : '0'} pt
+          </span>
+        </div>
+
+        <div className="mt-4 pt-3 border-t">
+          <div className="flex items-center justify-between text-sm font-medium">
+            <span>Credibility Score:</span>
+            <span>{scorePercentage.toFixed(0)}%</span>
+          </div>
+          <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full transition-all duration-300 ${
+                score >= 4 ? 'bg-green-500' : 
+                score >= 3 ? 'bg-blue-500' : 
+                score >= 2 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${scorePercentage}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CtaTrackingCard({ ctaTracking }: { ctaTracking: CtaTrackingData | null }) {
+  if (!ctaTracking) {
+    return (
+      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+          🎯 Execute CTA?
+        </h5>
+        <p className="text-sm text-gray-500">No CTA activity recorded for this conversation</p>
+      </div>
+    );
+  }
+
+  const ctaShown = !!ctaTracking.cta_shown_at;
+  const ctaClicked = !!ctaTracking.cta_clicked_at;
+  
+  return (
+    <div className={`mb-6 p-4 border rounded-lg ${
+      ctaClicked 
+        ? 'bg-green-50 border-green-200' 
+        : ctaShown 
+        ? 'bg-yellow-50 border-yellow-200' 
+        : 'bg-gray-50 border-gray-200'
+    }`}>
+      <h5 className={`font-medium mb-3 flex items-center gap-2 ${
+        ctaClicked 
+          ? 'text-green-900' 
+          : ctaShown 
+          ? 'text-yellow-900' 
+          : 'text-gray-700'
+      }`}>
+        🎯 Execute CTA?
+        <span className={`text-xs px-2 py-1 rounded-full ${
+          ctaClicked 
+            ? 'bg-green-100 text-green-700' 
+            : ctaShown 
+            ? 'bg-yellow-100 text-yellow-700' 
+            : 'bg-gray-100 text-gray-700'
+        }`}>
+          {ctaClicked ? 'Yes - Clicked' : ctaShown ? 'Shown - Not Clicked' : 'No Activity'}
+        </span>
+      </h5>
+      
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className={`text-xs font-medium ${
+              ctaClicked ? 'text-green-700' : ctaShown ? 'text-yellow-700' : 'text-gray-700'
+            }`}>
+              CTA Shown:
+            </span>
+            <p className={`text-sm font-medium ${
+              ctaClicked ? 'text-green-900' : ctaShown ? 'text-yellow-900' : 'text-gray-900'
+            }`}>
+              {ctaShown ? 'Yes' : 'No'}
+            </p>
+            {ctaShown && (
+              <p className={`text-xs ${
+                ctaClicked ? 'text-green-600' : 'text-yellow-600'
+              }`}>
+                {formatDate(ctaTracking.cta_shown_at || undefined)}
+              </p>
+            )}
+          </div>
+          
+          <div>
+            <span className={`text-xs font-medium ${
+              ctaClicked ? 'text-green-700' : ctaShown ? 'text-yellow-700' : 'text-gray-700'
+            }`}>
+              CTA Clicked:
+            </span>
+            <p className={`text-sm font-medium ${
+              ctaClicked ? 'text-green-900' : ctaShown ? 'text-yellow-900' : 'text-gray-900'
+            }`}>
+              {ctaClicked ? 'Yes' : 'No'}
+            </p>
+            {ctaClicked && (
+              <p className="text-xs text-green-600">
+                {formatDate(ctaTracking.cta_clicked_at || undefined)}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        {ctaTracking.cta_url && (
+          <div>
+            <span className={`text-xs font-medium ${
+              ctaClicked ? 'text-green-700' : ctaShown ? 'text-yellow-700' : 'text-gray-700'
+            }`}>
+              CTA URL:
+            </span>
+            <p className={`text-sm break-all ${
+              ctaClicked ? 'text-green-900' : ctaShown ? 'text-yellow-900' : 'text-gray-900'
+            }`}>
+              {ctaTracking.cta_url}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export const Reporting = ({ demo }: ReportingProps) => {
   const [conversationDetails, setConversationDetails] = useState<
     ConversationDetail[]
@@ -276,6 +529,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
   const [contactInfo, setContactInfo] = useState<Record<string, ContactInfo>>({});
   const [productInterestData, setProductInterestData] = useState<Record<string, ProductInterestData>>({});
   const [videoShowcaseData, setVideoShowcaseData] = useState<Record<string, VideoShowcaseData>>({});
+  const [ctaTrackingData, setCtaTrackingData] = useState<Record<string, CtaTrackingData>>({});
   const [loading, setLoading] = useState(false);
   const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -384,6 +638,28 @@ export const Reporting = ({ demo }: ReportingProps) => {
     }
   }, []);
 
+  // Fetch CTA tracking data for conversations
+  const fetchCtaTrackingData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cta_tracking")
+        .select("*")
+        .order("cta_shown_at", { ascending: false });
+
+      if (error) throw error;
+      
+      // Create a map of conversation_id to CTA tracking data
+      const ctaMap: Record<string, CtaTrackingData> = {};
+      data?.forEach((cta) => {
+        ctaMap[cta.conversation_id] = cta;
+      });
+      
+      setCtaTrackingData(ctaMap);
+    } catch (err) {
+      console.error("Failed to fetch CTA tracking data:", err);
+    }
+  }, []);
+
   // Sync conversations from Tavus
   const syncConversations = async () => {
     if (!demo?.id) return;
@@ -419,6 +695,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
       await fetchContactInfo();
       await fetchProductInterestData();
       await fetchVideoShowcaseData();
+      await fetchCtaTrackingData();
 
       // Show success message with details about what was synced
       const syncedCount = result.results?.length || 0;
@@ -444,7 +721,8 @@ export const Reporting = ({ demo }: ReportingProps) => {
     fetchContactInfo();
     fetchProductInterestData();
     fetchVideoShowcaseData();
-  }, [fetchConversationDetails, fetchContactInfo, fetchProductInterestData, fetchVideoShowcaseData]);
+    fetchCtaTrackingData();
+  }, [fetchConversationDetails, fetchContactInfo, fetchProductInterestData, fetchVideoShowcaseData, fetchCtaTrackingData]);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return "—";
@@ -643,6 +921,20 @@ export const Reporting = ({ demo }: ReportingProps) => {
         ) / conversationDetails.length
       : 0;
 
+  // Calculate average Domo Score
+  const averageDomoScore = conversationDetails.length > 0
+    ? conversationDetails.reduce((sum, conversation) => {
+        const { score } = calculateDomoScore(
+          contactInfo[conversation.tavus_conversation_id] || null,
+          productInterestData[conversation.tavus_conversation_id] || null,
+          videoShowcaseData[conversation.tavus_conversation_id] || null,
+          ctaTrackingData[conversation.tavus_conversation_id] || null,
+          conversation.perception_analysis
+        );
+        return sum + score;
+      }, 0) / conversationDetails.length
+    : 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -688,7 +980,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
             <MessageSquare className="w-4 h-4" />
@@ -714,6 +1006,18 @@ export const Reporting = ({ demo }: ReportingProps) => {
           </div>
           <div className="text-2xl font-bold text-blue-600">
             {formatDuration(Math.round(averageDuration))}
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            <span className="text-lg">🏆</span>
+            <span>Avg Domo Score</span>
+          </div>
+          <div className="text-2xl font-bold text-purple-600">
+            {averageDomoScore.toFixed(1)}/5
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {((averageDomoScore / 5) * 100).toFixed(0)}% Credibility
           </div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
@@ -795,6 +1099,37 @@ export const Reporting = ({ demo }: ReportingProps) => {
                           🎬 Video Data
                         </div>
                       )}
+                      {ctaTrackingData[conversation.tavus_conversation_id] && (
+                        <div className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          ctaTrackingData[conversation.tavus_conversation_id].cta_clicked_at
+                            ? 'bg-green-100 text-green-800'
+                            : ctaTrackingData[conversation.tavus_conversation_id].cta_shown_at
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          🎯 CTA {ctaTrackingData[conversation.tavus_conversation_id].cta_clicked_at ? 'Clicked' : 'Shown'}
+                        </div>
+                      )}
+                      {(() => {
+                        const { score } = calculateDomoScore(
+                          contactInfo[conversation.tavus_conversation_id] || null,
+                          productInterestData[conversation.tavus_conversation_id] || null,
+                          videoShowcaseData[conversation.tavus_conversation_id] || null,
+                          ctaTrackingData[conversation.tavus_conversation_id] || null,
+                          conversation.perception_analysis
+                        );
+                        const getScoreColor = (score: number) => {
+                          if (score >= 4) return 'bg-green-100 text-green-800';
+                          if (score >= 3) return 'bg-blue-100 text-blue-800';
+                          if (score >= 2) return 'bg-yellow-100 text-yellow-800';
+                          return 'bg-red-100 text-red-800';
+                        };
+                        return (
+                          <div className={`px-2 py-1 text-xs font-medium rounded-full ${getScoreColor(score)}`}>
+                            🏆 {score}/5
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -834,51 +1169,72 @@ export const Reporting = ({ demo }: ReportingProps) => {
                 </div>
 
                 {expandedConversation === conversation.id && (
-                  <div className="space-y-6">
-                    {/* Contact Information */}
-                    <ContactInfoCard 
-                      contact={contactInfo[conversation.tavus_conversation_id] || null} 
-                    />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column - Data Cards */}
+                    <div className="lg:col-span-2 space-y-6">
+                      {/* Contact Information */}
+                      <ContactInfoCard 
+                        contact={contactInfo[conversation.tavus_conversation_id] || null} 
+                      />
 
-                    {/* Product Interest Data */}
-                    <ProductInterestCard 
-                      productInterest={productInterestData[conversation.tavus_conversation_id] || null} 
-                    />
+                      {/* Product Interest Data */}
+                      <ProductInterestCard 
+                        productInterest={productInterestData[conversation.tavus_conversation_id] || null} 
+                      />
 
-                    {/* Video Showcase Data */}
-                    <VideoShowcaseCard 
-                      videoShowcase={videoShowcaseData[conversation.tavus_conversation_id] || null} 
-                    />
+                      {/* Video Showcase Data */}
+                      <VideoShowcaseCard 
+                        videoShowcase={videoShowcaseData[conversation.tavus_conversation_id] || null} 
+                      />
 
-                    {/* Perception Analysis */}
-                    {conversation.perception_analysis && (
-                      <div>
-                        <h5 className="font-medium text-gray-900 mb-3">
-                          Perception Analysis
-                        </h5>
-                        {renderPerceptionAnalysis(
-                          conversation.perception_analysis
-                        )}
-                      </div>
-                    )}
+                      {/* CTA Tracking Data */}
+                      <CtaTrackingCard 
+                        ctaTracking={ctaTrackingData[conversation.tavus_conversation_id] || null} 
+                      />
 
-                    {/* Transcript */}
-                    {conversation.transcript && (
-                      <div>
-                        <h5 className="font-medium text-gray-900 mb-3">
-                          Conversation Transcript
-                        </h5>
-                        {renderTranscript(conversation.transcript)}
-                      </div>
-                    )}
-
-                    {!conversation.perception_analysis &&
-                      !conversation.transcript && (
-                        <div className="text-sm text-gray-500 bg-gray-50 rounded p-4">
-                          No detailed data available for this conversation. Try
-                          syncing again later.
+                      {/* Perception Analysis */}
+                      {conversation.perception_analysis && (
+                        <div>
+                          <h5 className="font-medium text-gray-900 mb-3">
+                            Perception Analysis
+                          </h5>
+                          {renderPerceptionAnalysis(
+                            conversation.perception_analysis
+                          )}
                         </div>
                       )}
+
+                      {/* Transcript */}
+                      {conversation.transcript && (
+                        <div>
+                          <h5 className="font-medium text-gray-900 mb-3">
+                            Conversation Transcript
+                          </h5>
+                          {renderTranscript(conversation.transcript)}
+                        </div>
+                      )}
+
+                      {!conversation.perception_analysis &&
+                        !conversation.transcript && (
+                          <div className="text-sm text-gray-500 bg-gray-50 rounded p-4">
+                            No detailed data available for this conversation. Try
+                            syncing again later.
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Right Column - Domo Score */}
+                    <div className="lg:col-span-1">
+                      <div className="sticky top-4">
+                        <DomoScoreCard
+                          contact={contactInfo[conversation.tavus_conversation_id] || null}
+                          productInterest={productInterestData[conversation.tavus_conversation_id] || null}
+                          videoShowcase={videoShowcaseData[conversation.tavus_conversation_id] || null}
+                          ctaTracking={ctaTrackingData[conversation.tavus_conversation_id] || null}
+                          perceptionAnalysis={conversation.perception_analysis}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

@@ -834,9 +834,29 @@ export default function DemoExperiencePage() {
                       href={ctaButtonUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                      onClick={async (e: React.MouseEvent<HTMLAnchorElement>) => {
                         console.log('🔗 CTA Button clicked - Redirecting to configured URL');
                         console.log('🎯 CTA URL resolved:', ctaButtonUrl);
+                        
+                        // Track CTA click
+                        if (demo?.tavus_conversation_id && demo?.id) {
+                          try {
+                            await fetch('/api/track-cta-click', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                conversation_id: demo.tavus_conversation_id,
+                                demo_id: demo.id,
+                                cta_url: ctaButtonUrl
+                              })
+                            });
+                            console.log('✅ CTA click tracked successfully');
+                          } catch (error) {
+                            console.warn('⚠️ Failed to track CTA click:', error);
+                          }
+                        }
                       }}
                       className="inline-flex items-center justify-center px-6 py-2 bg-white text-green-600 font-semibold rounded-lg shadow hover:bg-gray-50 transition-colors duration-200 text-sm"
                     >

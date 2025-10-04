@@ -459,7 +459,30 @@ export async function handlePOST(req: NextRequest) {
         return NextResponse.json({ message: 'Demo not found for conversation.' });
       }
 
-      // 2. Broadcast the CTA event to the frontend
+      // 2. Track CTA shown event
+      try {
+        const { error: ctaError } = await supabase
+          .from('cta_tracking')
+          .upsert({
+            conversation_id,
+            demo_id: demo.id,
+            cta_shown_at: new Date().toISOString(),
+            cta_url: (demo as any).cta_button_url
+          }, {
+            onConflict: 'conversation_id',
+            ignoreDuplicates: false
+          });
+
+        if (ctaError) {
+          console.warn('Failed to track CTA shown event:', ctaError);
+        } else {
+          console.log(`Tracked CTA shown for conversation ${conversation_id}`);
+        }
+      } catch (trackingError) {
+        console.warn('Error tracking CTA shown event:', trackingError);
+      }
+
+      // 3. Broadcast the CTA event to the frontend
       {
         const channelName = `demo-${demo.id}`;
         const channel = supabase.channel(channelName);

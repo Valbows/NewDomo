@@ -86,10 +86,15 @@ export async function validateWebhookUrl(url?: string): Promise<boolean> {
   
   try {
     // Try to make a HEAD request to the webhook endpoint
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const response = await fetch(webhookUrl.replace('?t=', '?test=true&t='), {
       method: 'HEAD',
-      timeout: 5000
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     return response.status === 200 || response.status === 405; // 405 is OK (method not allowed for HEAD)
   } catch (error) {

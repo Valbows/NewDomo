@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
       validation,
       summary: {
         overrideWorking: isWorkingCorrectly,
-        usingCustomObjectives: validation.willUseCustom,
-        finalObjectivesSource: validation.willUseCustom ? 'CUSTOM' : 'DEFAULT',
-        message: validation.willUseCustom 
+        usingCustomObjectives: 'willUseCustom' in validation ? validation.willUseCustom : false,
+        finalObjectivesSource: ('willUseCustom' in validation && validation.willUseCustom) ? 'CUSTOM' : 'DEFAULT',
+        message: ('willUseCustom' in validation && validation.willUseCustom)
           ? `✅ Custom objectives "${validation.customObjectiveName}" are properly overriding defaults`
           : '📋 Using default template objectives (no custom objectives active)'
       }

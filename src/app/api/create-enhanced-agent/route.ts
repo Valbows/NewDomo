@@ -257,7 +257,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
             } else {
               // Try with simplified system prompt as last resort
               console.log('🔄 Retrying with simplified system prompt...');
-              const simplePayload = {
+              const simplePayload: any = {
                 persona_name: personaPayload.persona_name + ' (Simple)',
                 system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
                 objectives_id: DEFAULT_OBJECTIVES_ID,
@@ -301,7 +301,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           } else {
             // Already using default objectives, try simplified prompt
             console.log('🔄 Retrying with simplified system prompt...');
-            const simplePayload = {
+            const simplePayload: any = {
               persona_name: personaPayload.persona_name + ' (Simple)',
               system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
               objectives_id: objectivesId,
