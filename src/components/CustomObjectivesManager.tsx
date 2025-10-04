@@ -346,7 +346,13 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
                           </label>
                           <input
                             type="text"
-                            value={obj.output_variables?.join(', ') || ''}
+                            value={
+                              Array.isArray(obj.output_variables) 
+                                ? obj.output_variables.join(', ') 
+                                : typeof obj.output_variables === 'object' && obj.output_variables
+                                  ? Object.keys(obj.output_variables).join(', ')
+                                  : ''
+                            }
                             onChange={(e) => updateObjectiveStep(index, 'output_variables', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                             className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                             placeholder="e.g., user_name, company_name, interest_level"

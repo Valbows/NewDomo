@@ -39,11 +39,18 @@ async function main() {
     console.log(`   Name: ${persona.name || 'unnamed'}`);
     console.log(`   Created: ${persona.created_at}`);
     
-    // Check if tools are configured
-    if (persona.tools && persona.tools.length > 0) {
-      console.log(`\n🔧 Tools configured: ${persona.tools.length} tools`);
+    // Check if tools are configured (check multiple possible locations)
+    const tools = persona.tools || persona.layers?.llm?.tools || [];
+    console.log('🔍 Raw persona data keys:', Object.keys(persona));
+    console.log('🔍 Layers data:', persona.layers ? Object.keys(persona.layers) : 'none');
+    if (persona.layers?.llm) {
+      console.log('🔍 LLM layer keys:', Object.keys(persona.layers.llm));
+    }
+    
+    if (tools && tools.length > 0) {
+      console.log(`\n🔧 Tools configured: ${tools.length} tools`);
       
-      persona.tools.forEach((tool, index) => {
+      tools.forEach((tool, index) => {
         console.log(`\n   Tool ${index + 1}: ${tool.function?.name || 'unknown'}`);
         console.log(`   Description: ${tool.function?.description || 'none'}`);
         
@@ -76,11 +83,11 @@ async function main() {
     }
     
     console.log('\n🎯 Diagnosis:');
-    if (!persona.tools || persona.tools.length === 0) {
+    if (!tools || tools.length === 0) {
       console.log('   ❌ PROBLEM: No tools configured');
       console.log('   💡 SOLUTION: Create a new agent with TAVUS_TOOLS_ENABLED=true');
     } else {
-      const fetchVideoTool = persona.tools.find(t => t.function?.name === 'fetch_video');
+      const fetchVideoTool = tools.find(t => t.function?.name === 'fetch_video');
       if (!fetchVideoTool) {
         console.log('   ❌ PROBLEM: fetch_video tool not found');
       } else {

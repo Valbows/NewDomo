@@ -115,9 +115,10 @@ async function handlePOST(req: NextRequest) {
 
     // Objectives section - prioritize custom objectives, fall back to demo metadata
     let objectivesSection = '';
+    let activeCustomObjective = null;
     try {
       const { getActiveCustomObjective } = await import('@/lib/supabase/custom-objectives');
-      const activeCustomObjective = await getActiveCustomObjective(demoId);
+      activeCustomObjective = await getActiveCustomObjective(demoId);
       
       if (activeCustomObjective && activeCustomObjective.objectives.length > 0) {
         // Use custom objectives with detailed prompts
@@ -185,7 +186,19 @@ async function handlePOST(req: NextRequest) {
 
     // Define tools for the persona (optional via env toggle)
     // By default, tools remain disabled to avoid persona validation errors observed previously.
-    const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true';
+    // ALWAYS enable tools when custom objectives are being used (ensures video showcase works)
+    const hasCustomObjectives = !!activeCustomObjective;
+    const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true' || hasCustomObjectives;
+    
+    console.log('🔧 Tool enablement debug:');
+    console.log(`   TAVUS_TOOLS_ENABLED: ${process.env.TAVUS_TOOLS_ENABLED}`);
+    console.log(`   activeCustomObjective: ${!!activeCustomObjective}`);
+    console.log(`   hasCustomObjectives: ${hasCustomObjectives}`);
+    console.log(`   tavusToolsEnabled: ${tavusToolsEnabled}`);
+    
+    if (hasCustomObjectives && process.env.TAVUS_TOOLS_ENABLED !== 'true') {
+      console.log('🔧 Force-enabling tools for custom objectives (overriding TAVUS_TOOLS_ENABLED)');
+    }
     let tools: any[] = [];
     if (tavusToolsEnabled) {
       // Allow a minimal toolset during initial validation to reduce failure risk

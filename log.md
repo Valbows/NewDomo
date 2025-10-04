@@ -698,3 +698,66 @@ The agent creation process had a critical flaw in the custom objectives integrat
 **Next:** Monitor webhook data capture and optimize sales flow based on results
 
 ---
+
+---
+
+## 🎬 Video Showcase Integration - October 4, 2025
+
+### **Major Accomplishment: Complete Tool Calling & Video Showcase System**
+
+Successfully implemented end-to-end video showcase functionality with tool calling and data capture:
+
+#### **Tool Calling System Fixed**
+- ✅ **Root Cause Identified**: Variable scope issue in `create-agent/route.ts` 
+- ✅ **Fixed**: `activeCustomObjective` variable moved outside try block
+- ✅ **Result**: New agents now always have tools enabled
+- ✅ **Tools Included**: `fetch_video`, `pause_video`, `play_video`, `close_video`, `show_trial_cta`
+
+#### **Video Showcase Data Capture**
+- ✅ **Database Table**: `video_showcase_data` with RLS policies
+- ✅ **Webhook Endpoint**: `/api/webhook/video-showcase`
+- ✅ **Objective**: `demo_video_showcase` with immediate completion
+- ✅ **UI Integration**: 🎬 "Website Feature They Are Most Interested in Viewing" metric
+
+#### **Key Technical Fixes**
+1. **Tool Enablement Logic**: 
+   ```typescript
+   const hasCustomObjectives = !!activeCustomObjective;
+   const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true' || hasCustomObjectives;
+   ```
+
+2. **Objective Completion Prompt**:
+   > "Ask the user what video they'd like to see, then show them ONE relevant video using fetch_video(). As soon as the video is displayed, immediately complete this objective with the captured data and move directly to the call-to-action step."
+
+3. **RLS Policy Fix**:
+   ```sql
+   CREATE POLICY "Allow anonymous read access" ON video_showcase_data
+     FOR SELECT USING (true);
+   ```
+
+#### **Environment Configuration**
+- ✅ `TAVUS_TOOLS_ENABLED=true` - Always enable tools
+- ✅ `TAVUS_MINIMAL_TOOLS=false` - Full toolset
+- ✅ `NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK=true` - Tool call parsing
+
+#### **Working Personas**
+- ✅ **Persona with Tools**: `p278d060d473` (5 tools configured)
+- ✅ **Video Titles Available**: 
+  - "Workforce Planning: Strategic Planning"
+  - "Workforce Planning: Headcount and Cost Planning" 
+  - "Workforce Planning: Headcount Reconciliation"
+
+#### **Data Flow Verified**
+1. User asks for video → AI calls `fetch_video()` → Video displays
+2. Objective completes → Webhook fires → Data captured
+3. UI displays: 🎬 Videos Requested + Videos Shown
+4. Reporting dashboard shows complete analytics
+
+### **Status: ✅ COMPLETE**
+- Tool calling: **Working**
+- Video showcase: **Working** 
+- Data capture: **Working**
+- UI display: **Working**
+- Objective completion: **Working**
+
+---
