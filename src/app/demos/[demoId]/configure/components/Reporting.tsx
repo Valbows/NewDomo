@@ -536,17 +536,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
-  // Legacy analytics from metadata (keep for backward compatibility)
-  const analytics = demo?.metadata?.analytics as
-    | {
-        last_updated?: string;
-        conversations?: Record<string, any>;
-        last_perception_event?: any;
-      }
-    | undefined;
 
-  const legacyConversations = analytics?.conversations || {};
-  const legacyConversationIds = Object.keys(legacyConversations);
 
   // Fetch detailed conversation data from our new table
   const fetchConversationDetails = useCallback(async () => {
@@ -560,10 +550,28 @@ export const Reporting = ({ demo }: ReportingProps) => {
         .from("conversation_details")
         .select("*")
         .eq("demo_id", demo.id)
-        .order("completed_at", { ascending: false });
+        .order("completed_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setConversationDetails(data || []);
+      
+      // Sort conversations to ensure latest are on top
+      const sortedData = (data || []).sort((a, b) => {
+        // First try to sort by completed_at (most recent first)
+        const aCompleted = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+        const bCompleted = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+        
+        if (aCompleted !== bCompleted) {
+          return bCompleted - aCompleted; // Descending order (latest first)
+        }
+        
+        // Fallback to created_at if completed_at is the same or null
+        const aCreated = new Date(a.created_at).getTime();
+        const bCreated = new Date(b.created_at).getTime();
+        return bCreated - aCreated; // Descending order (latest first)
+      });
+      
+      setConversationDetails(sortedData);
     } catch (err) {
       console.error("Failed to fetch conversation details:", err);
       setError("Failed to load conversation details");
@@ -908,8 +916,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
     );
   };
 
-  const totalConversations =
-    conversationDetails.length + legacyConversationIds.length;
+  const totalConversations = conversationDetails.length;
   const completedConversations = conversationDetails.filter(
     (c) => c.status === "completed"
   ).length;
@@ -1023,10 +1030,13 @@ export const Reporting = ({ demo }: ReportingProps) => {
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
             <Calendar className="w-4 h-4" />
-            <span>Last Updated</span>
+            <span>Last Conversation</span>
           </div>
           <div className="text-sm font-medium text-gray-900">
-            {formatDate(analytics?.last_updated)}
+            {conversationDetails.length > 0 
+              ? formatDate(conversationDetails[0].completed_at || conversationDetails[0].created_at)
+              : "—"
+            }
           </div>
         </div>
       </div>
@@ -1243,48 +1253,14 @@ export const Reporting = ({ demo }: ReportingProps) => {
         )}
       </div>
 
-      {/* Legacy Analytics (backward compatibility) */}
-      {legacyConversationIds.length > 0 && (
-        <div className="mt-6 bg-white p-6 rounded-lg shadow border border-gray-100">
-          <h3 className="text-lg font-semibold mb-3">Legacy Analytics</h3>
-          <div className="space-y-4">
-            {legacyConversationIds.map((cid) => {
-              const item = legacyConversations[cid] || {};
-              return (
-                <div key={cid} className="border rounded-md">
-                  <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
-                    <div className="text-xs font-mono truncate">{cid}</div>
-                    <div className="text-xs text-gray-500">
-                      Updated {formatDate(item?.updated_at)}
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    {item?.perception ? (
-                      <>
-                        <div className="text-sm font-medium mb-2">
-                          Perception Snapshot
-                        </div>
-                        <SafeJSON value={item.perception} />
-                      </>
-                    ) : (
-                      <div className="text-sm text-gray-500">
-                        No perception data.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       <div className="mt-6 text-xs text-gray-500">
         <p className="mb-1 font-medium">Privacy Notice</p>
         <p>
-          Analytics data is stored in `demo.metadata.analytics` with PII
-          redaction. Do not store user names, emails, phone numbers, full
-          transcripts, or raw audio. This view is for insights and compliance.
+          Conversation data is stored securely with appropriate privacy controls. 
+          Personal information is handled according to our privacy policy. 
+          This view is for insights and compliance purposes.
         </p>
       </div>
     </div>
