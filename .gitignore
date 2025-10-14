@@ -34,3 +34,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .vercel
+
+# Temporary test files
+test-*.temp.js
+test-*-temp.js
+*-test-temp.js
