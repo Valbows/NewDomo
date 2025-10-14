@@ -10,9 +10,7 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  Settings,
 } from "lucide-react";
-import RavenDebugPanel from "@/components/RavenDebugPanel";
 
 interface ReportingProps {
   demo: Demo | null;
@@ -278,6 +276,96 @@ function VideoShowcaseCard({ videoShowcase }: { videoShowcase: VideoShowcaseData
   );
 }
 
+// Helper function to determine if perception analysis is valid
+// Since Raven-0 is enabled by default, we should award the point when:
+// 1. Camera is capturing actual visual data (not black screen)
+// 2. Analysis contains meaningful visual indicators
+// 3. Structured perception metrics are present
+function isValidPerceptionAnalysis(perceptionAnalysis: any): boolean {
+  // If no perception data at all, return false
+  if (!perceptionAnalysis) {
+    return false;
+  }
+
+  // If it's a string, check if it contains meaningful visual analysis
+  if (typeof perceptionAnalysis === 'string') {
+    const analysis = perceptionAnalysis.trim().toLowerCase();
+    
+    // Return false if it's empty or only contains generic/error messages
+    if (analysis.length === 0) {
+      return false;
+    }
+    
+    // Check for black screen indicators (should not award point)
+    const blackScreenIndicators = [
+      'completely black',
+      'black screen',
+      'no visual',
+      'no details regarding',
+      'no discernible visual',
+      'absence of visible content',
+      'all visual inputs were consistently reported as completely black'
+    ];
+    
+    const hasBlackScreenIndicator = blackScreenIndicators.some(indicator => 
+      analysis.includes(indicator)
+    );
+    
+    if (hasBlackScreenIndicator) {
+      return false;
+    }
+    
+    // Check for positive visual indicators (should award point)
+    const visualIndicators = [
+      'user',
+      'appearance',
+      'facial',
+      'expression',
+      'gesture',
+      'movement',
+      'looking',
+      'speaking',
+      'engaged',
+      'focused',
+      'attentive',
+      'background',
+      'setting',
+      'clothing',
+      'hair',
+      'eyes',
+      'mouth',
+      'hand',
+      'head',
+      'body language',
+      'emotional state',
+      'behavior'
+    ];
+    
+    const hasVisualIndicator = visualIndicators.some(indicator => 
+      analysis.includes(indicator)
+    );
+    
+    // Award point if we have visual indicators and no black screen
+    return hasVisualIndicator;
+  }
+  
+  // If it's an object with structured data, check for meaningful content
+  if (typeof perceptionAnalysis === 'object') {
+    // Check if it has any meaningful perception metrics
+    const hasMetrics = !!(
+      perceptionAnalysis.overall_score ||
+      perceptionAnalysis.engagement_score ||
+      perceptionAnalysis.sentiment_score ||
+      perceptionAnalysis.key_insights
+    );
+    
+    return hasMetrics;
+  }
+  
+  // Default to false for unknown formats
+  return false;
+}
+
 // Calculate Domo Score based on data completeness
 function calculateDomoScore(
   contact: ContactInfo | null,
@@ -292,7 +380,7 @@ function calculateDomoScore(
     platformFeatureInterest: !!(videoShowcase?.requested_videos && videoShowcase.requested_videos.length > 0) || 
                              !!(videoShowcase?.videos_shown && videoShowcase.videos_shown.length > 0),
     ctaExecution: !!(ctaTracking?.cta_clicked_at),
-    perceptionAnalysis: !!(perceptionAnalysis && typeof perceptionAnalysis === 'string' && perceptionAnalysis.trim().length > 0)
+    perceptionAnalysis: isValidPerceptionAnalysis(perceptionAnalysis)
   };
 
   const score = Object.values(breakdown).filter(Boolean).length;
@@ -392,7 +480,7 @@ function DomoScoreCard({
 
         <div className="flex items-center justify-between text-sm">
           <span className="flex items-center gap-2">
-            {breakdown.perceptionAnalysis ? '✅' : '❌'} Perception Analysis
+            {breakdown.perceptionAnalysis ? '✅' : '❌'} Visual Analysis
           </span>
           <span className="font-medium">
             {breakdown.perceptionAnalysis ? '1' : '0'} pt
@@ -534,7 +622,6 @@ export const Reporting = ({ demo }: ReportingProps) => {
   const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
 
 
@@ -952,27 +1039,18 @@ export const Reporting = ({ demo }: ReportingProps) => {
             Domo.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowDebugPanel(!showDebugPanel)}
-            className="inline-flex items-center px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Debug Raven-0
-          </button>
-          <button
-            onClick={syncConversations}
-            disabled={syncing || !demo?.tavus_conversation_id}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {syncing ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
-            )}
-            {syncing ? "Syncing..." : "Sync from Domo"}
-          </button>
-        </div>
+        <button
+          onClick={syncConversations}
+          disabled={syncing || !demo?.tavus_conversation_id}
+          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        >
+          {syncing ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4 mr-2" />
+          )}
+          {syncing ? "Syncing..." : "Sync from Domo"}
+        </button>
       </div>
 
       {error && (
@@ -981,11 +1059,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
         </div>
       )}
 
-      {showDebugPanel && (
-        <div className="mb-6">
-          <RavenDebugPanel demoId={demo?.id} />
-        </div>
-      )}
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
@@ -1107,6 +1181,11 @@ export const Reporting = ({ demo }: ReportingProps) => {
                       {videoShowcaseData[conversation.tavus_conversation_id] && (
                         <div className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                           🎬 Video Data
+                        </div>
+                      )}
+                      {conversation.perception_analysis && isValidPerceptionAnalysis(conversation.perception_analysis) && (
+                        <div className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                          🧠 Visual Analysis
                         </div>
                       )}
                       {ctaTrackingData[conversation.tavus_conversation_id] && (
