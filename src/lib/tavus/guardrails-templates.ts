@@ -50,7 +50,7 @@ export const DOMO_AI_GUARDRAILS: GuardrailTemplate = {
     {
       guardrail_name: "Exact_Title_Requirement",
       guardrail_prompt:
-        "Only call fetch_video when you have an exact, unambiguous match to an available video title. Never guess or use fallback defaults. If unsure about a title, ask the user to specify the exact title instead of making tool calls.",
+        "Always call fetch_video with exact titles from your available videos list. Use these exact titles: 'Workforce Planning: Strategic Planning', 'Workforce Planning: Headcount and Cost Planning', 'Workforce Planning: Build, Hire, Borrow Analysis', 'Workforce Planning: Headcount Reconciliation', 'Workforce Planning: Eliminate Planning Silos', 'Workforce Planning: More Context Behind the Numbers', 'Workforce Planning: Planning and Executing in a Single System'. Match user requests to these exact titles.",
       modality: "verbal",
     },
     {
