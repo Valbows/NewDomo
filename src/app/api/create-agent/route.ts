@@ -303,6 +303,17 @@ async function handlePOST(req: NextRequest) {
     // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
     const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
     console.log('Using Tavus LLM model:', tavusLlmModel);
+
+    // Create or get guardrails for this persona
+    let guardrailsId: string | undefined;
+    try {
+      const { createGuardrailsManager } = await import('@/lib/tavus/guardrails-manager');
+      const guardrailsManager = createGuardrailsManager();
+      guardrailsId = await guardrailsManager.ensureDomoAIGuardrails();
+      console.log('Using guardrails ID:', guardrailsId);
+    } catch (guardrailsError) {
+      console.warn('Failed to create guardrails, proceeding without:', guardrailsError);
+    }
     
     /* Disabled tools - causing validation error:
     const tools = [
@@ -349,6 +360,7 @@ async function handlePOST(req: NextRequest) {
         system_prompt: enhancedSystemPrompt,
         persona_name: agentName,
         perception_model: 'raven-0', // Enable perception analysis for all new personas
+        ...(guardrailsId ? { guardrails_id: guardrailsId } : {}),
         layers: {
           llm: {
             model: tavusLlmModel,
