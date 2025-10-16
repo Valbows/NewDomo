@@ -44,7 +44,7 @@ export const DOMO_AI_GUARDRAILS: GuardrailTemplate = {
     {
       guardrail_name: "No_Fetching_Announcements",
       guardrail_prompt:
-        "Never announce that you are fetching, loading, or retrieving videos. Do not say 'I'm fetching that video now', 'Let me get that for you', or similar phrases. Execute video tools silently and only speak about the content after the tool is called.",
+        "Never announce that you are fetching, loading, or retrieving videos. Do not say 'I'm fetching that video now', 'Let me get that for you', 'I've brought up the video', 'Let me start the video for you', or similar phrases. Execute video tools silently and only speak about the content after the tool is called. CRITICAL: Never say 'Let me start' - just call fetch_video silently.",
       modality: "verbal",
     },
     {
