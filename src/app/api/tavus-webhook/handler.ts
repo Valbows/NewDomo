@@ -327,6 +327,74 @@ export async function handlePOST(req: NextRequest) {
         } catch (error) {
           console.error('❌ Error processing contact information collection:', error);
         }
+      } else if (objectiveName === 'demo_video_showcase') {
+        // Handle video showcase objective to capture requested and shown videos
+        console.log('🎬 Processing video showcase data insertion...');
+        try {
+          // Normalize arrays
+          const req = outputVariables?.requested_videos;
+          const shown = outputVariables?.videos_shown;
+          const requestedArray = Array.isArray(req) ? req : (typeof req === 'string' ? [req] : null);
+          const shownArray = Array.isArray(shown) ? shown : (typeof shown === 'string' ? [shown] : null);
+
+          // Read existing record (if any)
+          const { data: existingShowcase } = await supabase
+            .from('video_showcase_data')
+            .select('id, requested_videos, videos_shown')
+            .eq('conversation_id', conversation_id)
+            .single();
+
+          const prevRequested = Array.isArray(existingShowcase?.requested_videos)
+            ? (existingShowcase!.requested_videos as string[])
+            : [];
+          const prevShown = Array.isArray(existingShowcase?.videos_shown)
+            ? (existingShowcase!.videos_shown as string[])
+            : [];
+
+          const updatedRequested = Array.from(new Set([...(prevRequested || []), ...(requestedArray || [])].filter(Boolean)));
+          const updatedShown = Array.from(new Set([...(prevShown || []), ...(shownArray || [])].filter(Boolean)));
+
+          const payload = {
+            conversation_id,
+            objective_name: 'demo_video_showcase',
+            requested_videos: updatedRequested.length ? updatedRequested : null,
+            videos_shown: updatedShown.length ? updatedShown : null,
+            event_type: event.event_type,
+            raw_payload: event,
+            received_at: new Date().toISOString(),
+          } as any;
+
+          if (existingShowcase?.id) {
+            const { error: updateErr } = await supabase
+              .from('video_showcase_data')
+              .update({
+                requested_videos: payload.requested_videos,
+                videos_shown: payload.videos_shown,
+                raw_payload: payload.raw_payload,
+                received_at: payload.received_at,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingShowcase.id);
+
+            if (updateErr) {
+              console.error('❌ Failed to update video_showcase_data:', updateErr);
+            } else {
+              console.log('✅ Successfully updated video_showcase_data for objective');
+            }
+          } else {
+            const { error: insertErr } = await supabase
+              .from('video_showcase_data')
+              .insert(payload);
+
+            if (insertErr) {
+              console.error('❌ Failed to insert video_showcase_data:', insertErr);
+            } else {
+              console.log('✅ Successfully inserted video_showcase_data for objective');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error processing video showcase objective:', error);
+        }
       }
       
       return NextResponse.json({ received: true });
@@ -334,7 +402,14 @@ export async function handlePOST(req: NextRequest) {
 
     // Process tool calls
     if (toolName === 'fetch_video' || toolName === 'play_video') {
-      const video_title = toolArgs?.video_title || toolArgs?.title;
+      const candidateTitle = (
+        toolArgs?.video_title ||
+        toolArgs?.title ||
+        toolArgs?.videoName ||
+        toolArgs?.video_name ||
+        (typeof toolArgs === 'string' ? toolArgs : null)
+      ) as string | null;
+      const video_title = typeof candidateTitle === 'string' ? candidateTitle.trim().replace(/^['"]|['"]$/g, '') : '';
       if (!video_title || typeof video_title !== 'string' || !video_title.trim()) {
         logError('Webhook: Missing or invalid video title for fetch_video/play_video', 'ToolCall Validation');
         
@@ -444,6 +519,62 @@ export async function handlePOST(req: NextRequest) {
           } catch {}
         }
       }
+
+      // 5. Track video showcase data for Domo Score
+      try {
+        // Read existing record (if any)
+        const { data: existingShowcase } = await supabase
+          .from('video_showcase_data')
+          .select('id, requested_videos, videos_shown, objective_name')
+          .eq('conversation_id', conversation_id)
+          .single();
+
+        const prevShown = Array.isArray(existingShowcase?.videos_shown)
+          ? existingShowcase!.videos_shown as string[]
+          : [];
+        const updatedVideosShown = Array.from(new Set([...
+          prevShown,
+          video_title,
+        ]));
+
+        const payload = {
+          conversation_id,
+          demo_id: demo.id,
+          objective_name: existingShowcase?.objective_name || 'video_showcase',
+          requested_videos: (existingShowcase?.requested_videos as any) || null,
+          videos_shown: updatedVideosShown,
+          received_at: new Date().toISOString(),
+        } as any;
+
+        // Perform update if exists, else insert (avoid relying on unique constraint for upsert)
+        if (existingShowcase?.id) {
+          const { error: updateErr } = await supabase
+            .from('video_showcase_data')
+            .update({
+              videos_shown: updatedVideosShown,
+              received_at: new Date().toISOString(),
+            })
+            .eq('id', existingShowcase.id);
+
+          if (updateErr) {
+            console.warn('Failed to update video_showcase_data:', updateErr);
+          } else {
+            console.log(`Updated video_showcase_data for ${conversation_id}:`, video_title);
+          }
+        } else {
+          const { error: insertErr } = await supabase
+            .from('video_showcase_data')
+            .insert(payload);
+
+          if (insertErr) {
+            console.warn('Failed to insert video_showcase_data:', insertErr);
+          } else {
+            console.log(`Inserted video_showcase_data for ${conversation_id}:`, video_title);
+          }
+        }
+      } catch (trackErr) {
+        console.warn('Error tracking video showcase data:', trackErr);
+      }
     } else if (toolName === 'show_trial_cta') {
       console.log('Processing show_trial_cta tool call');
       
@@ -459,24 +590,46 @@ export async function handlePOST(req: NextRequest) {
         return NextResponse.json({ message: 'Demo not found for conversation.' });
       }
 
-      // 2. Track CTA shown event
+      // 2. Track CTA shown event (select-then-update-or-insert)
       try {
-        const { error: ctaError } = await supabase
+        const { data: existingCta } = await supabase
           .from('cta_tracking')
-          .upsert({
-            conversation_id,
-            demo_id: demo.id,
-            cta_shown_at: new Date().toISOString(),
-            cta_url: (demo as any).cta_button_url
-          }, {
-            onConflict: 'conversation_id',
-            ignoreDuplicates: false
-          });
+          .select('id, cta_url')
+          .eq('conversation_id', conversation_id)
+          .single();
 
-        if (ctaError) {
-          console.warn('Failed to track CTA shown event:', ctaError);
+        const now = new Date().toISOString();
+        if (existingCta?.id) {
+          const { error: updateErr } = await supabase
+            .from('cta_tracking')
+            .update({
+              cta_shown_at: now,
+              cta_url: (demo as any).cta_button_url ?? existingCta.cta_url ?? null,
+              updated_at: now,
+            })
+            .eq('id', existingCta.id);
+
+          if (updateErr) {
+            console.warn('Failed to update CTA shown event:', updateErr);
+          } else {
+            console.log(`Updated CTA shown for conversation ${conversation_id}`);
+          }
         } else {
-          console.log(`Tracked CTA shown for conversation ${conversation_id}`);
+          const { error: insertErr } = await supabase
+            .from('cta_tracking')
+            .insert({
+              conversation_id,
+              demo_id: demo.id,
+              cta_shown_at: now,
+              cta_url: (demo as any).cta_button_url ?? null,
+              updated_at: now,
+            });
+
+          if (insertErr) {
+            console.warn('Failed to insert CTA shown event:', insertErr);
+          } else {
+            console.log(`Inserted CTA shown for conversation ${conversation_id}`);
+          }
         }
       } catch (trackingError) {
         console.warn('Error tracking CTA shown event:', trackingError);

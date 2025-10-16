@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+    const serviceKey = process.env.SUPABASE_SECRET_KEY as string;
+    if (!supabaseUrl || !serviceKey) {
+      console.error('Supabase service credentials missing');
+      return NextResponse.json(
+        { error: 'Server not configured' },
+        { status: 500 }
+      );
+    }
+    const supabase = createClient(supabaseUrl, serviceKey);
     const body = await request.json();
     const { conversation_id, demo_id, cta_url } = body;
 
@@ -20,24 +29,53 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get('x-real-ip');
     const ipAddress = forwardedFor?.split(',')[0] || realIp || request.ip || '';
 
-    // Update the CTA tracking record with click timestamp
-    const { error } = await supabase
+    // Ensure we capture clicks even if the 'show_trial_cta' tool call didn't run on the server
+    const now = new Date().toISOString();
+    const { data: existing } = await supabase
       .from('cta_tracking')
-      .update({
-        cta_clicked_at: new Date().toISOString(),
-        user_agent: userAgent,
-        ip_address: ipAddress,
-        updated_at: new Date().toISOString()
-      })
+      .select('id, cta_url')
       .eq('conversation_id', conversation_id)
-      .eq('demo_id', demo_id);
+      .single();
 
-    if (error) {
-      console.error('Failed to track CTA click:', error);
-      return NextResponse.json(
-        { error: 'Failed to track CTA click' },
-        { status: 500 }
-      );
+    if (existing?.id) {
+      const { error: updateErr } = await supabase
+        .from('cta_tracking')
+        .update({
+          cta_clicked_at: now,
+          user_agent: userAgent,
+          ip_address: ipAddress,
+          updated_at: now,
+          cta_url: cta_url || existing.cta_url || null,
+        })
+        .eq('id', existing.id);
+
+      if (updateErr) {
+        console.error('Failed to update CTA click:', updateErr);
+        return NextResponse.json(
+          { error: 'Failed to track CTA click' },
+          { status: 500 }
+        );
+      }
+    } else {
+      const { error: insertErr } = await supabase
+        .from('cta_tracking')
+        .insert({
+          conversation_id,
+          demo_id,
+          cta_clicked_at: now,
+          user_agent: userAgent,
+          ip_address: ipAddress,
+          updated_at: now,
+          cta_url: cta_url || null,
+        });
+
+      if (insertErr) {
+        console.error('Failed to insert CTA click:', insertErr);
+        return NextResponse.json(
+          { error: 'Failed to track CTA click' },
+          { status: 500 }
+        );
+      }
     }
 
     console.log(`Tracked CTA click for conversation ${conversation_id}, demo ${demo_id}`);
