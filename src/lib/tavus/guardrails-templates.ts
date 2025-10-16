@@ -48,9 +48,9 @@ export const DOMO_AI_GUARDRAILS: GuardrailTemplate = {
       modality: "verbal",
     },
     {
-      guardrail_name: "Exact_Title_Requirement",
+      guardrail_name: "Contextual_Video_Matching",
       guardrail_prompt:
-        "Always call fetch_video with exact titles from your available videos list. Use these exact titles: 'Workforce Planning: Strategic Planning', 'Workforce Planning: Headcount and Cost Planning', 'Workforce Planning: Build, Hire, Borrow Analysis', 'Workforce Planning: Headcount Reconciliation', 'Workforce Planning: Eliminate Planning Silos', 'Workforce Planning: More Context Behind the Numbers', 'Workforce Planning: Planning and Executing in a Single System'. Match user requests to these exact titles.",
+        "When users express business needs or challenges, immediately call fetch_video with the most contextually relevant video title from your available videos. Match user context (strategic planning, budgeting, hiring, data issues, etc.) to the appropriate video and call the tool silently. Never mention video titles to users - just describe the content naturally.",
       modality: "verbal",
     },
     {
