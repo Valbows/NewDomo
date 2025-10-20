@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  // Required to use the standalone server in Docker
-  output: 'standalone',
   async headers() {
     const headers = [
       {

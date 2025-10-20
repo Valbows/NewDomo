@@ -5,8 +5,10 @@ import { useUserStore } from '@/store/user';
 import Link from 'next/link';
 
 const HomePageClient = () => {
+  console.log('🎯 HomePageClient component rendering');
   const user = useUserStore((state) => state.user);
   const router = useRouter();
+  console.log('👤 User state:', user);
 
   const handleCreateDemo = () => {
     if (user) {
