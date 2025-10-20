@@ -39,3 +39,22 @@ yarn-error.log*
 test-*.temp.js
 test-*-temp.js
 *-test-temp.js
+
+# Deployment files
+.netlify/
+.railway/
+.render/
+
+# Build artifacts
+*.tsbuildinfo
+.next/
+dist/
+build/
+
+# Logs
+*.log
+tunnel.log
+
+# Test results
+test-results/
+playwright-report/
