@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Domo A.I.',
   description: 'AI-Powered Product Demos',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -16,6 +19,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  console.log('🏗️ RootLayout rendering');
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>

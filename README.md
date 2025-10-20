@@ -1,4 +1,10 @@
 # Domo AI MVP - Interactive Demo Platform
+### Conversation URL Ends Immediately
+
+- Our CVI uses Daily.co. The client must join a valid Daily room URL (e.g., `https://tavus.daily.co/<room>`).
+- If an older `tavusShareableLink` points to `app.tavus.io`, the app will now automatically call `POST /api/start-conversation` to obtain a valid Daily room URL.
+- If starting a conversation fails with `Missing replica_id`, set `TAVUS_REPLICA_ID` or add a default replica to the persona in Tavus.
+
 
 A Next.js application that creates interactive AI-powered demos using Tavus Agent integration, Supabase backend, and ElevenLabs transcription services.
 
@@ -6,6 +12,7 @@ A Next.js application that creates interactive AI-powered demos using Tavus Agen
 
 - 🎥 **Video Management**: Upload and manage demo video segments
 - 🤖 **AI Agent Integration**: Tavus-powered conversational AI agents
+- 🛡️ **Smart Guardrails**: Automated behavioral rules and safety controls
 - 📚 **Knowledge Base**: Upload documents and Q&A pairs for agent training
 - 🎙️ **Auto Transcription**: ElevenLabs integration for video transcription
 - 🔄 **Real-time Updates**: Supabase Realtime for live video playback
@@ -51,11 +58,24 @@ Fill in your API keys in `.env.local`:
 # Supabase (Local Development)
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_local_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_local_service_key
+SUPABASE_SECRET_KEY=your_local_service_key
 
 # API Keys
 TAVUS_API_KEY=your_tavus_api_key
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
+
+# Tavus Persona/Replica
+# Optional: override the persona's default replica. If not set, we fetch persona.default_replica_id.
+TAVUS_REPLICA_ID=
+
+# Tavus LLM model override (optional, default: tavus-llama-4)
+TAVUS_LLM_MODEL=tavus-llama-4
+
+# Sentry Monitoring
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
+# CI release token (set in CI/CD only)
+SENTRY_AUTH_TOKEN=
 ```
 
 ### 3. Start Supabase Locally
@@ -78,7 +98,14 @@ supabase migration up
 curl -X POST http://localhost:3000/api/setup-test-user
 ```
 
-### 6. Start Development Server
+### 6. Setup Guardrails (One-time)
+
+```bash
+# Create Tavus guardrails for AI safety
+npx tsx scripts/setup-guardrails.ts
+```
+
+### 7. Start Development Server
 
 ```bash
 npm run dev
@@ -109,6 +136,17 @@ The Tavus AI agent can:
 - Play specific video segments on request
 - Reference uploaded documents and Q&A pairs
 - Maintain context throughout conversations
+- **Follow behavioral guardrails** for consistent, safe interactions
+
+### Guardrails System
+
+This project implements advanced guardrails for AI safety:
+- **Automatic Setup**: One-time guardrails creation per API key
+- **Behavioral Rules**: Prevent inappropriate responses and actions
+- **Content Safety**: Block hallucinations and ensure accuracy
+- **Consistent Experience**: Same rules across all AI personas
+
+For detailed guardrails documentation, see [GUARDRAILS.md](./GUARDRAILS.md).
 
 ## Database Schema
 
@@ -132,6 +170,12 @@ The Tavus AI agent can:
 - `POST /api/transcribe` - Process video transcription
 - `POST /api/tavus-webhook` - Handle Tavus events
 - `POST /api/setup-test-user` - Create test user (development only)
+
+## Guardrails Management
+
+- `npx tsx scripts/setup-guardrails.ts` - One-time guardrails setup
+- `npx tsx src/tests/test-guardrails.ts` - Test guardrails system
+- `npx tsx examples/create-persona-with-guardrails.ts` - Usage examples
 
 ## Development
 
@@ -194,6 +238,13 @@ Update your `.env.local` with production Supabase URLs and API keys.
 - Verify Tavus API key is correct
 - Check webhook URL configuration
 - Ensure persona is created successfully
+- Ensure the persona has a `default_replica_id` or set `TAVUS_REPLICA_ID` in your environment. Conversations require a replica.
+- Run guardrails setup: `npx tsx scripts/setup-guardrails.ts`
+
+**Guardrails Issues**
+- Check API key permissions for guardrails creation
+- Verify guardrails exist: `npx tsx src/tests/test-guardrails.ts`
+- See detailed troubleshooting in [GUARDRAILS.md](./GUARDRAILS.md)
 
 **Transcription Not Working**
 - Verify ElevenLabs API key

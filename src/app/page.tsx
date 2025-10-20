@@ -1,11 +1,14 @@
-import React from 'react';
-import Header from '@/components/Header';
-import Hero from '@/components/Hero';
-import Features from '@/components/Features';
-import CTA from '@/components/CTA';
-import Footer from '@/components/Footer';
-import HomePageClient from './HomePageClient';
-
 export default function HomePage() {
-  return <HomePageClient />;
+  console.log('🏠 Simple HomePage rendering');
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+      <h1>Domo AI - Test Page</h1>
+      <p>If you see this, the deployment is working!</p>
+      <p>Environment check:</p>
+      <ul>
+        <li>NODE_ENV: {process.env.NODE_ENV}</li>
+        <li>Has Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Yes' : 'No'}</li>
+      </ul>
+    </div>
+  );
 }

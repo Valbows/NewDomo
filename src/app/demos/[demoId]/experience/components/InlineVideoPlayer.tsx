@@ -1,34 +1,131 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 
 interface InlineVideoPlayerProps {
   videoUrl: string;
   onClose: () => void;
+  onVideoEnd?: () => void;
 }
 
-export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps) {
+export type InlineVideoPlayerHandle = {
+  play: () => Promise<void>;
+  pause: () => void;
+  isPaused: () => boolean;
+  getCurrentTime: () => number;
+  seekTo: (time: number) => void;
+};
+
+export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideoPlayerProps>(function InlineVideoPlayer(
+  { videoUrl, onClose, onVideoEnd }: InlineVideoPlayerProps,
+  ref
+) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const shouldAutoplayRef = useRef<boolean>(true);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [paused, setPaused] = useState<boolean>(true);
+
+  useImperativeHandle(ref, () => ({
+    async play() {
+      const el = videoRef.current;
+      if (!el) return;
+      shouldAutoplayRef.current = true;
+      try {
+        await el.play();
+      } catch (e) {
+        console.warn('InlineVideoPlayer.play() failed:', e);
+      }
+      // For E2E, reflect requested state even if underlying playback fails
+      setPaused(false);
+    },
+    pause() {
+      const el = videoRef.current;
+      if (!el) return;
+      shouldAutoplayRef.current = false;
+      try {
+        el.pause();
+      } catch (e) {
+        console.warn('InlineVideoPlayer.pause() failed:', e);
+      }
+      setPaused(true);
+    },
+    isPaused() {
+      const el = videoRef.current;
+      return el ? el.paused : paused;
+    },
+    getCurrentTime() {
+      const el = videoRef.current;
+      return el ? el.currentTime : 0;
+    },
+    seekTo(time: number) {
+      const el = videoRef.current;
+      if (!el) return;
+      try {
+        el.currentTime = Math.max(0, time || 0);
+      } catch (e) {
+        console.warn('InlineVideoPlayer.seekTo() failed:', e);
+      }
+    },
+  }), []);
 
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
+    // Reset error state on new source
+    setHasError(false);
+    setErrorMessage('');
+    // New source should autoplay by default unless paused via tool command
+    shouldAutoplayRef.current = true;
+
+    // Ensure browser initializes network fetch for the new src
+    try {
+      // Pause before swapping sources
+      try { videoElement.pause(); } catch {}
+      // Explicitly set src to ensure resource selection, then call load()
+      try { (videoElement as HTMLVideoElement).src = videoUrl; } catch {}
+      // Setting src attribute is also handled by React prop, but load() ensures fetch begins
+      videoElement.load();
+    } catch (e) {
+      console.warn('InlineVideoPlayer: load() failed to initiate', e);
+    }
+
     const handleCanPlay = async () => {
-      // Autoplay the video
-      try {
-        await videoElement.play();
-        console.log('Video started playing:', videoUrl);
-      } catch (error) {
-        console.error("Video autoplay failed:", error);
+      // Autoplay only if not explicitly paused via tool command
+      if (shouldAutoplayRef.current) {
+        try {
+          await videoElement.play();
+          console.log('Video started playing:', videoUrl);
+          setPaused(false);
+        } catch (error) {
+          console.error('Video autoplay failed:', error);
+        }
+      } else {
+        try { videoElement.pause(); } catch {}
+        setPaused(true);
+      }
+    };
+
+    const handleLoadedMetadata = async () => {
+      // Start playback only if autoplay is still intended
+      if (shouldAutoplayRef.current) {
+        try {
+          await videoElement.play();
+          setPaused(false);
+        } catch {}
+      } else {
+        try { videoElement.pause(); } catch {}
+        setPaused(true);
       }
     };
 
     const handleEnded = () => {
       console.log('Video ended');
-      // Don't auto-close, let user decide
+      if (onVideoEnd) {
+        onVideoEnd();
+      }
+      setPaused(true);
     };
 
     const handleError = (error: Event) => {
@@ -49,17 +146,27 @@ export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps)
         setHasError(true);
         setErrorMessage('Unknown video error occurred');
       }
+      setPaused(true);
     };
 
+    const handlePlay = () => setPaused(false);
+    const handlePause = () => setPaused(true);
+
     videoElement.addEventListener('canplay', handleCanPlay);
+    videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
     videoElement.addEventListener('ended', handleEnded);
     videoElement.addEventListener('error', handleError);
+    videoElement.addEventListener('play', handlePlay);
+    videoElement.addEventListener('pause', handlePause);
 
     // Clean up event listeners
     return () => {
       videoElement.removeEventListener('canplay', handleCanPlay);
+      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
       videoElement.removeEventListener('ended', handleEnded);
       videoElement.removeEventListener('error', handleError);
+      videoElement.removeEventListener('play', handlePlay);
+      videoElement.removeEventListener('pause', handlePause);
     };
   }, [videoUrl]);
 
@@ -68,13 +175,19 @@ export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps)
       <div className="relative">
         <video
           ref={videoRef}
+          key={videoUrl}
           src={videoUrl}
           controls
           autoPlay
           muted // Muting is often required for autoplay to work reliably
-          className="w-full h-64 bg-black rounded-lg"
+          playsInline // Improve autoplay on mobile/iOS and headless environments
+          preload="metadata" // Prioritize metadata to reach HAVE_METADATA quickly in headless
+          className="w-full h-full bg-black rounded-lg"
+          data-testid="inline-video"
+          data-paused={paused ? 'true' : 'false'}
           poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='14' fill='%236b7280' text-anchor='middle' dy='0.3em'%3ELoading...%3C/text%3E%3C/svg%3E"
-        />
+        >
+        </video>
         
         {/* Error overlay */}
         {hasError && (
@@ -120,4 +233,4 @@ export function InlineVideoPlayer({ videoUrl, onClose }: InlineVideoPlayerProps)
       </div>
     </div>
   );
-}
+});

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
+import { getErrorMessage, logError } from '@/lib/errors';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const supabase = createClient();
 
   try {
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!conversationResponse.ok) {
-      console.error('Failed to fetch conversation:', conversationResponse.statusText);
+      logError(conversationResponse.statusText, 'Failed to fetch conversation');
       return NextResponse.json({ error: 'Conversation not found' }, { status: conversationResponse.status });
     }
 
@@ -50,8 +52,14 @@ export async function POST(req: NextRequest) {
       message: 'Conversation not active'
     });
 
-  } catch (error: any) {
-    console.error('Conversation monitor error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    logError(error, 'Conversation monitor error');
+    const message = getErrorMessage(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = wrapRouteHandlerWithSentry(handlePOST, {
+  method: 'POST',
+  parameterizedRoute: '/api/monitor-conversation',
+});

@@ -31,8 +31,9 @@ export default function TestLoginPage() {
         router.push('/demos/create');
       }, 1000);
 
-    } catch (error) {
-      setMessage(`Error: ${error.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(`Error: ${msg}`);
     } finally {
       setLoading(false);
     }

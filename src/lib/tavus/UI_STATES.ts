@@ -1,7 +1,8 @@
 // UI_STATES.ts
 export enum UIState {
   IDLE = 'idle',
-  LOADING = 'loading',           // Connecting to Tavus
+  LOADING = 'loading',           // Connecting to Domo
+  CONVERSATION = 'conversation', // Active Domo conversation
   AGENT_THINKING = 'thinking',   // Processing user input  
   VIDEO_PLAYING = 'playing',     // Demo content active
   VIDEO_PAUSED = 'paused',       // Q&A interruption

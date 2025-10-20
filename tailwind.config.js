@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       colors: {
         'domo-dark-blue': '#1A2942',
+        'domo-light-blue': '#2563EB',
         'domo-green': '#10B981',
         'domo-blue-accent': '#3B82F6',
         'domo-light-gray': '#F9FAFB',

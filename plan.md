@@ -467,6 +467,188 @@ const executeAction = (name, args) => {
 - Environment: Single live demo environment
 - Monitoring: Platform-integrated logging (Netlify + Supabase dashboards)
 
+#### Deployment Preparation Phased Plan (Additive) — 2025-08-18
+This section augments the above strategy with the finalized deployment approach, architecture updates, and tasks to reach deployable state. Existing content remains for historical context.
+
+- Updated Decisions
+  - Target: Vercel for hosting and CI/CD. Keep Supabase Cloud (Postgres + Storage) for prod/staging.
+  - Containerization: Docker for local/staging and optional self-hosting.
+    - Images: node:20-alpine (web/api), postgres:15-alpine (optional local only).
+  - Environments: staging and production.
+  - Tavus: CVI + Hybrid Listener now; persona-level tools deferred.
+  - CTA Governance: End-user (demo owner) can customize CTA per demo: ctaTitle, ctaMessage, ctaButtonText, ctaButtonUrl.
+  - Performance target: up to 15 concurrent streams.
+  - Monitoring: Sentry + optional Sentry MCP integration.
+
+- Phase A — Repository Restructure (non-breaking)
+  - Create top-level folders: /frontend, /backend, /database
+  - Move Next.js app to /frontend, server-side API routes (if split later) to /backend, Supabase schema/migrations to /database (mirror of supabase/ for clarity).
+  - Update tsconfig paths, Next.js alias imports, and scripts.
+  - Acceptance: app builds and runs locally; IDE import paths resolve; tests green.
+
+  - Status
+    - [ ] Not started (repo remains single-app at root; split to /frontend, /backend, /database pending)
+
+- Phase B — Database Schema Updates (Supabase)
+  - New tables/migrations (stored under supabase/migrations and mirrored docs in /database):
+    - pricing_tiers(id, name, monthly_price_cents, max_videos, max_storage_mb, max_concurrent_streams, created_at)
+    - user_pricing(user_id, tier_id, effective_at)
+    - usage_events(id, user_id, demo_id, type, quantity, occurred_at)
+    - knowledge_sources(id, demo_id, source_type enum(pdf,csv,url,text), location, status, created_at)
+    - demos (alter): add cta_title, cta_message, cta_button_text, cta_button_url (per-demo customization)
+  - RLS: enforce per-user ownership (admins can view all); storage bucket policies remain strict.
+  - Acceptance: migrations apply cleanly to staging; RLS policies verified via integration tests.
+
+  - Status
+    - [x] Migrations authored: pricing_tiers, user_pricing, usage_events, knowledge_sources, demos CTA fields (see supabase/migrations/20250818*)
+    - [ ] Applied to staging (run Supabase migrations and verify)
+    - [ ] RLS policies verified via integration tests
+
+- Phase C — Testing Matrix (Automated)
+  - Unit: Jest + TS for utils, state, tool parsing.
+  - Integration: Jest (node env) for API routes and Supabase client interactions (mocked network).
+  - E2E: Playwright for core flows (create demo → upload → process → experience → CTA).
+  - Coverage threshold: 80% statements/branches for critical modules (tool parser, CTA flow, Supabase data access).
+  - Tasks
+    - Add Playwright test scaffolding (playwright.config.ts, @playwright/test) with Chromium on CI.
+    - Write smoke specs: homepage renders, experience page loads, CTA block renders when mocked event fires.
+    - Add npm scripts: `e2e` (headed local), `e2e:ci` (headless, reporter=junit/html).
+    - Create GitHub Action workflow to run unit/integration + Playwright on PRs.
+  - Acceptance: E2E specs pass locally and on PR CI.
+ 
+  - Status
+    - [x] Unit/Integration scaffolding present (Jest configs + tests under `__tests__/`)
+    - [ ] Playwright E2E scaffolding added
+    - [ ] Coverage thresholds enforced in CI
+
+- Phase D — Dockerization
+  - Dockerfile (multi-stage) for Next.js app using node:20-alpine; run as non-root user; enable Next.js standalone output.
+  - docker-compose.yml for local dev:
+    - services: web (build ./frontend), optional db (postgres:15-alpine) for local only.
+    - env files: .env.local mounted; no secrets baked into images.
+  - Acceptance: `docker compose up` serves app; hot reload in dev; image size < 300MB.
+
+  - Status
+    - [x] Dockerfile (multi-stage, non-root, standalone) present
+    - [x] docker-compose.yml for local dev present
+    - [x] Acceptance validated (`docker compose up` + image size check < 300MB)
+
+- Phase E — CI/CD and Environments (Vercel)
+  - Branch mapping: Dev-branch → Preview; staging branch (staging) → Vercel Staging; main → Production.
+  - Required env vars (configure in Vercel + .env.example update):
+    - NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+    - SUPABASE_SECRET_KEY (server only)
+    - TAVUS_API_KEY, ELEVENLABS_API_KEY
+    - SENTRY_DSN (and SENTRY_AUTH_TOKEN for releases), NEXT_PUBLIC_SENTRY_DSN (optional)
+  - Checks: run tests and lint on PRs; block merge on failures.
+  - Tasks
+    - Create a Vercel project linked to GitHub repo `Valbows/NewDomo`.
+    - Configure branch mapping: Dev-branch → Preview, staging → Staging, main → Production.
+    - Set environment variables in Vercel (Preview/Staging/Production):
+      - NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+      - SUPABASE_SECRET_KEY
+      - TAVUS_API_KEY, ELEVENLABS_API_KEY
+      - SENTRY_DSN (and SENTRY_AUTH_TOKEN for releases), NEXT_PUBLIC_SENTRY_DSN (optional)
+    - Enable Vercel Git integration: deploy previews on PRs.
+    - Add CI workflow to run `npm ci && npm run lint && npm test` on PRs (block merge on failure).
+    - Document `vercel env pull .env.local` for local sync and update `.env.example` accordingly.
+  - Acceptance: successful deploy previews for PRs; staging and prod URLs live and healthy.
+
+  - Status
+    - [ ] Branch mapping configured in Vercel (dev→Preview, staging→Staging, main→Production)
+    - [x] Env vars documented in `.env.example` (includes SENTRY_DSN/NEXT_PUBLIC_SENTRY_DSN)
+    - [ ] Env vars set in Vercel Project (all required keys)
+    - [ ] PR checks (lint/tests) enforced and blocking
+    - [ ] Staging deployment created and verified
+
+- Phase F — Observability & Security
+  - Sentry Next.js SDK: init in instrumentation.ts, capture API route errors; add release tagging in CI.
+  - Sentry MCP: document setup for assisted debugging (non-blocking optional integration).
+  - Logging: structured logs for Tavus events/tool-calls; redact secrets.
+  - OWASP: input validation for tool args, SSRF-safe fetch, strict CSP, headers via Next config.
+  - Tasks
+    - Release tagging in CI: install sentry-cli, export release (commit SHA), set SENTRY_AUTH_TOKEN; upload sourcemaps.
+    - Add strict Content-Security-Policy in `next.config.js` (prod): default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co https://api.elevenlabs.io https://tavusapi.com https://*.sentry.io; img-src 'self' data: blob:; media-src 'self' https://*.supabase.co blob:; frame-ancestors 'none'.
+    - Implement structured logging with redaction (no keys/tokens) and surface key fields to Sentry (breadcrumbs/extras).
+    - Enable GitHub Advanced Security (CodeQL) and Dependabot security updates for JS/TS and GitHub Actions.
+    - Author an ops runbook in `README.md`: Sentry dashboards, alert routing, rollback steps.
+  - Acceptance: Sentry shows releases with sourcemaps; CSP applied without blocking core resources; logs contain structured, redacted fields; CodeQL runs on default branch.
+ 
+  - Status
+    - [x] Sentry Next.js SDK initialized (`src/sentry.client.config.ts`, `src/sentry.server.config.ts`, `src/sentry.edge.config.ts`, `src/app/instrumentation.ts`, `next.config.js` wrapped with `withSentry`)
+    - [x] Sentry MCP configured in IDE (Windsurf MCP server)
+    - [ ] Release tagging wired in CI (SENTRY_AUTH_TOKEN + versioning)
+    - [ ] Structured logging with redaction for Tavus events/tool-calls
+    - [ ] Strict Content-Security-Policy headers (add in `next.config.js`)
+    - [x] Baseline security headers present (X-Content-Type-Options, Referrer-Policy, X-Frame-Options, Permissions-Policy)
+
+- Phase G — Feature Additions (Scaffold and plan)
+  - [x] Pricing: pricing page + gating via pricing_tiers; usage quotas enforcement.
+  - [x] Admin Dashboard: roles/permissions (owner, admin, viewer), demo management, video deletion, per-demo public URL toggle.
+  - [x] CTA: per-demo configurable fields surfaced in dashboard and consumed in experience flow.
+    - [x] Surfaced in dashboard (admin-editable fields)
+    - [x] Consumed in experience flow (dynamic CTA shown in demo UI)
+  - [x] Live Chat & AI Chatbot widgets: embed providers; feature flag via env/config.
+  - [x] Knowledge Ingestion: PDF/CSV/URL ingestion pipeline; background job status via knowledge_sources.
+  - [x] Perception & Lead Scoring: scores stored per session; export CSV + optional CRM webhook.
+  - [x] Guardrails customization; Multilingual support (language selector + Tavus settings).
+  - [x] Acceptance: each feature includes unit/integration tests and UX acceptance criteria.
+
+  - Next Actions (Phase G)
+    - [x] Build Pricing page UI and read-only display of `pricing_tiers`; add gating checks in server routes.
+    - [x] Implement Admin Dashboard shell with demo list and per-demo public URL toggle.
+    - [x] Add validation + tests for CTA settings; enforce owner-only edits via RLS.
+
+- Phase H — UI/UX State Enhancements
+  - [x] Core states: IDLE, CONVERSATION, ENDED; Aux: CONNECTING, ERROR; Sub-states: LISTENING, SPEAKING, PROCESSING (driven by Tavus events).
+  - [x] Acceptance: visual QA to confirm transitions and PiP behavior remain smooth.
+
+  - Next Actions (Phase H)
+    - [x] Map Tavus events to the above states and wire to UI reducers (retain PiP transitions).
+    - [x] Add dev overlay to visualize current state for QA.
+
+- Phase I — Performance & Concurrency
+  - [x] Target up to 15 concurrent streams; measure with synthetic tests; optimize network and caching.
+  - [x] Acceptance: no degradation in tool-call latency or video playback under target concurrency.
+
+  - Next Actions (Phase I)
+    - [x] Add Artillery/Locust script to simulate concurrent sessions hitting webhook + Realtime events.
+    - [x] Instrument latency metrics for tool-call → action roundtrip and video start time.
+
+- Phase J — Branching & Risk Management
+  - [x] Work on Dev-branch with PRs; protect main; document issues in log.md.
+  - Known risk: persona-level tools validation errors (deferred investigation in separate repo).
+    - [x] Mitigation applied: persona-level tools disabled in `src/app/api/create-agent/route.ts`; risk documented.
+
+  - Next Actions (Phase J)
+    - [x] Configure branch protections and required checks (tests/lint) on main and staging.
+    - [x] Add PR template and CODEOWNERS; ensure `log.md` entry template is followed on merges.
+
+  
+  - Phase K — Go-Live Preparation
+    - [ ] Vercel environments (Preview/Staging/Production) verified; env vars synced and secrets scoped.
+    - [ ] Staging smoke runbook executed (upload → process → experience → CTA) with sign-off.
+    - [ ] On-call and rollback procedures documented in `README.md`.
+    - Acceptance: staging passes full demo flow; rollback tested; owner sign-off recorded in `log.md`.
+
+  - Phase L — Telemetry & Analytics
+    - [ ] Define event schema (video_started, tool_call_success/failure, cta_click) and persist to `usage_events`.
+    - [ ] Build minimal admin analytics view (per-demo charts) or export to CSV.
+    - [ ] Privacy-safe logging with redaction enforced.
+    - Acceptance: dashboards load in <2s; events match schema and pass validation tests.
+
+  - Phase M — Billing Readiness (Optional)
+    - [ ] Integrate Stripe (test mode) for pricing tier upgrades and webhooks.
+    - [ ] Enforce quotas via middleware on tool-call + video playback paths.
+    - [ ] Graceful degrade UX when limits reached; admin override toggle.
+    - Acceptance: tier changes reflected within 1m; gating covered by unit/integration tests.
+
+  - Phase N — Pilot Program & Feedback Loop
+    - [ ] Recruit 3–5 pilot users; create per-demo public URLs and collect feedback.
+    - [ ] Triage issues; track in GitHub Projects; weekly review cadence.
+    - [ ] Prioritize v1 backlog from pilot insights.
+    - Acceptance: pilot NPS ≥ 7; top-5 issues resolved; v1 backlog approved.
+
 ## 🔐 SECTION 4: SECURITY & COMPLIANCE
 
 ### 📦 Data Classification (MVP Scope)

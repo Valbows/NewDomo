@@ -1,4 +1,8 @@
 // Singleton class to manage Daily.co call instances globally
+import { logError } from '@/lib/errors';
+import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
+import DailyIframe from '@daily-co/daily-js';
+
 class DailyCallSingleton {
   private static instance: DailyCallSingleton;
   private dailyCall: any = null;
@@ -28,15 +32,9 @@ class DailyCallSingleton {
     this.activeComponents.delete(componentId);
     console.log(`🗑️ Unregistered component ${componentId}. Active components: ${this.activeComponents.size}`);
     
-    // If no more active components, cleanup after a delay
-    if (this.activeComponents.size === 0) {
-      setTimeout(() => {
-        if (this.activeComponents.size === 0) {
-          console.log('🧹 No active components, cleaning up Daily.co call');
-          this.cleanup();
-        }
-      }, 1000);
-    }
+    // DISABLED: Don't auto-cleanup to prevent multiple instances
+    // The cleanup will only happen on explicit cleanup() calls or URL changes
+    console.log('🚫 Auto-cleanup disabled to prevent multiple Daily.co instances');
   }
 
   public async initialize(conversationUrl: string, onToolCall: (toolName: string, args: any) => void, componentId: string): Promise<any> {
@@ -45,7 +43,7 @@ class DailyCallSingleton {
     
     // If currently cleaning up, wait for it to complete
     if (this.isCleaningUp) {
-      console.log('⏳ Waiting for cleanup to complete before initializing');
+      console.log(`⏳ [${componentId}] Waiting for cleanup to complete before initializing`);
       await new Promise(resolve => {
         const checkCleanup = () => {
           if (!this.isCleaningUp) {
@@ -66,47 +64,41 @@ class DailyCallSingleton {
 
     // If different conversation, cleanup first
     if (this.dailyCall && this.conversationUrl !== conversationUrl) {
+      console.log(`🧹 [${componentId}] Different conversation detected, cleaning up first`);
       await this.cleanup();
     }
 
-    // If already initializing, return the promise
-    if (this.initializationPromise) {
+    // If already initializing for same conversation, return the promise
+    if (this.initializationPromise && this.conversationUrl === conversationUrl) {
       console.log(`⏳ [${componentId}] Waiting for existing initialization`);
       return this.initializationPromise;
     }
 
-    console.log(`🚀 [${componentId}] Starting new Daily.co initialization`);
-    this.conversationUrl = conversationUrl;
-    this.initializationPromise = this.createDailyCall(conversationUrl, onToolCall);
-    
-    try {
-      this.dailyCall = await this.initializationPromise;
-      this.isInitialized = true;
-      console.log(`✅ [${componentId}] Daily.co call initialized successfully`);
+    // Only initialize if we don't have an active call
+    if (!this.dailyCall || !this.isInitialized) {
+      console.log(`🚀 [${componentId}] Starting new Daily.co initialization`);
+      this.conversationUrl = conversationUrl;
+      this.initializationPromise = this.createDailyCall(conversationUrl, onToolCall);
+      
+      try {
+        this.dailyCall = await this.initializationPromise;
+        this.isInitialized = true;
+        console.log(`✅ [${componentId}] Daily.co call initialized successfully`);
+        return this.dailyCall;
+      } catch (error: unknown) {
+        this.initializationPromise = null;
+        logError(error, `❌ [${componentId}] Failed to initialize Daily.co`);
+        throw error;
+      }
+    } else {
+      console.log(`🚫 [${componentId}] Daily.co call already exists, returning existing instance`);
       return this.dailyCall;
-    } catch (error) {
-      this.initializationPromise = null;
-      console.error(`❌ [${componentId}] Failed to initialize Daily.co:`, error);
-      throw error;
     }
   }
 
   private async createDailyCall(conversationUrl: string, onToolCall: (toolName: string, args: any) => void): Promise<any> {
-    // Load Daily.co SDK if not already loaded
-    if (typeof window !== 'undefined' && !(window as any).DailyIframe) {
-      await new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@daily-co/daily-js';
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Failed to load Daily.co SDK'));
-        document.head.appendChild(script);
-      });
-    }
-
-    const Daily = (window as any).DailyIframe;
-    if (!Daily) {
-      throw new Error('Daily.co SDK not loaded');
-    }
+    // Use bundled Daily.co SDK via npm import to avoid CDN version drift
+    const Daily = DailyIframe;
 
     // Find container
     const container = document.getElementById('daily-call-container');
@@ -144,50 +136,38 @@ class DailyCallSingleton {
     // App message listener for tool calls
     const appMessageHandler = (event: any) => {
       console.log('=== DAILY APP MESSAGE RECEIVED ===');
-      console.log('Event data:', event.data);
-      
-      const { data } = event;
-      
-      // Check for different tool call event formats
-      if (data?.event_type === 'conversation_toolcall' || data?.type === 'tool_call') {
-        console.log('🎯 Real-time tool call detected:', data);
-        
-        const toolName = data.name || data.function?.name;
-        const toolArgs = data.args || data.arguments;
-        
-        if (toolName === 'fetch_video') {
-          console.log('🎬 Triggering real-time video fetch:', toolArgs);
-          onToolCall(toolName, toolArgs);
-        }
-      }
-      
-      // Check for tool calls in transcript format
-      if (data?.transcript) {
-        console.log('📝 Checking transcript for tool calls:', data.transcript);
-        const transcript = data.transcript;
-        
-        // Find assistant messages with tool calls
-        const toolCallMessages = transcript.filter((msg: any) => 
-          msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0
-        );
-        
-        if (toolCallMessages.length > 0) {
-          const lastToolCall = toolCallMessages[toolCallMessages.length - 1];
-          const toolCall = lastToolCall.tool_calls[0];
-          
-          if (toolCall.function?.name === 'fetch_video') {
-            console.log('🎬 Found fetch_video in transcript:', toolCall.function);
-            try {
-              const args = JSON.parse(toolCall.function.arguments);
-              console.log('🎬 Triggering real-time video from transcript:', args);
-              onToolCall('fetch_video', args);
-            } catch (error) {
-              console.error('Error parsing tool call arguments:', error);
-            }
+      try {
+        console.log('Full event (json):', JSON.stringify(event, null, 2));
+      } catch {}
+      const { data } = event || {};
+      try {
+        console.log('Event.data (json):', JSON.stringify(data, null, 2));
+      } catch {}
+
+      // Unified parsing using shared helper on multiple shapes
+      let parsed = parseToolCallFromEvent(data);
+      if (!parsed.toolName) parsed = parseToolCallFromEvent(event);
+
+      console.log('Parsed tool call result (DailyCallSingleton):', parsed);
+
+      const KNOWN_TOOLS = ['fetch_video', 'pause_video', 'play_video', 'next_video', 'close_video', 'show_trial_cta'];
+      if (parsed.toolName && KNOWN_TOOLS.includes(parsed.toolName)) {
+        if (parsed.toolName === 'fetch_video') {
+          if (!parsed.toolArgs) {
+            console.warn('fetch_video detected but args missing/null; ignoring');
+            return;
           }
+          console.log('🎬 Triggering real-time video fetch (parsed):', parsed.toolArgs);
+          onToolCall('fetch_video', parsed.toolArgs);
+          return;
         }
+        // Forward all other supported tools (no-arg tools may provide null or {})
+        const args = parsed.toolArgs ?? {};
+        console.log(`➡️ Forwarding tool "${parsed.toolName}" to UI with args:`, args);
+        onToolCall(parsed.toolName, args);
+        return;
       }
-      
+
       // Check for system events
       if (data?.message_type === 'system') {
         console.log('🔧 System event:', data);
@@ -202,8 +182,8 @@ class DailyCallSingleton {
       console.log('❌ Daily call left');
     };
     
-    const errorHandler = (error: any) => {
-      console.error('🚨 Daily call error:', error);
+    const errorHandler = (error: unknown) => {
+      logError(error, '🚨 Daily call error');
     };
     
     call.on('left-meeting', leftHandler);
@@ -213,6 +193,13 @@ class DailyCallSingleton {
   }
 
   private mountIframe(call: any, conversationUrl: string) {
+    console.log(`🕒 [DailyCallSingleton] mountIframe invoked at ${new Date().toISOString()}. conversationUrl=${conversationUrl}, activeComponents=${this.activeComponents.size}, IFRAME_MOUNTED=${(window as any).__DAILY_IFRAME_MOUNTED__}, containerExists=${!!this.container}`);
+    // Throttle: skip if iframe already globally mounted
+    // Throttle: skip if iframe already globally mounted
+    if (typeof window !== 'undefined' && (window as any).__DAILY_IFRAME_MOUNTED__) {
+      console.log('⚠️ Global iframe mount flag set, skipping mountIframe');
+      return;
+    }
     setTimeout(() => {
       if (!this.container) {
         console.log('⚠️ No container available for iframe mounting');
@@ -240,7 +227,7 @@ class DailyCallSingleton {
         
         // Append to container
         this.container.appendChild(iframe);
-        console.log('✅ Daily.co iframe mounted successfully');
+        console.log('✅ Daily.co iframe mounted successfully'); (window as any).__DAILY_IFRAME_MOUNTED__ = true;
       } else {
         console.log('🔄 Daily.co iframe not available, using fallback');
         const fallbackIframe = document.createElement('iframe');
@@ -253,7 +240,7 @@ class DailyCallSingleton {
         fallbackIframe.setAttribute('data-source', 'fallback');
         
         this.container.appendChild(fallbackIframe);
-        console.log('✅ Fallback iframe created');
+        console.log('✅ Fallback iframe created'); (window as any).__DAILY_IFRAME_MOUNTED__ = true;
       }
     }, 1000);
   }
@@ -265,7 +252,7 @@ class DailyCallSingleton {
     }
     
     this.isCleaningUp = true;
-    console.log('🧹 Cleaning up Daily.co call singleton');
+    console.log(`🧹 [DailyCallSingleton] Starting cleanup at ${new Date().toISOString()}. conversationUrl=${this.conversationUrl}, activeComponents=${this.activeComponents.size}, isInitialized=${this.isInitialized}`);
     
     if (this.dailyCall) {
       try {
@@ -282,8 +269,8 @@ class DailyCallSingleton {
         if (this.container) {
           this.container.innerHTML = '';
         }
-      } catch (error) {
-        console.error('Error during cleanup:', error);
+      } catch (error: unknown) {
+        logError(error, 'Error during cleanup');
       }
     }
     
@@ -295,7 +282,7 @@ class DailyCallSingleton {
     this.isCleaningUp = false;
     this.activeComponents.clear();
     
-    console.log('✅ Cleanup completed');
+    delete (window as any).__DAILY_IFRAME_MOUNTED__; console.log('✅ Cleanup completed');
   }
 
   public getDailyCall() {

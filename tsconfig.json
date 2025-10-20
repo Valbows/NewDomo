@@ -30,7 +30,8 @@
     },
     "types": [
       "jest",
-      "@testing-library/jest-dom"
+      "@testing-library/jest-dom",
+      "@playwright/test"
     ]
   },
   "include": [
@@ -40,6 +41,10 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "supabase/**",
+    "__tests__/**",
+    "scripts/**",
+    "examples/**"
   ]
 }
