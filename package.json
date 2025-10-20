@@ -24,7 +24,7 @@
   "dependencies": {
     "@daily-co/daily-js": "^0.83.1",
     "@daily-co/daily-react": "^0.23.1",
-    "@elevenlabs/elevenlabs-js": "^2.7.0",
+    "@elevenlabs/elevenlabs-js": "^2.20.0",
     "@radix-ui/react-dialog": "^1.0.0",
     "@radix-ui/react-tabs": "^1.1.12",
     "@sentry/nextjs": "^10.5.0",
