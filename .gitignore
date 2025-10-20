@@ -39,3 +39,6 @@ yarn-error.log*
 test-*.temp.js
 test-*-temp.js
 *-test-temp.js
+
+# Local Netlify folder
+.netlify
