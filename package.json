@@ -61,5 +61,9 @@
     "ts-jest": "^29.4.0",
     "typescript": "5.8.3",
     "whatwg-fetch": "^3.6.20"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-x64": "^4.52.5",
+    "@rollup/rollup-linux-x64-gnu": "^4.52.5"
   }
 }
