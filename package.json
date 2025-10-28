@@ -59,7 +59,7 @@
     "@types/jest": "^30.0.0",
     "@types/react": "^18.3.23",
     "autoprefixer": "^10.4.21",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "env-cmd": "^11.0.0",
     "eslint": "9.34.0",
     "eslint-config-next": "15.5.2",
