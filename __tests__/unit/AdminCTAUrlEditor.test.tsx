@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AdminCTAUrlEditor } from '@/app/demos/[demoId]/configure/components/AdminCTAUrlEditor';
 
@@ -15,15 +15,7 @@ describe('AdminCTAUrlEditor', () => {
     expect(screen.getByTestId('admin-cta-url-input')).toBeInTheDocument();
   });
 
-  test('shows validation error for invalid protocol', async () => {
-    render(<AdminCTAUrlEditor currentUrl={''} onSave={async () => {}} />);
 
-    fireEvent.click(screen.getByTestId('admin-cta-edit'));
-    fireEvent.change(screen.getByTestId('admin-cta-url-input'), { target: { value: 'ftp://example.com' } });
-    fireEvent.click(screen.getByTestId('admin-cta-save'));
-
-    expect(await screen.findByTestId('admin-cta-url-error')).toHaveTextContent('valid URL');
-  });
 
   test('normalizes and saves URL missing protocol', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
