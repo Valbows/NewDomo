@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
-// Mock Supabase server client and Sentry before importing the route
-jest.mock('@/utils/supabase/server', () => {
+// Mock Supabase client and Sentry before importing the route
+jest.mock('@supabase/supabase-js', () => {
   // Track processed events for idempotency simulation
   const processedEvents = new Set<string>();
 
@@ -88,7 +88,7 @@ describe('Tavus Webhook Tool Calls', () => {
 
   test('fetch_video: finds demo/video, signs URL, broadcasts play_video', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabaseJs = await import('@supabase/supabase-js');
 
     const payloadObj = {
       event_type: 'conversation.toolcall',
@@ -116,7 +116,7 @@ describe('Tavus Webhook Tool Calls', () => {
     expect(json).toEqual({ received: true });
 
     // Inspect Supabase channel broadcast
-    const createClientMock = supabaseServer.createClient as unknown as jest.Mock;
+    const createClientMock = supabaseJs.createClient as unknown as jest.Mock;
     const supabaseInstance = createClientMock.mock.results[0].value;
     const channelMock = supabaseInstance.channel as jest.Mock;
     expect(channelMock).toHaveBeenCalledWith('demo-demo_abc');
