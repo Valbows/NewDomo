@@ -1,0 +1,130 @@
+# Render Infrastructure as Code Template
+# 
+# IMPORTANT: This file is a TEMPLATE for future use
+# Your current services are already deployed and managed through the Render dashboard
+# 
+# Use this file when you need to:
+# - Create new environments (demo, testing, etc.)
+# - Recreate services if needed
+# - Share infrastructure setup with team members
+# - Migrate to full Infrastructure as Code approach
+#
+# To use: Update service names below to match your preferences, then commit and push
+
+services:
+  # Production Web Service (Template - adjust name to match your existing service)
+  - type: web
+    name: domo-ai-production  # Update this to match your actual production service name
+    env: node
+    plan: starter
+    buildCommand: npm ci && npm run build:production
+    startCommand: npm run start:production
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: TAVUS_API_KEY
+        sync: false
+      - key: TAVUS_BASE_URL
+        value: https://tavusapi.com/v2
+      - key: TAVUS_REPLICA_ID
+        sync: false
+      - key: COMPLETE_PERSONA_ID
+        sync: false
+      - key: DOMO_AI_OBJECTIVES_ID
+        sync: false
+      - key: DOMO_AI_GUARDRAILS_ID
+        sync: false
+      - key: TAVUS_LLM_MODEL
+        value: tavus-llama-4
+      - key: TAVUS_TOOLS_ENABLED
+        value: "true"
+      - key: TAVUS_MINIMAL_TOOLS
+        value: "false"
+      - key: TAVUS_WEBHOOK_SECRET
+        sync: false
+      - key: TAVUS_WEBHOOK_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: domo-ai-production
+          property: host
+      - key: NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK
+        value: "true"
+      - key: NEXT_PUBLIC_DEBUG_DAILY
+        value: "false"
+      - key: NEXT_PUBLIC_E2E_TEST_MODE
+        value: "false"
+      - key: SENTRY_DSN
+        sync: false
+      - key: NEXT_PUBLIC_SENTRY_DSN
+        sync: false
+
+  # Staging Web Service (Template - adjust name to match your existing service)
+  - type: web
+    name: domo-ai-staging  # Update this to match your actual staging service name
+    env: node
+    plan: starter
+    buildCommand: npm ci && npm run build:staging
+    startCommand: npm run start:staging
+    branch: develop
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: TAVUS_API_KEY
+        sync: false
+      - key: TAVUS_BASE_URL
+        value: https://tavusapi.com/v2
+      - key: TAVUS_REPLICA_ID
+        sync: false
+      - key: COMPLETE_PERSONA_ID
+        sync: false
+      - key: DOMO_AI_OBJECTIVES_ID
+        sync: false
+      - key: DOMO_AI_GUARDRAILS_ID
+        sync: false
+      - key: TAVUS_LLM_MODEL
+        value: tavus-llama-4
+      - key: TAVUS_TOOLS_ENABLED
+        value: "true"
+      - key: TAVUS_MINIMAL_TOOLS
+        value: "false"
+      - key: TAVUS_WEBHOOK_SECRET
+        sync: false
+      - key: TAVUS_WEBHOOK_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: domo-ai-staging
+          property: host
+      - key: NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK
+        value: "true"
+      - key: NEXT_PUBLIC_DEBUG_DAILY
+        value: "false"
+      - key: NEXT_PUBLIC_E2E_TEST_MODE
+        value: "false"
+      - key: SENTRY_DSN
+        sync: false
+      - key: NEXT_PUBLIC_SENTRY_DSN
+        sync: false

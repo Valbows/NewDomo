@@ -25,6 +25,14 @@
 .env.test.local
 .env.production.local
 
+# Environment files (keep templates, ignore actual secrets)
+# .env.development - committed (template)
+# .env.staging - committed (template) 
+# .env.production - committed (template)
+.env.development.local
+.env.staging.local
+.env.production.local
+
 # Supabase
 supabase/.branches
 supabase/.temp
@@ -33,7 +41,6 @@ supabase/.temp
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.vercel
 
 # Temporary test files
 test-*.temp.js
@@ -44,6 +51,9 @@ test-*-temp.js
 .netlify/
 .railway/
 .render/
+
+# Vercel (if switching back)
+.vercel
 
 # Build artifacts
 *.tsbuildinfo
