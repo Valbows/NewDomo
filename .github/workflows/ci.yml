@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -95,3 +95,25 @@ jobs:
           name: playwright-report-real
           path: playwright-report
           if-no-files-found: ignore
+
+  notify-render-staging:
+    name: Notify Render Staging Deploy
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: Trigger Render Deploy (Staging)
+        run: |
+          echo "✅ Tests passed! Render will automatically deploy staging from develop branch"
+          echo "🚀 Staging URL: https://domo-ai-staging.onrender.com"
+
+  notify-render-production:
+    name: Notify Render Production Deploy
+    needs: [build-and-test, e2e-real]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Render Deploy (Production)
+        run: |
+          echo "✅ All tests passed! Render will automatically deploy production from main branch"
+          echo "🚀 Production URL: https://domo-ai-production.onrender.com"

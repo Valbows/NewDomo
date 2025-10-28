@@ -9,14 +9,14 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
-    # Uncomment to group minor/patch updates together
-    # groups:
-    #   minor-and-patch:
-    #     patterns:
-    #       - "*"
-    #     update-types:
-    #       - "minor"
-    #       - "patch"
+    # Group minor/patch updates together to reduce PR noise
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
