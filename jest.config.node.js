@@ -2,7 +2,13 @@
 module.exports = {
   displayName: 'node',
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/__tests__/**/*.test.ts'],
+  testMatch: [
+    '<rootDir>/__tests__/**/*.test.ts',
+    '<rootDir>/__tests__/unit/**/*.test.ts',
+    '<rootDir>/__tests__/integration/**/*.test.ts',
+    '<rootDir>/__tests__/lib/**/*.test.ts',
+    '<rootDir>/src/**/*.test.ts'
+  ],
   setupFiles: ['<rootDir>/jest.env.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.node.js'],
   transform: {

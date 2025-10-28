@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import CreateDemoPage from '../page';
+import CreateDemoPage from '@/app/demos/create/page';
 import { supabase } from '@/lib/supabase';
 
 // Mock dependencies
@@ -76,12 +76,19 @@ describe('CreateDemoPage', () => {
   it('validates required demo name field', async () => {
     render(<CreateDemoPage />);
     
+    const nameInput = screen.getByLabelText('Demo Name');
     const submitButton = screen.getByRole('button', { name: /create and configure/i });
-    fireEvent.click(submitButton);
     
-    await waitFor(() => {
-      expect(screen.getByText('Demo name is required.')).toBeInTheDocument();
-    });
+    // Test that button is disabled when no name is provided
+    expect(submitButton).toBeDisabled();
+    
+    // Test that button becomes enabled when name is provided
+    fireEvent.change(nameInput, { target: { value: 'Test Demo' } });
+    expect(submitButton).not.toBeDisabled();
+    
+    // Test that button becomes disabled again when name is cleared
+    fireEvent.change(nameInput, { target: { value: '' } });
+    expect(submitButton).toBeDisabled();
   });
 
   it('creates demo with proper metadata structure', async () => {
@@ -97,6 +104,8 @@ describe('CreateDemoPage', () => {
       expect(mockSupabaseInsert).toHaveBeenCalledWith({
         name: 'Test Demo',
         user_id: 'test-user-id',
+        upload_id: expect.any(String),
+        video_storage_path: '',
         metadata: expect.objectContaining({
           uploadId: expect.any(String),
           userId: 'test-user-id',
@@ -175,7 +184,7 @@ describe('CreateDemoPage', () => {
       expect(mockSupabaseInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.objectContaining({
-            fileName: 'Test_Demo_____demo',
+            fileName: 'Test_Demo_______demo',
           }),
         })
       );

@@ -5,7 +5,7 @@
  * It adds the CTA fields to the metadata JSON object.
  * 
  * Usage:
- * npx tsx -r dotenv/config src/tests/update-cta-demo.ts dotenv_config_path=.env.local
+ * npx tsx -r dotenv/config __tests__/unit/update-cta-demo.ts dotenv_config_path=.env.local
  */
 
 import { createClient } from '@supabase/supabase-js';

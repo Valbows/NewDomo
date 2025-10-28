@@ -1,12 +1,12 @@
 /**
  * Manual guardrails testing script
- * Run with: npx tsx src/tests/test-guardrails.ts
+ * Run with: npx tsx __tests__/unit/test-guardrails.ts
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { createGuardrailsManager } from '../lib/tavus/guardrails-manager';
-import { ALL_GUARDRAIL_TEMPLATES } from '../lib/tavus/guardrails-templates';
+import { createGuardrailsManager } from '../../src/lib/tavus/guardrails-manager';
+import { ALL_GUARDRAIL_TEMPLATES } from '../../src/lib/tavus/guardrails-templates';
 
 async function testTavusGuardrails() {
   console.log('🔍 Testing Tavus Guardrails Integration...\n');

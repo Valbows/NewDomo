@@ -13,6 +13,9 @@
     "start:production": "env-cmd -f .env.production next start",
     "lint": "next lint",
     "test": "jest",
+    "test:unit": "jest --selectProjects dom node --testPathPatterns=__tests__/unit",
+    "test:integration": "jest --selectProjects node --testPathPatterns=__tests__/integration",
+    "test:lib": "jest --selectProjects node --testPathPatterns=__tests__/lib",
     "e2e": "playwright test",
     "e2e:ci": "playwright test --reporter=github,html",
     "e2e:real": "playwright test -c playwright.real.config.ts",
@@ -24,7 +27,9 @@
     "deploy:staging": "echo 'Push to develop branch to deploy to staging'",
     "deploy:production": "echo 'Push to main branch to deploy to production'",
     "docker:build": "docker build -t domo-ai .",
-    "docker:run": "docker run -p 3000:3000 --env-file .env.production domo-ai"
+    "docker:run": "docker run -p 3000:3000 --env-file .env.production domo-ai",
+    "validate-imports": "ts-node --project scripts/tsconfig.json scripts/validate-imports.ts",
+    "validate-imports:js": "node scripts/validate-imports.js"
   },
   "keywords": [],
   "author": "",
@@ -57,6 +62,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/jest": "^30.0.0",
+    "@types/node": "^24.9.2",
     "@types/react": "^18.3.23",
     "autoprefixer": "^10.4.21",
     "dotenv": "^17.2.2",
@@ -69,6 +75,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
     "typescript": "5.8.3",
     "whatwg-fetch": "^3.6.20"
   },

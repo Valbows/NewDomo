@@ -1,4 +1,4 @@
-import config from '../next.config.js';
+import config from '../../next.config.js';
 
 describe('next.config.js security headers', () => {
   test('includes baseline security headers on all routes', async () => {
