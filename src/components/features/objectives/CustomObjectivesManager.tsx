@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Play, Copy, CheckCircle } from 'lucide-react';
-import { useCustomObjectives } from '@/hooks/useCustomObjectives';
+import { useCustomObjectives } from '@/hooks';
 import { ObjectiveDefinition } from '@/lib/services/tavus/types';
 import { CustomObjective } from '@/lib/supabase/custom-objectives';
 

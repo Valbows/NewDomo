@@ -9,8 +9,7 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
-import { validateCustomObjectives } from '@/lib/tavus/custom-objectives-integration';
-import { ObjectiveDefinition } from '@/lib/tavus/objectives-templates';
+import { validateCustomObjectives, ObjectiveDefinition } from '@/lib/tavus';
 
 describe('Custom Objectives', () => {
   describe('validateCustomObjectives', () => {

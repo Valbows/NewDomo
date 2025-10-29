@@ -5,9 +5,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ObjectivesBuilder } from '@/components/ObjectivesBuilder';
-import { useObjectives } from '@/hooks/useObjectives';
-import { createDomoAIPersona } from '@/lib/tavus/persona-with-guardrails';
+import { ObjectivesBuilder } from '@/components/features/objectives';
+import { useObjectives } from '@/hooks';
+import { createDomoAIPersona } from '@/lib/tavus';
 
 export function DemoCreationWithObjectives() {
   const [step, setStep] = useState<'objectives' | 'persona' | 'complete'>('objectives');

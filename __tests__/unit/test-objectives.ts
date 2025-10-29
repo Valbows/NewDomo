@@ -3,9 +3,7 @@
  * Test suite for Tavus Objectives system
  */
 
-import { createObjectivesManager } from '../../src/lib/tavus/objectives-manager';
-import { OBJECTIVES_TEMPLATES } from '../../src/lib/tavus/objectives-templates';
-import { createDomoAIPersona } from '../../src/lib/tavus/persona-with-guardrails';
+import { createObjectivesManager, OBJECTIVES_TEMPLATES, createDomoAIPersona } from '@/lib/tavus';
 
 async function testObjectivesCreation() {
   console.log('🧪 Testing objectives creation...');

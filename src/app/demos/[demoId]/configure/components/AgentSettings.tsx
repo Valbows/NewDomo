@@ -1,7 +1,6 @@
 import { Demo } from '@/app/demos/[demoId]/configure/types';
-import { CustomObjectivesManager } from '@/components/CustomObjectivesManager';
-import { ObjectivesStatus } from '@/components/ObjectivesStatus';
-import WebhookUrlDisplay from '@/components/WebhookUrlDisplay';
+import { CustomObjectivesManager, ObjectivesStatus } from '@/components/features/objectives';
+import { WebhookUrlDisplay } from '@/components/features/webhooks';
 import { useState } from 'react';
 
 interface AgentSettingsProps {

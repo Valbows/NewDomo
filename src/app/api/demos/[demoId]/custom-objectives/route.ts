@@ -3,13 +3,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 import {
   createCustomObjective,
   getCustomObjectives,
   CreateCustomObjectiveRequest,
 } from '@/lib/supabase/custom-objectives';
-import { createObjectivesManager } from '@/lib/tavus/objectives-manager';
+import { createObjectivesManager } from '@/lib/tavus';
 import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 
 async function handleGET(

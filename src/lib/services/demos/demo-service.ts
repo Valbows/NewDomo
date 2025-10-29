@@ -4,7 +4,7 @@
  * Handles demo creation, configuration, and management operations.
  */
 
-import { createClient } from '@/utils/supabase/server';
+import { createServerSupabaseClient } from '@/lib/utils/supabase';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { ServiceResult, ServiceErrorCode } from '../types';
 import { IDemoService, DemoConfig, KnowledgeChunk, DemoVideo, TestDemoParams, PersonaStatus, PersonaDetails } from './types';
@@ -155,7 +155,7 @@ export class DemoService implements IDemoService {
    */
   async updateDemoPersona(demoId: string, userId: string, personaId: string): Promise<ServiceResult<DemoConfig>> {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
 
       const { data, error } = await supabase
         .from('demos')
@@ -202,7 +202,7 @@ export class DemoService implements IDemoService {
    */
   async getDemoConfig(demoId: string, userId: string): Promise<ServiceResult<DemoConfig>> {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
 
       const { data: demo, error: demoError } = await supabase
         .from('demos')
@@ -239,7 +239,7 @@ export class DemoService implements IDemoService {
    */
   async getKnowledgeBase(demoId: string): Promise<ServiceResult<KnowledgeChunk[]>> {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
 
       const { data: knowledgeChunks, error: knowledgeError } = await supabase
         .from('knowledge_chunks')
@@ -275,7 +275,7 @@ export class DemoService implements IDemoService {
    */
   async getDemoVideos(demoId: string): Promise<ServiceResult<DemoVideo[]>> {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
 
       const { data: demoVideos, error: videosError } = await supabase
         .from('demo_videos')
@@ -349,7 +349,7 @@ export class DemoService implements IDemoService {
    */
   async getCurrentPersonaStatus(demoId: string): Promise<ServiceResult<PersonaStatus>> {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
 
       // Get demo configuration
       const { data: demo, error: demoError } = await supabase
@@ -444,7 +444,7 @@ export class DemoService implements IDemoService {
     integration: any;
   }>> {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
 
       // Get demo info
       const { data: demo, error: demoError } = await supabase

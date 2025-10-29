@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createServerSupabaseClient } from '@/lib/utils/supabase';
 import { getErrorMessage, logError } from '@/lib/errors';
 import type { User, AuthSession } from './types';
 
@@ -51,7 +51,7 @@ export async function validateAuthentication(
     }
 
     // Use server-side Supabase client to get user from cookies
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {

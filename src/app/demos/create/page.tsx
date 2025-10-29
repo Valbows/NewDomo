@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import withAuth from '@/components/withAuth';
-import DashboardLayout from '@/components/DashboardLayout';
+import { withAuth } from '@/components/features/auth';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useUserStore } from '@/store/user';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/services/auth';

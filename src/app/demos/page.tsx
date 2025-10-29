@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import DashboardLayout from '@/components/DashboardLayout';
-import withAuth from '@/components/withAuth';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import { withAuth } from '@/components/features/auth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/services/auth';

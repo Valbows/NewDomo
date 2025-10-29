@@ -6,7 +6,7 @@
  */
 
 import { createCustomObjective } from '@/lib/supabase/custom-objectives';
-import { ObjectiveDefinition } from '@/lib/tavus/objectives-templates';
+import { ObjectiveDefinition } from '@/lib/tavus';
 
 // Example: E-commerce Product Demo Objectives
 const ecommerceObjectives: ObjectiveDefinition[] = [

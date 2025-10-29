@@ -4,11 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { agentService } from '@/lib/services/demos';
-import { getWebhookUrl } from '@/lib/tavus/webhook-objectives';
+import { getWebhookUrl } from '@/lib/tavus';
 import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 
 async function handlePOST(req: AuthenticatedRequest): Promise<NextResponse> {

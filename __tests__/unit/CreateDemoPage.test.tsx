@@ -17,13 +17,13 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
-jest.mock('@/components/withAuth', () => {
+jest.mock('@/components/features/auth/withAuth', () => {
   return function withAuth(Component: any) {
     return Component;
   };
 });
 
-jest.mock('@/components/DashboardLayout', () => {
+jest.mock('@/components/layout/DashboardLayout', () => {
   return function DashboardLayout({ children }: { children: React.ReactNode }) {
     return <div data-testid="dashboard-layout">{children}</div>;
   };

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/services/auth';
-import { UIState } from '@/lib/tavus/UI_STATES';
+import { UIState } from '@/lib/tavus';
 import { Demo, DemoVideo, KnowledgeChunk, ProcessingStatus } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2, AlertCircle, Wand2 } from 'lucide-react';

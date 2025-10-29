@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 // Mock Supabase server client and Sentry before importing the route
-jest.mock('@/utils/supabase/server', () => {
+jest.mock('@/utils/supabase', () => {
   return {
     createClient: jest.fn(() => ({
       from: () => ({

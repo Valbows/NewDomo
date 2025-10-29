@@ -1,4 +1,4 @@
-import { sanitizeAnalyticsPayload } from '@/lib/tavus/analytics';
+import { sanitizeAnalyticsPayload } from '@/lib/tavus';
 
 describe('sanitizeAnalyticsPayload', () => {
   test('redacts emails and phone numbers inside strings', () => {

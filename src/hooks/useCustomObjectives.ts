@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { CustomObjective } from '@/lib/supabase/custom-objectives';
-import { ObjectiveDefinition } from '@/lib/tavus/objectives-templates';
+import { ObjectiveDefinition } from '@/lib/tavus';
 
 interface UseCustomObjectivesReturn {
   objectives: CustomObjective[];

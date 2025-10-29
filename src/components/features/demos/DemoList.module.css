@@ -1,0 +1,57 @@
+/* Styles for DemoList component */
+
+.container {
+  @apply space-y-6;
+}
+
+.header {
+  @apply flex items-center justify-between;
+}
+
+.title {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+.createButton {
+  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+}
+
+.demoGrid {
+  @apply grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.emptyState {
+  @apply text-center py-12;
+}
+
+.emptyIcon {
+  @apply mx-auto h-12 w-12 text-gray-400;
+}
+
+.emptyTitle {
+  @apply mt-2 text-lg font-medium text-gray-900;
+}
+
+.emptyDescription {
+  @apply mt-1 text-sm text-gray-500;
+}
+
+.loading {
+  @apply flex items-center justify-center py-12;
+}
+
+.loadingSpinner {
+  @apply animate-spin h-8 w-8 text-blue-600;
+}
+
+.error {
+  @apply bg-red-50 border border-red-200 rounded-md p-4;
+}
+
+.errorTitle {
+  @apply text-sm font-medium text-red-800;
+}
+
+.errorMessage {
+  @apply mt-1 text-sm text-red-700;
+}

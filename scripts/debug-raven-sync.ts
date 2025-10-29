@@ -5,7 +5,7 @@
  * This will help identify why perception analysis and transcripts aren't being extracted
  */
 
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 
 async function debugRavenSync() {
   console.log('🔍 Debugging raven-0 conversation sync...\n');

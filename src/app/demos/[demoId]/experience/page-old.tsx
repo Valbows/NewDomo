@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { CVIProvider } from '@/components/cvi/components/cvi-provider';
+import { CVIProvider } from '@/components/features/cvi/components/cvi-provider';
 import { InlineVideoPlayer } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useUserStore } from '@/store/user';
-import { authProviderService } from '@/lib/services/auth/auth-provider-service';
+import { authProviderService } from '@/lib/services/auth';
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   console.log('🔐 AuthProvider rendering');
