@@ -1,43 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
 import * as Sentry from '@sentry/nextjs';
 import { getErrorMessage, logError } from '@/lib/errors';
+import { videoService } from '@/lib/services/demos';
 
 async function handleGET(req: NextRequest) {
-  const supabase = createClient();
-
   try {
     const url = new URL(req.url);
     const targetKey = url.searchParams.get('key') || 'test-videos/fourth-video.mp4';
-    const sourceUrl =
-      url.searchParams.get('url') ||
-      'https://samplelib.com/lib/preview/mp4/sample-5s.mp4';
+    const sourceUrl = url.searchParams.get('url') || 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4';
 
-    // Fetch a small public sample MP4
-    const resp = await fetch(sourceUrl);
-    if (!resp.ok) {
-      return NextResponse.json({ error: `Failed to download sample from ${sourceUrl}` }, { status: 502 });
-    }
-    const arrayBuf = await resp.arrayBuffer();
-    const fileBytes = new Uint8Array(arrayBuf);
+    // Use video service to upload test video
+    const result = await videoService.uploadTestVideo(targetKey, sourceUrl);
 
-    // Upload to Supabase Storage (demo-videos bucket)
-    const { data, error } = await supabase.storage
-      .from('demo-videos')
-      .upload(targetKey, fileBytes, { contentType: 'video/mp4', upsert: true });
-
-    if (error) {
-      logError(error, 'Seed test videos upload error');
-      return NextResponse.json({ error: getErrorMessage(error, 'Upload failed') }, { status: 500 });
+    if (!result.success) {
+      const status = result.code === 'EXTERNAL_API_ERROR' ? 502 : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
 
     return NextResponse.json({
       success: true,
-      bucket: 'demo-videos',
-      key: targetKey,
-      sourceUrl,
+      bucket: result.data.bucket,
+      key: result.data.key,
+      sourceUrl: result.data.sourceUrl,
       message: 'Sample video uploaded to storage.'
     });
+
   } catch (error: unknown) {
     logError(error, 'Seed test videos error');
     const message = getErrorMessage(error);

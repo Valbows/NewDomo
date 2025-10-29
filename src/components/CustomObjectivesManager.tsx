@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Play, Copy, CheckCircle } from 'lucide-react';
 import { useCustomObjectives } from '@/hooks/useCustomObjectives';
-import { ObjectiveDefinition } from '@/lib/tavus/objectives-templates';
+import { ObjectiveDefinition } from '@/lib/services/tavus/types';
 import { CustomObjective } from '@/lib/supabase/custom-objectives';
 
 interface CustomObjectivesManagerProps {

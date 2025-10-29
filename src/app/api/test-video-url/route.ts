@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
+import { videoService } from '@/lib/services/demos';
 
 async function handleGET(req: NextRequest) {
-  const supabase = createClient();
-
   try {
     // Get the demo ID from query params
     const url = new URL(req.url);
@@ -16,31 +14,17 @@ async function handleGET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing demoId' }, { status: 400 });
     }
 
-    // Find the video
-    const { data: video, error: videoError } = await supabase
-      .from('demo_videos')
-      .select('storage_url')
-      .eq('demo_id', demoId)
-      .eq('title', videoTitle)
-      .single();
+    // Use video service to generate URL
+    const result = await videoService.generateVideoUrl(demoId, videoTitle);
 
-    if (videoError || !video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    if (!result.success) {
+      const status = result.code === 'NOT_FOUND' ? 404 : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
 
-    // Generate signed URL
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('demo-videos')
-      .createSignedUrl(video.storage_url, 3600);
-
-    if (signedUrlError || !signedUrlData) {
-      return NextResponse.json({ error: 'Could not generate video URL' }, { status: 500 });
-    }
-
-    // Return the video URL for direct testing
     return NextResponse.json({
-      videoUrl: signedUrlData.signedUrl,
-      storageUrl: video.storage_url,
+      videoUrl: result.data.videoUrl,
+      storageUrl: result.data.storageUrl,
       message: 'Video URL generated successfully'
     });
 

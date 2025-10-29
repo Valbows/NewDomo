@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createObjectivesManager } from '@/lib/tavus/objectives-manager';
+import { getTavusService } from '@/lib/services/tavus';
 import { OBJECTIVES_TEMPLATES } from '@/lib/tavus/objectives-templates';
 
 interface Objective {
@@ -35,10 +35,14 @@ export function ObjectivesBuilder({ onObjectivesCreated }: ObjectivesBuilderProp
     
     setIsCreating(true);
     try {
-      const manager = createObjectivesManager();
+      const tavusService = getTavusService();
       const template = OBJECTIVES_TEMPLATES[selectedTemplate as keyof typeof OBJECTIVES_TEMPLATES];
-      const result = await manager.createObjectives(template);
-      onObjectivesCreated(result.uuid!);
+      const result = await tavusService.services.objectives.createObjectives(template);
+      if (result.success) {
+        onObjectivesCreated(result.data!.uuid!);
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error('Failed to create objectives:', error);
     } finally {
@@ -51,14 +55,18 @@ export function ObjectivesBuilder({ onObjectivesCreated }: ObjectivesBuilderProp
     
     setIsCreating(true);
     try {
-      const manager = createObjectivesManager();
+      const tavusService = getTavusService();
       const template = {
         name: "Custom Objectives",
         description: "User-defined conversation flow",
         objectives: customObjectives
       };
-      const result = await manager.createObjectives(template);
-      onObjectivesCreated(result.uuid!);
+      const result = await tavusService.services.objectives.createObjectives(template);
+      if (result.success) {
+        onObjectivesCreated(result.data!.uuid!);
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error('Failed to create custom objectives:', error);
     } finally {

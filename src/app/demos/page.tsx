@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import withAuth from '@/components/withAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authService } from '@/lib/services/auth';
 
 interface Demo {
   id: string;
@@ -20,11 +21,12 @@ function DemosPage() {
   useEffect(() => {
     const fetchDemos = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const sessionResult = await authService.getCurrentSession();
+        if (!sessionResult.success || !sessionResult.session) {
           window.location.href = '/login';
           return;
         }
+        const user = sessionResult.session.user;
 
         const { data: demosData, error: demosError } = await supabase
           .from('demos')

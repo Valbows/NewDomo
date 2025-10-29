@@ -6,6 +6,7 @@ import withAuth from '@/components/withAuth';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useUserStore } from '@/store/user';
 import { supabase } from '@/lib/supabase';
+import { authService } from '@/lib/services/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { Upload } from 'lucide-react';
 
@@ -28,10 +29,11 @@ const CreateDemoPage = () => {
     setError(null);
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      const sessionResult = await authService.getCurrentSession();
+      if (!sessionResult.success || !sessionResult.session) {
         throw new Error('User authentication failed. Please sign in again.');
       }
+      const user = sessionResult.session.user;
 
       // Create required metadata to satisfy database validation
       const metadata = {

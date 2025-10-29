@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useUserStore } from '@/store/user';
+import { authFormService } from '@/lib/services/auth/auth-form-service';
 
 const SignInPage = () => {
   const [email, setEmail] = useState('');
@@ -19,17 +19,21 @@ const SignInPage = () => {
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const result = await authFormService.handleSignIn(
+      { email, password },
+      { setUser },
+      { 
+        push: router.push, 
+        replace: router.replace, 
+        refresh: router.refresh 
+      },
+      '/dashboard'
+    );
 
-    if (error) {
-      setError(error.message);
-    } else if (data.user) {
-      setUser({ id: data.user.id, email: data.user.email || '', isAuthenticated: true });
-      router.push('/dashboard');
+    if (!result.success) {
+      setError(result.error || 'Sign-in failed');
     }
+    
     setLoading(false);
   };
 

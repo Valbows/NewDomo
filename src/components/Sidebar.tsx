@@ -3,17 +3,21 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { authService } from '@/lib/services/auth';
+import { useUserStore } from '@/store/user';
 
 const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const setUser = useUserStore((state) => state.setUser);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error);
+    const result = await authService.signOut();
+    if (!result.success) {
+      console.error('Error logging out:', result.error);
     } else {
+      // Clear user state
+      setUser(null);
       router.push('/');
     }
   };

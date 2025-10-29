@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { authService } from '@/lib/services/auth';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { Demo, DemoVideo, KnowledgeChunk, ProcessingStatus } from './types';
 import { v4 as uuidv4 } from 'uuid';
@@ -196,10 +197,11 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
     try {
       // Get current user to ensure authentication
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      const sessionResult = await authService.getCurrentSession();
+      if (!sessionResult.success || !sessionResult.session) {
         throw new Error('User not authenticated. Please log in again.');
       }
+      const user = sessionResult.session.user;
 
       const fileExtension = selectedVideoFile.name.split('.').pop();
       const filePath = `${demoId}/${uuidv4()}.${fileExtension}`;
