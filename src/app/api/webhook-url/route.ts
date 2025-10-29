@@ -1,25 +1,12 @@
-import { NextResponse } from 'next/server';
-import { getWebhookUrl } from '@/lib/tavus/webhook-objectives';
+// Backward compatibility route - forwards to new location
+import { NextRequest } from 'next/server';
 
-/**
- * Simple API route to get the current webhook URL
- * Used by the WebhookUrlDisplay component
- */
-export async function GET() {
-  try {
-    const webhookUrl = getWebhookUrl();
-    
-    return NextResponse.json({
-      success: true,
-      webhookUrl,
-      isNgrok: webhookUrl.includes('ngrok'),
-      isLocalhost: webhookUrl.includes('localhost'),
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+export async function GET(request: NextRequest) {
+  // Forward to new location
+  const url = new URL('/api/webhooks/url', request.url);
+  
+  return fetch(url.toString(), {
+    method: 'GET',
+    headers: request.headers,
+  });
 }

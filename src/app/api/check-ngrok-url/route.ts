@@ -1,56 +1,42 @@
-import { NextResponse } from 'next/server';
-import { getCurrentNgrokUrl, checkNgrokUrlChanged, autoUpdateWebhookUrls } from '@/lib/ngrok/ngrok-utils';
+// Backward compatibility route - forwards to new location
+import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * API route to check and auto-update ngrok URLs
- * GET: Check if ngrok URL has changed
- * POST: Auto-update webhook URLs if ngrok URL changed
- */
-
-export async function GET() {
-  try {
-    const currentUrl = await getCurrentNgrokUrl();
-    const { changed, envUrl } = await checkNgrokUrlChanged();
-    
-    return NextResponse.json({
-      success: true,
-      currentNgrokUrl: currentUrl,
-      environmentUrl: envUrl,
-      hasChanged: changed,
-      message: changed 
-        ? 'Ngrok URL has changed - consider updating webhook URLs' 
-        : 'Ngrok URL is up to date'
+export async function GET(request: NextRequest) {
+  // Forward to new admin/check/ngrok-url endpoint
+  const url = new URL(request.url);
+  const newUrl = new URL('/api/admin/check/ngrok-url', url.origin);
+  
+  // Copy query parameters
+  url.searchParams.forEach((value, key) => {
+    newUrl.searchParams.set(key, value);
+  });
+  
+  return fetch(newUrl.toString(), {
+    method: 'GET',
+    headers: request.headers,
+  }).then(async (response) => {
+    const data = await response.text();
+    return new NextResponse(data, {
+      status: response.status,
+      headers: response.headers,
     });
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+  });
 }
 
-export async function POST() {
-  try {
-    console.log('🔍 Checking for ngrok URL changes...');
-    
-    const updated = await autoUpdateWebhookUrls();
-    const { currentUrl, envUrl } = await checkNgrokUrlChanged();
-    
-    return NextResponse.json({
-      success: true,
-      updated,
-      currentNgrokUrl: currentUrl,
-      environmentUrl: envUrl,
-      message: updated 
-        ? 'Webhook URLs updated with new ngrok URL' 
-        : 'No ngrok URL changes detected'
+export async function POST(request: NextRequest) {
+  // Forward to new admin/check/ngrok-url endpoint
+  const url = new URL(request.url);
+  const newUrl = new URL('/api/admin/check/ngrok-url', url.origin);
+  
+  return fetch(newUrl.toString(), {
+    method: 'POST',
+    headers: request.headers,
+    body: request.body,
+  }).then(async (response) => {
+    const data = await response.text();
+    return new NextResponse(data, {
+      status: response.status,
+      headers: response.headers,
     });
-  } catch (error) {
-    console.error('❌ Error in auto-update:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to auto-update webhook URLs'
-    }, { status: 500 });
-  }
+  });
 }

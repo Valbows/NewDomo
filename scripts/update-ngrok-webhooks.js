@@ -8,7 +8,7 @@
 const https = require('https');
 const http = require('http');
 
-const API_ENDPOINT = 'http://localhost:3000/api/update-webhook-urls';
+const API_ENDPOINT = 'http://localhost:3000/api/webhooks/update-urls';
 
 async function updateWebhookUrls(newUrl) {
   return new Promise((resolve, reject) => {
@@ -17,7 +17,7 @@ async function updateWebhookUrls(newUrl) {
     const options = {
       hostname: 'localhost',
       port: 3000,
-      path: '/api/update-webhook-urls',
+      path: '/api/webhooks/update-urls',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

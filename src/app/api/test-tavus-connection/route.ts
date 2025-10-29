@@ -1,37 +1,24 @@
+// Backward compatibility route - forwards to new location
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest) {
-  try {
-    const tavusApiKey = process.env.TAVUS_API_KEY;
-    
-    if (!tavusApiKey) {
-      return NextResponse.json({ 
-        error: 'Tavus API key not configured',
-        hasKey: false
-      }, { status: 500 });
-    }
-
-    // Test a simple API call to Tavus (list personas)
-    const response = await fetch('https://tavusapi.com/v2/personas', {
-      method: 'GET',
-      headers: {
-        'x-api-key': tavusApiKey,
-      },
+export async function GET(request: NextRequest) {
+  // Forward to new admin/test/tavus-connection endpoint
+  const url = new URL(request.url);
+  const newUrl = new URL('/api/admin/test/tavus-connection', url.origin);
+  
+  // Copy query parameters
+  url.searchParams.forEach((value, key) => {
+    newUrl.searchParams.set(key, value);
+  });
+  
+  return fetch(newUrl.toString(), {
+    method: 'GET',
+    headers: request.headers,
+  }).then(async (response) => {
+    const data = await response.text();
+    return new NextResponse(data, {
+      status: response.status,
+      headers: response.headers,
     });
-
-    return NextResponse.json({
-      hasKey: true,
-      keyLength: tavusApiKey.length,
-      keyPrefix: tavusApiKey.substring(0, 8) + '...',
-      tavusApiStatus: response.status,
-      tavusApiOk: response.ok,
-      message: response.ok ? 'Tavus API connection successful' : 'Tavus API connection failed'
-    });
-
-  } catch (error) {
-    return NextResponse.json({
-      error: 'Test failed',
-      details: String(error)
-    }, { status: 500 });
-  }
+  });
 }
