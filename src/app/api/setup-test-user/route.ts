@@ -1,21 +1,8 @@
+// Backward compatibility layer - redirects to new auth structure
 import { NextRequest, NextResponse } from 'next/server';
-import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
-import { userService } from '@/lib/services/auth';
 
-async function handlePOST(req: NextRequest) {
-  const result = await userService.createTestUser();
-
-  if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 500 });
-  }
-
-  return NextResponse.json({ 
-    message: 'Test user created successfully',
-    user: result.user 
-  });
+export async function POST(req: NextRequest) {
+  // Redirect to new auth endpoint
+  const url = new URL('/api/auth/setup-test-user', req.url);
+  return NextResponse.redirect(url, { status: 308 });
 }
-
-export const POST = wrapRouteHandlerWithSentry(handlePOST, {
-  method: 'POST',
-  parameterizedRoute: '/api/setup-test-user',
-});

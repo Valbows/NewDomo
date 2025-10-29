@@ -30,11 +30,11 @@ async function updateWebhooks(webhookUrl) {
     const updatedObjectives = objective.objectives.map(obj => {
       // Update qualification webhook
       if (obj.objective_name === 'greeting_and_qualification') {
-        return { ...obj, callback_url: `${webhookUrl}/api/webhook/qualification` };
+        return { ...obj, callback_url: `${webhookUrl}/api/webhooks/events/qualification` };
       }
       // Update product interest webhook
       if (obj.objective_name === 'product_interest_discovery') {
-        return { ...obj, callback_url: `${webhookUrl}/api/webhook/product-interest` };
+        return { ...obj, callback_url: `${webhookUrl}/api/webhooks/events/product-interest` };
       }
       return obj;
     });
@@ -48,8 +48,8 @@ async function updateWebhooks(webhookUrl) {
       .eq('id', objective.id);
     
     console.log('✅ Webhook URLs updated in database');
-    console.log(`📡 Qualification: ${webhookUrl}/api/webhook/qualification`);
-    console.log(`📡 Product Interest: ${webhookUrl}/api/webhook/product-interest`);
+    console.log(`📡 Qualification: ${webhookUrl}/api/webhooks/events/qualification`);
+    console.log(`📡 Product Interest: ${webhookUrl}/api/webhooks/events/product-interest`);
     
     // Save webhook URL to .env.local for persistence
     updateEnvFile(webhookUrl);

@@ -81,7 +81,7 @@ update_webhook() {
             const objective = objectives[0];
             const updatedObjectives = objective.objectives.map(obj => {
                 if (obj.objective_name === 'greeting_and_qualification') {
-                    return { ...obj, callback_url: '$webhook_url/api/webhook/qualification' };
+                    return { ...obj, callback_url: '$webhook_url/api/webhooks/events/qualification' };
                 }
                 return obj;
             });
@@ -109,7 +109,7 @@ test_webhook() {
     local webhook_url="$1"
     log "🧪 Testing webhook: $webhook_url"
     
-    local response=$(curl -s -o /dev/null -w "%{http_code}" "$webhook_url/api/webhook/qualification" 2>/dev/null)
+    local response=$(curl -s -o /dev/null -w "%{http_code}" "$webhook_url/api/webhooks/events/qualification" 2>/dev/null)
     
     if [ "$response" = "200" ]; then
         log "✅ Webhook is accessible"
@@ -139,7 +139,7 @@ main() {
         if test_webhook "$tunnel_url"; then
             log "🎉 Webhook setup complete!"
             echo ""
-            echo "✅ Webhook URL: $tunnel_url/api/webhook/qualification"
+            echo "✅ Webhook URL: $tunnel_url/api/webhooks/events/qualification"
             echo "📊 Check data: http://localhost:3000/api/qualification-data"
             echo "🔄 To restart: ./auto-webhook.sh"
             echo ""

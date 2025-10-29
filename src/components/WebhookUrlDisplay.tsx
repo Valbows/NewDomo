@@ -23,7 +23,7 @@ export default function WebhookUrlDisplay({ className = '' }: WebhookUrlDisplayP
     setError(null);
     
     try {
-      const response = await fetch('/api/webhook-url');
+      const response = await fetch('/api/webhooks/url');
       const data = await response.json();
       
       if (data.success) {

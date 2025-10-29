@@ -841,7 +841,7 @@ export default function DemoExperiencePage() {
                         // Track CTA click
                         if (demo?.tavus_conversation_id && demo?.id) {
                           try {
-                            await fetch('/api/track-cta-click', {
+                            await fetch('/api/webhooks/cta-click', {
                               method: 'POST',
                               headers: {
                                 'Content-Type': 'application/json',

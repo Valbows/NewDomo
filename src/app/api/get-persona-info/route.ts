@@ -1,51 +1,24 @@
-/**
- * Get Persona Information API (Authenticated)
- */
+// Backward compatibility route - forwards to new location
+import { NextRequest, NextResponse } from "next/server";
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
-import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
-import { getErrorMessage, logError } from '@/lib/errors';
-import { demoService } from '@/lib/services/demos';
-import { getTavusService } from '@/lib/services/tavus';
+export async function GET(request: NextRequest) {
+  // Forward to new personas/info endpoint
+  const url = new URL(request.url);
+  const newUrl = new URL("/api/tavus/personas/info", url.origin);
 
-async function handleGET(request: AuthenticatedRequest) {
-  try {
-    const supabase = createClient();
-    const user = getRequestUser(request);
+  // Copy query parameters
+  url.searchParams.forEach((value, key) => {
+    newUrl.searchParams.set(key, value);
+  });
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const url = new URL(request.url);
-    const demoId = url.searchParams.get('demoId') || 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
-
-    // Use demo service to get persona info
-    const result = await demoService.getPersonaInfo(demoId, user.id);
-
-    if (!result.success) {
-      const status = result.error === 'Demo not found' ? 404 : 500;
-      return NextResponse.json({ 
-        success: false,
-        error: result.error 
-      }, { status });
-    }
-
-    return NextResponse.json({
-      success: true,
-      ...result.data
+  return fetch(newUrl.toString(), {
+    method: "GET",
+    headers: request.headers,
+  }).then(async (response) => {
+    const data = await response.text();
+    return new NextResponse(data, {
+      status: response.status,
+      headers: response.headers,
     });
-
-  } catch (error: unknown) {
-    logError(error, 'Get Persona Info Error');
-    const message = getErrorMessage(error);
-    return NextResponse.json({
-      success: false,
-      error: message
-    }, { status: 500 });
-  }
+  });
 }
-
-export const GET = withAuth(handleGET);

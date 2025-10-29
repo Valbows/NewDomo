@@ -1,9 +1,7 @@
-import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
-import { handlePOST } from './handler';
+// Backward compatibility route - forwards to new location
+import { NextRequest, NextResponse } from 'next/server';
+import { handlePOST } from '../tavus/webhook/handler';
 
-// Export the Next.js-compliant POST route using our conditional Sentry wrapper
-export const POST = wrapRouteHandlerWithSentry(handlePOST, {
-  method: 'POST',
-  parameterizedRoute: '/api/tavus-webhook',
-});
+// Maintain backward compatibility for existing webhook URLs
+export const POST = handlePOST;
  

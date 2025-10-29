@@ -123,66 +123,66 @@
 
 **Goal: Organize 40+ flat API routes into domain-based structure**
 
-- [ ] #### Task 3.1: Plan API route restructuring
-- [ ] 3.1.1 Map current 40+ flat API routes to new domain-based structure
-- [ ] 3.1.2 Identify routes that need URL compatibility layers
-- [ ] 3.1.3 Create migration plan for existing endpoints
-- [ ] 3.1.4 Document new API route organization structure
-- [ ] 3.1.5 Plan backward compatibility strategy
+- [x] #### Task 3.1: Plan API route restructuring
+- [x] 3.1.1 Map current 40+ flat API routes to new domain-based structure
+- [x] 3.1.2 Identify routes that need URL compatibility layers
+- [x] 3.1.3 Create migration plan for existing endpoints
+- [x] 3.1.4 Document new API route organization structure
+- [x] 3.1.5 Plan backward compatibility strategy
 - _Requirements: 1.1, 1.3_
 
-- [ ] #### Task 3.2: Reorganize authentication API routes
-- [ ] 3.2.1 Move setup-test-user to `src/app/api/auth/setup-test-user/`
-- [ ] 3.2.2 Move check-current-persona to appropriate domain structure
-- [ ] 3.2.3 Create auth-related route groupings
-- [ ] 3.2.4 Update route handlers to use extracted auth services
-- [ ] 3.2.5 Ensure backward compatibility for existing URLs
+- [x] #### Task 3.2: Reorganize authentication API routes
+- [x] 3.2.1 Move setup-test-user to `src/app/api/auth/setup-test-user/`
+- [x] 3.2.2 Move check-current-persona to appropriate domain structure
+- [x] 3.2.3 Create auth-related route groupings
+- [x] 3.2.4 Update route handlers to use extracted auth services
+- [x] 3.2.5 Ensure backward compatibility for existing URLs
 - _Requirements: 1.1, 1.2_
 
-- [ ] #### Task 3.3: Reorganize demo management API routes
-- [ ] 3.3.1 Move create-agent to `src/app/api/demos/agents/create/`
-- [ ] 3.3.2 Move create-enhanced-agent to `src/app/api/demos/agents/create-enhanced/`
-- [ ] 3.3.3 Move create-test-demo to `src/app/api/demos/create-test/`
-- [ ] 3.3.4 Organize demo configuration routes under `src/app/api/demos/[demoId]/`
-- [ ] 3.3.5 Update route handlers to use extracted demo services
-- [ ] 3.3.6 Ensure backward compatibility for existing URLs
+- [x] #### Task 3.3: Reorganize demo management API routes
+- [x] 3.3.1 Move create-agent to `src/app/api/demos/agents/create/`
+- [x] 3.3.2 Move create-enhanced-agent to `src/app/api/demos/agents/create-enhanced/`
+- [x] 3.3.3 Move create-test-demo to `src/app/api/demos/create-test/`
+- [x] 3.3.4 Organize demo configuration routes under `src/app/api/demos/[demoId]/`
+- [x] 3.3.5 Update route handlers to use extracted demo services
+- [x] 3.3.6 Ensure backward compatibility for existing URLs
 - _Requirements: 1.1, 1.2_
 
-- [ ] #### Task 3.4: Reorganize Tavus integration API routes
-- [ ] 3.4.1 Move tavus routes to `src/app/api/tavus/`
-- [ ] 3.4.2 Move tavus-webhook to `src/app/api/tavus/webhook/`
-- [ ] 3.4.3 Move start-conversation to `src/app/api/tavus/conversations/start/`
-- [ ] 3.4.4 Move end-conversation to `src/app/api/tavus/conversations/end/`
-- [ ] 3.4.5 Organize persona and video routes under Tavus structure
-- [ ] 3.4.6 Update route handlers to use extracted Tavus services
-- [ ] 3.4.7 Ensure backward compatibility for existing URLs
+- [x] #### Task 3.4: Reorganize Tavus integration API routes
+- [x] 3.4.1 Move tavus routes to `src/app/api/tavus/`
+- [x] 3.4.2 Move tavus-webhook to `src/app/api/tavus/webhook/`
+- [x] 3.4.3 Move start-conversation to `src/app/api/tavus/conversations/start/`
+- [x] 3.4.4 Move end-conversation to `src/app/api/tavus/conversations/end/`
+- [x] 3.4.5 Organize persona and video routes under Tavus structure
+- [x] 3.4.6 Update route handlers to use extracted Tavus services
+- [x] 3.4.7 Ensure backward compatibility for existing URLs
 - _Requirements: 1.1, 1.2_
 
-- [ ] #### Task 3.5: Reorganize webhook API routes
-- [ ] 3.5.1 Move webhook routes to `src/app/api/webhooks/`
-- [ ] 3.5.2 Move track-cta-click to `src/app/api/webhooks/cta-click/`
-- [ ] 3.5.3 Move webhook-url to `src/app/api/webhooks/url/`
-- [ ] 3.5.4 Organize webhook handlers by event type
-- [ ] 3.5.5 Update route handlers to use extracted webhook services
-- [ ] 3.5.6 Ensure backward compatibility for existing URLs
+- [x] #### Task 3.5: Reorganize webhook API routes
+- [x] 3.5.1 Move webhook routes to `src/app/api/webhooks/`
+- [x] 3.5.2 Move track-cta-click to `src/app/api/webhooks/cta-click/`
+- [x] 3.5.3 Move webhook-url to `src/app/api/webhooks/url/`
+- [x] 3.5.4 Organize webhook handlers by event type
+- [x] 3.5.5 Update route handlers to use extracted webhook services
+- [x] 3.5.6 Ensure backward compatibility for existing URLs
 - _Requirements: 1.1, 1.2_
 
-- [ ] #### Task 3.6: Reorganize admin/debug API routes
-- [ ] 3.6.1 Move debug-\* routes to `src/app/api/admin/debug/`
-- [ ] 3.6.2 Move test-\* routes to `src/app/api/admin/test/`
-- [ ] 3.6.3 Move check-\* routes to `src/app/api/admin/check/`
-- [ ] 3.6.4 Move verify-\* routes to `src/app/api/admin/verify/`
-- [ ] 3.6.5 Group by functionality (debug, testing, verification)
-- [ ] 3.6.6 Update route handlers to use extracted services
-- [ ] 3.6.7 Ensure proper admin authentication and authorization
+- [x] #### Task 3.6: Reorganize admin/debug API routes
+- [x] 3.6.1 Move debug-\* routes to `src/app/api/admin/debug/`
+- [x] 3.6.2 Move test-\* routes to `src/app/api/admin/test/`
+- [x] 3.6.3 Move check-\* routes to `src/app/api/admin/check/`
+- [x] 3.6.4 Move verify-\* routes to `src/app/api/admin/verify/`
+- [x] 3.6.5 Group by functionality (debug, testing, verification)
+- [x] 3.6.6 Update route handlers to use extracted services
+- [x] 3.6.7 Ensure proper admin authentication and authorization
 - _Requirements: 1.1, 1.2_
 
-- [ ] #### Task 3.7: Validate API route organization
+- [x] #### Task 3.7: Validate API route organization
 - [ ]\* 3.7.1 Test all API endpoints to ensure they still work
-- [ ] 3.7.2 Verify URL compatibility is maintained
-- [ ] 3.7.3 Test backward compatibility layers
-- [ ] 3.7.4 Validate route organization structure
-- [ ] 3.7.5 Ensure proper error handling and responses
+- [x] 3.7.2 Verify URL compatibility is maintained
+- [x] 3.7.3 Test backward compatibility layers
+- [x] 3.7.4 Validate route organization structure
+- [x] 3.7.5 Ensure proper error handling and responses
 - _Requirements: 1.3, 1.5_
 
 ### Phase 4: Utility and Component Organization
@@ -370,33 +370,42 @@
 
 **Goal: Final cleanup and optimization for production readiness**
 
-- [ ] #### Task 8.1: Remove unused files and directories
-- [ ] 8.1.1 Clean up empty directories from file moves
-- [ ] 8.1.2 Remove any duplicate or unused files
-- [ ] 8.1.3 Clean up old configuration files
-- [ ] 8.1.4 Remove temporary or backup files
+- [ ] #### Task 8.1: Remove backward compatibility redirect routes
+- [ ] 8.1.1 Verify all external integrations have migrated to new URLs
+- [ ] 8.1.2 Update all internal references to use new API structure
+- [ ] 8.1.3 Remove old redirect stub files (track-cta-click, webhook-url, etc.)
+- [ ] 8.1.4 Clean up old webhook event handler redirects
+- [ ] 8.1.5 Update documentation to reflect final URL structure
+- [ ] 8.1.6 Add deprecation notices before removal (if needed)
+- _Requirements: 1.2, 1.3_
+
+- [ ] #### Task 8.2: Remove unused files and directories
+- [ ] 8.2.1 Clean up empty directories from file moves
+- [ ] 8.2.2 Remove any duplicate or unused files
+- [ ] 8.2.3 Clean up old configuration files
+- [ ] 8.2.4 Remove temporary or backup files
 - _Requirements: 4.2_
 
-- [ ] #### Task 8.2: Optimize import statements
-- [ ] 8.2.1 Remove unused imports across the codebase
-- [ ] 8.2.2 Optimize import grouping and ordering
-- [ ] 8.2.3 Consolidate related imports
-- [ ] 8.2.4 Use barrel exports where appropriate
+- [ ] #### Task 8.3: Optimize import statements
+- [ ] 8.3.1 Remove unused imports across the codebase
+- [ ] 8.3.2 Optimize import grouping and ordering
+- [ ] 8.3.3 Consolidate related imports
+- [ ] 8.3.4 Use barrel exports where appropriate
 - _Requirements: 4.4_
 
-- [ ] #### Task 8.3: Final code quality review
-- [ ] 8.3.1 Run linting and formatting across entire codebase
-- [ ] 8.3.2 Ensure consistent code style and conventions
-- [ ] 8.3.3 Review code for best practices compliance
-- [ ] 8.3.4 Validate TypeScript configurations
+- [ ] #### Task 8.4: Final code quality review
+- [ ] 8.4.1 Run linting and formatting across entire codebase
+- [ ] 8.4.2 Ensure consistent code style and conventions
+- [ ] 8.4.3 Review code for best practices compliance
+- [ ] 8.4.4 Validate TypeScript configurations
 - _Requirements: 7.5_
 
-- [ ] #### Task 8.4: Final validation and testing
-- [ ] 8.4.1 Run complete test suite
-- [ ] 8.4.2 Build and deploy to staging for integration testing
-- [ ] 8.4.3 Verify all functionality works end-to-end
-- [ ] 8.4.4 Performance testing and optimization
-- [ ] 8.4.5 Security review and validation
+- [ ] #### Task 8.5: Final validation and testing
+- [ ] 8.5.1 Run complete test suite
+- [ ] 8.5.2 Build and deploy to staging for integration testing
+- [ ] 8.5.3 Verify all functionality works end-to-end
+- [ ] 8.5.4 Performance testing and optimization
+- [ ] 8.5.5 Security review and validation
 - _Requirements: 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5_
 
 ## Success Criteria
