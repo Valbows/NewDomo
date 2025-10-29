@@ -2,26 +2,33 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { authService } from '@/lib/services/auth';
+import { useUserStore } from '@/store/user';
 
 export default function TestLoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
+  const setUser = useUserStore((state) => state.setUser);
 
   const handleAutoLogin = async () => {
     setLoading(true);
     setMessage('Logging in...');
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const result = await authService.signIn({
         email: 'test@domo-ai.com',
         password: 'testpassword123'
       });
 
-      if (error) {
-        setMessage(`Login failed: ${error.message}`);
+      if (!result.success) {
+        setMessage(`Login failed: ${result.error}`);
         return;
+      }
+
+      // Update user state
+      if (result.user) {
+        setUser(result.user);
       }
 
       setMessage('Login successful! Redirecting...');

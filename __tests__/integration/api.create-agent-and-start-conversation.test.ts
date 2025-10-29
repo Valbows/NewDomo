@@ -91,7 +91,7 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
 
     const req = new Request('http://localhost/api/create-agent', {
       method: 'POST',
@@ -138,7 +138,7 @@ describe('Create Agent and Start Conversation APIs', () => {
       };
     });
 
-    const { POST: StartConversationPOST } = await import('../src/app/api/start-conversation/route');
+    const { POST: StartConversationPOST } = await import('../../src/app/api/start-conversation/route');
 
     const req = new Request('http://localhost/api/start-conversation', {
       method: 'POST',
@@ -216,7 +216,7 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: StartConversationPOST } = await import('../src/app/api/start-conversation/route');
+    const { POST: StartConversationPOST } = await import('../../src/app/api/start-conversation/route');
 
     const req = new Request('http://localhost/api/start-conversation', {
       method: 'POST',
@@ -294,7 +294,7 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
 
     const req = new Request('http://localhost/api/create-agent', {
       method: 'POST',
@@ -372,7 +372,7 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
 
     const req = new Request('http://localhost/api/create-agent', {
       method: 'POST',
@@ -450,7 +450,7 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
 
     const req = new Request('http://localhost/api/create-agent', {
       method: 'POST',

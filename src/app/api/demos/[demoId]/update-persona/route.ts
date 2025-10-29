@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { demoService } from '@/lib/services/demos';
 
 export async function POST(
   request: NextRequest,
@@ -27,32 +28,19 @@ export async function POST(
       );
     }
 
-    // Update the demo with new persona ID
-    const { data, error } = await supabase
-      .from('demos')
-      .update({ tavus_persona_id })
-      .eq('id', params.demoId)
-      .eq('user_id', user.id)
-      .select()
-      .single();
+    // Use demo service to update persona
+    const result = await demoService.updateDemoPersona(params.demoId, user.id, tavus_persona_id);
 
-    if (error) {
-      console.error('Error updating demo persona:', error);
-      return NextResponse.json(
-        { error: 'Failed to update demo persona' },
-        { status: 500 }
-      );
-    }
-
-    if (!data) {
-      return NextResponse.json({ error: 'Demo not found' }, { status: 404 });
+    if (!result.success) {
+      const status = result.code === 'NOT_FOUND' ? 404 : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
 
     console.log(`✅ Updated demo ${params.demoId} with persona ${tavus_persona_id}`);
 
     return NextResponse.json({
       success: true,
-      demo: data,
+      demo: result.data,
       message: 'Demo persona updated successfully'
     });
 

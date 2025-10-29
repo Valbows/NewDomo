@@ -87,7 +87,7 @@ describe('Tavus Webhook Tool Calls', () => {
   });
 
   test('fetch_video: finds demo/video, signs URL, broadcasts play_video', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
     const supabaseJs = await import('@supabase/supabase-js');
 
     const payloadObj = {
@@ -129,7 +129,7 @@ describe('Tavus Webhook Tool Calls', () => {
   });
 
   test('show_trial_cta: finds demo and broadcasts CTA event', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
     const supabaseJs = await import('@supabase/supabase-js');
 
     const payloadObj = {
@@ -175,7 +175,7 @@ describe('Tavus Webhook Tool Calls', () => {
   });
 
   test('idempotency: duplicate show_trial_cta only broadcasts once', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
     const supabaseJs = await import('@supabase/supabase-js');
 
     const payloadObj = {
@@ -223,7 +223,7 @@ describe('Tavus Webhook Tool Calls', () => {
   });
 
   test('play_video alias behaves like fetch_video (signs and broadcasts)', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
     const supabaseJs = await import('@supabase/supabase-js');
 
     const payloadObj = {
@@ -264,7 +264,7 @@ describe('Tavus Webhook Tool Calls', () => {
   });
 
   test('fetch_video with missing/invalid title returns 200 with validation message', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
     const supabaseJs = await import('@supabase/supabase-js');
 
     const payloadObj = {
@@ -324,7 +324,7 @@ describe('Tavus Webhook Tool Calls', () => {
       return mock;
     });
 
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
       event_type: 'conversation.toolcall',
@@ -363,7 +363,7 @@ describe('Tavus Webhook Tool Calls', () => {
       return mock;
     });
 
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
       event_type: 'conversation.toolcall',
@@ -415,7 +415,7 @@ describe('Tavus Webhook Tool Calls', () => {
       return mock;
     });
 
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
       event_type: 'conversation.toolcall',
@@ -480,7 +480,7 @@ describe('Tavus Webhook Tool Calls', () => {
       return mock;
     });
 
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
       event_type: 'conversation.toolcall',

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useUserStore } from '@/store/user';
+import { authFormService } from '@/lib/services/auth/auth-form-service';
 import Link from 'next/link';
 
 const LoginPage = () => {
@@ -10,6 +11,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const setUser = useUserStore((state) => state.setUser);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -17,17 +19,21 @@ const LoginPage = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const result = await authFormService.handleSignIn(
+      { email, password },
+      { setUser },
+      { 
+        push: router.push, 
+        replace: router.replace, 
+        refresh: router.refresh 
+      },
+      '/' // Redirect to homepage on successful login
+    );
 
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push('/'); // Redirect to homepage on successful login
-      router.refresh(); // Refresh the page to update auth state
+    if (!result.success) {
+      setError(result.error || 'Sign-in failed');
     }
+    
     setLoading(false);
   };
 

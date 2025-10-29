@@ -51,7 +51,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('returns 401 Unauthorized for invalid or missing signature', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
 
@@ -71,7 +71,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts multi-part signature header (t=..., v1=<base64>)', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const ts = '1690000002';
@@ -93,7 +93,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('rejects wrong algorithm prefix (sha1=<hex>) and returns 401', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const hex = signHex(secret, payload);
@@ -115,7 +115,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('rejects multi-part header with missing signature part (t=..., v1=) and returns 401', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const ts = '1690000003';
@@ -137,7 +137,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts valid signature (hex) and returns 200 for benign event', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const sig = signHex(secret, payload);
@@ -158,7 +158,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts multi-part signature header (t=..., sha256=<hex>)', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const ts = '1690000001';
@@ -180,7 +180,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('rejects malformed base64 signature and returns 401', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const malformed = 'sha256=!!not_base64!!';
@@ -201,7 +201,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('rejects mismatched payload even with valid hex signature format', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payloadSent = JSON.stringify({ event_type: 'utterance', data: {} });
     const payloadSigned = JSON.stringify({ event_type: 'utterance', data: { different: true } });
@@ -223,7 +223,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts valid signature with prefixed header (sha256=...)', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const sig = `sha256=${signHex(secret, payload)}`;
@@ -244,7 +244,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('ingestion-type events still return 200 even if Supabase lookups fail', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     // Event type matches shouldIngestEvent needles (application_conversation_completed)
     const payload = JSON.stringify({
@@ -270,7 +270,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts valid signature (base64) and returns 200 for benign event', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const sig = signBase64(secret, payload);
@@ -291,7 +291,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts valid signature with prefixed base64 (sha256=...)', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const sig = `sha256=${signBase64(secret, payload)}`;
@@ -312,7 +312,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts multi-part signature header (t=..., v1=<hex>)', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const ts = '1690000000';
@@ -334,7 +334,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts valid signature via alt header "tavus-signature"', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const sig = signHex(secret, payload);
@@ -355,7 +355,7 @@ describe('Tavus Webhook Security', () => {
   });
 
   test('accepts valid signature via alt header "x-signature"', async () => {
-    const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
+    const { handlePOST } = await import('../../src/app/api/tavus-webhook/handler');
 
     const payload = JSON.stringify({ event_type: 'utterance', data: {} });
     const sig = signHex(secret, payload);

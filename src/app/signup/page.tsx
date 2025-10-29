@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useUserStore } from '@/store/user';
+import { authFormService } from '@/lib/services/auth/auth-form-service';
 import Link from 'next/link';
 
 const SignupPage = () => {
@@ -11,6 +12,7 @@ const SignupPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const setUser = useUserStore((state) => state.setUser);
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -19,16 +21,26 @@ const SignupPage = () => {
     setError(null);
     setSuccess(false);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    const result = await authFormService.handleSignUp(
+      { email, password },
+      { setUser },
+      { 
+        push: router.push, 
+        replace: router.replace, 
+        refresh: router.refresh 
+      },
+      '/dashboard'
+    );
 
-    if (error) {
-      setError(error.message);
+    if (!result.success) {
+      setError(result.error || 'Sign-up failed');
     } else {
-      setSuccess(true);
+      if (result.requiresEmailConfirmation) {
+        setSuccess(true);
+      }
+      // If no email confirmation required, navigation is handled by the service
     }
+    
     setLoading(false);
   };
 

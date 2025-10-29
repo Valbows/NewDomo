@@ -10,15 +10,14 @@ import {
   CreateCustomObjectiveRequest,
 } from '@/lib/supabase/custom-objectives';
 import { createObjectivesManager } from '@/lib/tavus/objectives-manager';
+import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 
-export async function GET(
-  request: NextRequest,
+async function handleGET(
+  request: AuthenticatedRequest,
   { params }: { params: { demoId: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
+    const user = getRequestUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -34,13 +33,13 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: NextRequest,
+async function handlePOST(
+  request: AuthenticatedRequest,
   { params }: { params: { demoId: string } }
 ) {
   try {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = getRequestUser(request);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -110,3 +109,6 @@ export async function POST(
     );
   }
 }
+
+export const GET = withAuth(handleGET);
+export const POST = withAuth(handlePOST);
