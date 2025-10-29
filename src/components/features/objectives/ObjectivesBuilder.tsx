@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { getTavusService } from '@/lib/services/tavus';
-import { OBJECTIVES_TEMPLATES } from '@/lib/tavus/objectives-templates';
+import { OBJECTIVES_TEMPLATES } from '@/lib/tavus';
 
 interface Objective {
   objective_name: string;

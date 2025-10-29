@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { ensureAllPersonasHaveRaven, summarizePerceptionStatus } from '@/lib/tavus/ensure-raven-perception';
+import { createClient } from '@/utils/supabase';
+import { ensureAllPersonasHaveRaven, summarizePerceptionStatus } from '@/lib/tavus';
 
 /**
  * Ensure Raven Perception API

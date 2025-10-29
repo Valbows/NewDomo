@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import DemoListItem from './DemoListItem';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
-import { useDemosRealtime } from '@/hooks/useDemosRealtime';
+import { useDemosRealtime } from '@/hooks';
 
 interface DemoListProps {
   demos?: Demo[];

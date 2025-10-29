@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { CVIProvider } from '@/components/cvi/components/cvi-provider';
+import { CVIProvider } from '@/components/features/cvi/components/cvi-provider';
 import { TavusConversationCVI } from './components/TavusConversationCVI';
 import { InlineVideoPlayer } from './components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from './components/InlineVideoPlayer';
-import { UIState } from '@/lib/tavus/UI_STATES';
+import { UIState } from '@/lib/tavus';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 // Custom styles for PiP video layout

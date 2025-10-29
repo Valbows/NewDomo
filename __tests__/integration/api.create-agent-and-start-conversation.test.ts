@@ -34,7 +34,7 @@ describe('Create Agent and Start Conversation APIs', () => {
     const updates: any[] = [];
 
     // Mock Supabase server client
-    jest.doMock('@/utils/supabase/server', () => {
+    jest.doMock('@/utils/supabase', () => {
       return {
         createClient: jest.fn(() => ({
           auth: {
@@ -112,7 +112,7 @@ describe('Create Agent and Start Conversation APIs', () => {
 
   test('start-conversation returns 400 if tavus_persona_id missing', async () => {
     // Mock Supabase server client for missing persona
-    jest.doMock('@/utils/supabase/server', () => {
+    jest.doMock('@/utils/supabase', () => {
       return {
         createClient: jest.fn(() => ({
           auth: {
@@ -156,7 +156,7 @@ describe('Create Agent and Start Conversation APIs', () => {
     const updates: any[] = [];
 
     // Mock Supabase server client for successful path
-    jest.doMock('@/utils/supabase/server', () => {
+    jest.doMock('@/utils/supabase', () => {
       return {
         createClient: jest.fn(() => ({
           auth: {
@@ -245,7 +245,7 @@ describe('Create Agent and Start Conversation APIs', () => {
     delete process.env.TAVUS_MINIMAL_TOOLS;
 
     // Mock Supabase server client
-    jest.doMock('@/utils/supabase/server', () => {
+    jest.doMock('@/utils/supabase', () => {
       return {
         createClient: jest.fn(() => ({
           auth: {
@@ -318,7 +318,7 @@ describe('Create Agent and Start Conversation APIs', () => {
     const demoVideoTitles = ['Fourth Video', 'Welcome'];
 
     // Mock Supabase server client with available videos
-    jest.doMock('@/utils/supabase/server', () => {
+    jest.doMock('@/utils/supabase', () => {
       return {
         createClient: jest.fn(() => ({
           auth: {
@@ -405,7 +405,7 @@ describe('Create Agent and Start Conversation APIs', () => {
     process.env.TAVUS_MINIMAL_TOOLS = 'false';
 
     // Mock Supabase server client (videos optional for this test)
-    jest.doMock('@/utils/supabase/server', () => {
+    jest.doMock('@/utils/supabase', () => {
       return {
         createClient: jest.fn(() => ({
           auth: {

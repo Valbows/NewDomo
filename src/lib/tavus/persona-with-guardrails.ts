@@ -3,8 +3,6 @@
  */
 
 import { createGuardrailsManager } from './guardrails-manager';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface PersonaConfig {
   system_prompt?: string;
@@ -39,8 +37,16 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
   // Load system prompt if not provided
   let systemPrompt = config.system_prompt;
   if (!systemPrompt) {
-    const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
-    systemPrompt = fs.readFileSync(promptPath, 'utf-8');
+    // For server-side usage, load from file system
+    if (typeof window === 'undefined') {
+      const fs = await import('fs');
+      const path = await import('path');
+      const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
+      systemPrompt = fs.readFileSync(promptPath, 'utf-8');
+    } else {
+      // For client-side usage, use a default prompt
+      systemPrompt = 'You are a helpful AI assistant.';
+    }
   }
 
   // Create persona with guardrails and raven-0 perception analysis

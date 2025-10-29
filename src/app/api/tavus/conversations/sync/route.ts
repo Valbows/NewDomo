@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 interface TavusConversation {

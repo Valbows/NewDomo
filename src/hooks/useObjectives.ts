@@ -3,8 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { createObjectivesManager } from '@/lib/tavus/objectives-manager';
-import type { ObjectivesTemplate } from '@/lib/tavus/objectives-templates';
+import { createObjectivesManager, type ObjectivesTemplate } from '@/lib/tavus';
 
 interface ObjectivesData {
   uuid?: string;

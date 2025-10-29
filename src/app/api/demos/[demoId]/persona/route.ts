@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';

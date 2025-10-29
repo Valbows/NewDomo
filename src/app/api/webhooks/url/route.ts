@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getWebhookUrl } from '@/lib/tavus/webhook-objectives';
+import { getWebhookUrl } from '@/lib/tavus';
 
 /**
  * Simple API route to get the current webhook URL

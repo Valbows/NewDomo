@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 
 /**
  * Quick fix API to configure personas for raven-0 perception analysis

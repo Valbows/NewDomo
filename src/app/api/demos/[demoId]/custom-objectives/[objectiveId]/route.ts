@@ -3,14 +3,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 import {
   getCustomObjective,
   updateCustomObjective,
   deleteCustomObjective,
   setActiveCustomObjective,
 } from '@/lib/supabase/custom-objectives';
-import { createObjectivesManager } from '@/lib/tavus/objectives-manager';
+import { createObjectivesManager } from '@/lib/tavus';
 
 export async function GET(
   request: NextRequest,

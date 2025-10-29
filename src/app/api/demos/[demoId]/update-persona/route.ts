@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 import { demoService } from '@/lib/services/demos';
 
 export async function POST(

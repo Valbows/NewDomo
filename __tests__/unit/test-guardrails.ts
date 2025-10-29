@@ -5,8 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { createGuardrailsManager } from '../../src/lib/tavus/guardrails-manager';
-import { ALL_GUARDRAIL_TEMPLATES } from '../../src/lib/tavus/guardrails-templates';
+import { createGuardrailsManager, ALL_GUARDRAIL_TEMPLATES } from '@/lib/tavus';
 
 async function testTavusGuardrails() {
   console.log('🔍 Testing Tavus Guardrails Integration...\n');

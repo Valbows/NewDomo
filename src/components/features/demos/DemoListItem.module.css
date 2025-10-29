@@ -1,0 +1,81 @@
+/* Styles for DemoListItem component */
+
+.card {
+  @apply bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200;
+}
+
+.cardBody {
+  @apply p-6;
+}
+
+.header {
+  @apply flex items-start justify-between;
+}
+
+.titleSection {
+  @apply flex-1 min-w-0;
+}
+
+.title {
+  @apply text-lg font-semibold text-gray-900 truncate;
+}
+
+.description {
+  @apply mt-1 text-sm text-gray-600 line-clamp-2;
+}
+
+.status {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.statusActive {
+  @apply bg-green-100 text-green-800;
+}
+
+.statusInactive {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.statusDraft {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.metadata {
+  @apply mt-4 flex items-center justify-between text-sm text-gray-500;
+}
+
+.createdAt {
+  @apply flex items-center;
+}
+
+.updatedAt {
+  @apply flex items-center;
+}
+
+.actions {
+  @apply mt-4 flex items-center justify-end space-x-2;
+}
+
+.actionButton {
+  @apply inline-flex items-center p-2 border border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.selectButton {
+  @apply text-blue-600 hover:text-blue-800 focus:ring-blue-500;
+}
+
+.editButton {
+  @apply text-gray-400 hover:text-gray-600 focus:ring-gray-500;
+}
+
+.deleteButton {
+  @apply text-red-400 hover:text-red-600 focus:ring-red-500;
+}
+
+.clickable {
+  @apply cursor-pointer;
+}
+
+.clickable:hover .card {
+  @apply shadow-lg;
+}

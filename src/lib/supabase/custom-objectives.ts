@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { ObjectiveDefinition } from '@/lib/tavus/objectives-templates';
+import { ObjectiveDefinition } from '@/lib/tavus';
 
 export interface CustomObjective {
   id: string;

@@ -4,7 +4,7 @@
  * This script creates an agent by directly calling the create-agent API logic
  */
 
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase';
 
 const DEMO_ID = 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
 

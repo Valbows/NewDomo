@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Settings } from 'lucide-react';
-import { useCustomObjectives } from '@/hooks/useCustomObjectives';
+import { useCustomObjectives } from '@/hooks';
 
 interface ObjectivesStatusProps {
   demoId: string;

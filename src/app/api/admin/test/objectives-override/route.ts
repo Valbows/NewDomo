@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateObjectivesOverride } from '@/lib/tavus/custom-objectives-integration';
+import { validateObjectivesOverride } from '@/lib/tavus';
 
 /**
  * Test API endpoint to verify that custom objectives properly override defaults

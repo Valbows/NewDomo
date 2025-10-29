@@ -1,4 +1,4 @@
-import { sanitizeAnalyticsPayload } from '@/lib/tavus/analytics';
+import { sanitizeAnalyticsPayload } from '@/lib/tavus';
 
 export function normalizeEventType(event: any): string {
   const eventTypeRaw = event?.event_type || event?.type || event?.data?.event_type || event?.data?.type || '';

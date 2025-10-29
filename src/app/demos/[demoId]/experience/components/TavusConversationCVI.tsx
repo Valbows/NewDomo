@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useDaily, useMeetingState } from '@daily-co/daily-react';
-import { Conversation } from '@/components/cvi/components/conversation';
+import { Conversation } from '@/components/features/cvi/components/conversation';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
 
 interface TavusConversationCVIProps {

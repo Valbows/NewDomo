@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import withAuth from '@/components/withAuth';
-import DashboardLayout from '@/components/DashboardLayout';
-import DemoList from '@/components/DemoList';
+import { withAuth } from '@/components/features/auth';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import { DemoList } from '@/components/features/demos';
 import Link from 'next/link';
-import { useDemosRealtime } from '@/hooks/useDemosRealtime';
-import DashboardSummary from '@/components/DashboardSummary';
+import { useDemosRealtime } from '@/hooks';
+import { DashboardSummary } from '@/components/features/dashboard';
 
 const DashboardPage = () => {
   const { demos, loading, error, refresh } = useDemosRealtime();

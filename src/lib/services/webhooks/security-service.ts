@@ -4,7 +4,7 @@
  */
 
 import { IWebhookSecurityService, WebhookSecurityConfig } from './types';
-import { verifyHmacSha256Signature } from '../../security/webhooks';
+import { verifyHmacSha256Signature, extractSignature } from '@/utils/security/webhooks';
 
 export class WebhookSecurityService implements IWebhookSecurityService {
   /**
@@ -48,28 +48,11 @@ export class WebhookSecurityService implements IWebhookSecurityService {
 
   /**
    * Extract signature from various header formats
+   * @deprecated Use extractSignature from utils/security/webhooks instead
    */
   extractSignature(header: string | null): string | null {
     if (!header) return null;
-    
-    const trimmed = header.trim();
-
-    // Handle comma/space separated key=value pairs (e.g., Stripe style)
-    if (trimmed.includes(',')) {
-      const parts = trimmed.split(',').map((p) => p.trim());
-      for (const part of parts) {
-        const [k, v] = part.split('=');
-        if (!k || !v) continue;
-        if (k.toLowerCase() === 'v1' || k.toLowerCase() === 'signature') return v;
-        if (k.toLowerCase() === 'sha256') return v;
-      }
-    }
-
-    // Handle prefix like sha256=<sig>
-    const shaIdx = trimmed.toLowerCase().indexOf('sha256=');
-    if (shaIdx === 0) return trimmed.slice('sha256='.length);
-
-    return trimmed;
+    return extractSignature(header);
   }
 
   /**

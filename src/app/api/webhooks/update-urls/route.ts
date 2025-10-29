@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateWebhookUrlsForAllObjectives, getWebhookUrlStatus } from '@/lib/tavus/webhook-url-manager';
+import { updateWebhookUrlsForAllObjectives, getWebhookUrlStatus } from '@/lib/tavus';
 
 /**
  * API route to update webhook URLs when ngrok restarts
