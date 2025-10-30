@@ -5,7 +5,7 @@
  * Run this after updating your persona creation code to fix existing personas
  */
 
-import { createClient } from '@/utils/supabase';
+import { createClient } from '@/lib/utils/supabase';
 import { ensureAllPersonasHaveRaven, summarizePerceptionStatus } from '@/lib/tavus';
 
 async function ensureAllRaven() {

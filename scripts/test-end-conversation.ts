@@ -30,8 +30,8 @@ async function testEndConversationAPI() {
     });
 
     // Mock the Supabase client to return no user (unauthenticated)
-    const originalCreateClient = require('../src/utils/supabase/server').createClient;
-    require('../src/utils/supabase/server').createClient = jest.fn(() => ({
+    const originalCreateClient = require('../src/lib/utils/supabase/client').createClient;
+    require('../src/lib/utils/supabase/client').createClient = jest.fn(() => ({
       auth: {
         getUser: jest.fn(() => ({
           data: { user: null }
@@ -54,7 +54,7 @@ async function testEndConversationAPI() {
     }
     
     // Restore original function
-    require('../src/utils/supabase/server').createClient = originalCreateClient;
+    require('../src/lib/utils/supabase/client').createClient = originalCreateClient;
     
     console.log('\n🎉 End-conversation API endpoint tests completed successfully!');
     

@@ -4,7 +4,7 @@
  * Handles video transcription, processing, and media operations.
  */
 
-import { createClient } from '@/utils/supabase';
+import { createClient } from '@/lib/utils/supabase';
 import { ServiceResult, ServiceErrorCode } from '../types';
 import { logError } from '@/lib/errors';
 import OpenAI from 'openai';
