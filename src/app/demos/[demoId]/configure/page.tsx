@@ -371,7 +371,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     }
     setUiState(UIState.LOADING);
     try {
-      const response = await fetch('/api/create-agent', {
+      const response = await fetch('/api/demos/agents/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

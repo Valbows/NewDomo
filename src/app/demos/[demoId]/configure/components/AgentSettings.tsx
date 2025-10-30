@@ -62,7 +62,7 @@ export const AgentSettings = ({
     setAgentCreationResult(null);
 
     try {
-      const response = await fetch('/api/create-enhanced-agent', {
+      const response = await fetch('/api/demos/agents/create-enhanced', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

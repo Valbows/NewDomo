@@ -8,11 +8,12 @@
 - All tests consolidated into unified `__tests__/` structure
 - Jest configuration set up for new structure with proper test scripts
 - Service layer structure created (`src/lib/services/` with auth, demos, tavus, webhooks)
-- Complete auth service layer implemented (auth-service.ts, user-service.ts, session-service.ts)
-- Agent service implementation completed with business logic extraction (828 lines)
-- Demo service implementation completed (438 lines)
-- Large files identified: 10 files over 300 lines (largest: Reporting.tsx at 1347 lines)
-- Current API structure analyzed: 40+ flat routes need organization
+- Complete service layer implemented across all domains (auth, demos, tavus, webhooks)
+- API routes partially organized (admin, auth, demos, tavus, webhooks directories exist)
+- Component organization completed (ui/, features/, layout/ structure)
+- Utility consolidation completed with backward compatibility
+- Backward compatibility routes implemented for major endpoints
+- Large files identified: 19 files over 300 lines (largest: Reporting.tsx at 1347 lines)
 
 ## Implementation Tasks (Priority Order)
 
@@ -121,162 +122,193 @@
 
 ### Phase 3: API Route Organization
 
-**Goal: Organize 40+ flat API routes into domain-based structure**
+**Goal: Complete organization of remaining flat API routes into domain-based structure**
 
-- [x] #### Task 3.1: Plan API route restructuring
-- [x] 3.1.1 Map current 40+ flat API routes to new domain-based structure
-- [x] 3.1.2 Identify routes that need URL compatibility layers
-- [x] 3.1.3 Create migration plan for existing endpoints
-- [x] 3.1.4 Document new API route organization structure
-- [x] 3.1.5 Plan backward compatibility strategy
-- _Requirements: 1.1, 1.3_
-
-- [x] #### Task 3.2: Reorganize authentication API routes
-- [x] 3.2.1 Move setup-test-user to `src/app/api/auth/setup-test-user/`
-- [x] 3.2.2 Move check-current-persona to appropriate domain structure
-- [x] 3.2.3 Create auth-related route groupings
-- [x] 3.2.4 Update route handlers to use extracted auth services
-- [x] 3.2.5 Ensure backward compatibility for existing URLs
+- [x] #### Task 3.1: Complete remaining API route organization
+- [x] 3.1.1 Move remaining flat routes to appropriate domain directories:
+  - ✅ Moved `get-persona-info` to `src/app/api/tavus/personas/info/` (already existed)
+  - ✅ Moved `monitor-conversation` to `src/app/api/tavus/conversations/monitor/`
+  - ✅ Moved `start-conversation` to `src/app/api/tavus/conversations/start/` (already existed)
+  - ✅ Moved `end-conversation` to `src/app/api/tavus/conversations/end/` (already existed)
+  - ✅ Moved `sync-tavus-conversations` to `src/app/api/tavus/conversations/sync/` (already existed)
+  - ✅ Moved `ensure-raven-perception` to `src/app/api/tavus/perception/ensure-raven/` (already existed)
+  - ✅ Moved `fix-raven-config` to `src/app/api/tavus/perception/fix-config/`
+- [x] 3.1.2 Move data collection routes to appropriate structure:
+  - ✅ Moved `product-interest-data` to `src/app/api/webhooks/data/product-interest/`
+  - ✅ Moved `qualification-data` to `src/app/api/webhooks/data/qualification/`
+  - ✅ Moved `video-showcase-data` to `src/app/api/webhooks/data/video-showcase/`
+- [x] 3.1.3 Move utility routes to admin structure:
+  - ✅ Moved `seed-test-videos` to `src/app/api/admin/test/seed-videos/`
+  - ✅ Moved `e2e-video` to `src/app/api/admin/test/e2e-video/`
+  - ✅ Moved `transcribe` to `src/app/api/admin/utilities/transcribe/`
 - _Requirements: 1.1, 1.2_
 
-- [x] #### Task 3.3: Reorganize demo management API routes
-- [x] 3.3.1 Move create-agent to `src/app/api/demos/agents/create/`
-- [x] 3.3.2 Move create-enhanced-agent to `src/app/api/demos/agents/create-enhanced/`
-- [x] 3.3.3 Move create-test-demo to `src/app/api/demos/create-test/`
-- [x] 3.3.4 Organize demo configuration routes under `src/app/api/demos/[demoId]/`
-- [x] 3.3.5 Update route handlers to use extracted demo services
-- [x] 3.3.6 Ensure backward compatibility for existing URLs
-- _Requirements: 1.1, 1.2_
+- [x] #### Task 3.2: Remove backward compatibility redirect routes
+- [x] 3.2.1 Delete all flat route redirect files (currently 20+ redirect routes exist):
+  - ✅ Removed `src/app/api/check-current-persona/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/check-knowledge-chunks/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/check-ngrok-url/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/check-persona-config/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/create-agent/route.ts` (redirects to demos)
+  - ✅ Removed `src/app/api/create-enhanced-agent/route.ts` (redirects to demos)
+  - ✅ Removed `src/app/api/create-test-demo/route.ts` (redirects to demos)
+  - ✅ Removed `src/app/api/debug-conversation-data/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/debug-conversation-id/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/debug-tavus-conversation/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/find-video-id/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/set-webhook-url/route.ts` (redirects to webhooks)
+  - ✅ Removed `src/app/api/setup-test-user/route.ts` (redirects to auth)
+  - ✅ Removed `src/app/api/test-*` redirect routes (8 routes)
+  - ✅ Removed `src/app/api/track-cta-click/route.ts` (redirects to webhooks)
+  - ✅ Removed `src/app/api/update-webhook-urls/route.ts` (redirects to webhooks)
+  - ✅ Removed `src/app/api/verify-agent-objectives/route.ts` (redirects to admin)
+  - ✅ Removed `src/app/api/webhook-url/route.ts` (redirects to webhooks)
+- [x] 3.2.2 Clean up empty directories left behind after route removal
+- [x] 3.2.3 Update any internal references to use new routes directly
+- _Requirements: 1.2, 1.3_
 
-- [x] #### Task 3.4: Reorganize Tavus integration API routes
-- [x] 3.4.1 Move tavus routes to `src/app/api/tavus/`
-- [x] 3.4.2 Move tavus-webhook to `src/app/api/tavus/webhook/`
-- [x] 3.4.3 Move start-conversation to `src/app/api/tavus/conversations/start/`
-- [x] 3.4.4 Move end-conversation to `src/app/api/tavus/conversations/end/`
-- [x] 3.4.5 Organize persona and video routes under Tavus structure
-- [x] 3.4.6 Update route handlers to use extracted Tavus services
-- [x] 3.4.7 Ensure backward compatibility for existing URLs
-- _Requirements: 1.1, 1.2_
-
-- [x] #### Task 3.5: Reorganize webhook API routes
-- [x] 3.5.1 Move webhook routes to `src/app/api/webhooks/`
-- [x] 3.5.2 Move track-cta-click to `src/app/api/webhooks/cta-click/`
-- [x] 3.5.3 Move webhook-url to `src/app/api/webhooks/url/`
-- [x] 3.5.4 Organize webhook handlers by event type
-- [x] 3.5.5 Update route handlers to use extracted webhook services
-- [x] 3.5.6 Ensure backward compatibility for existing URLs
-- _Requirements: 1.1, 1.2_
-
-- [x] #### Task 3.6: Reorganize admin/debug API routes
-- [x] 3.6.1 Move debug-\* routes to `src/app/api/admin/debug/`
-- [x] 3.6.2 Move test-\* routes to `src/app/api/admin/test/`
-- [x] 3.6.3 Move check-\* routes to `src/app/api/admin/check/`
-- [x] 3.6.4 Move verify-\* routes to `src/app/api/admin/verify/`
-- [x] 3.6.5 Group by functionality (debug, testing, verification)
-- [x] 3.6.6 Update route handlers to use extracted services
-- [x] 3.6.7 Ensure proper admin authentication and authorization
-- _Requirements: 1.1, 1.2_
-
-- [x] #### Task 3.7: Validate API route organization
-- [ ]\* 3.7.1 Test all API endpoints to ensure they still work
-- [x] 3.7.2 Verify URL compatibility is maintained
-- [x] 3.7.3 Test backward compatibility layers
-- [x] 3.7.4 Validate route organization structure
-- [x] 3.7.5 Ensure proper error handling and responses
+- [x] #### Task 3.3: Validate complete API route organization
+- [x] 3.3.1 Test all organized API endpoints to ensure they work correctly
+- [x] 3.3.2 Verify old redirect routes are completely removed and no longer accessible
+- [x] 3.3.3 Validate route organization follows domain structure (auth/, demos/, tavus/, webhooks/, admin/)
+- [x] 3.3.4 Ensure proper error handling and responses in organized routes
+- [x] 3.3.5 Run integration tests to verify API functionality
 - _Requirements: 1.3, 1.5_
 
-### Phase 4: Utility and Component Organization
+### Phase 4: Large File Refactoring
+
+**Goal: Break down 19 files over 300 lines into focused modules**
+
+- [ ] #### Task 4.1: Identify and prioritize large files for refactoring
+- [ ] 4.1.1 Analyze current large files (19 files over 300 lines identified):
+  - Reporting.tsx (1347 lines) - High priority, complex UI component
+  - experience/page.tsx (880 lines) - High priority, main user interface
+  - agent-service.ts (829 lines) - High priority, core business logic
+  - configure/page.tsx (624 lines) - Medium priority, configuration UI
+  - demo-service.ts (536 lines) - Medium priority, business logic
+  - analytics-service.ts (458 lines) - Medium priority, data processing
+  - toolParser.ts (453 lines) - Medium priority, utility logic
+  - media-service.ts (445 lines) - Medium priority, media handling
+  - integration-service.ts (416 lines) - Medium priority, external APIs
+  - CustomObjectivesManager.tsx (404 lines) - Medium priority, feature component
+  - webhook-service.ts (398 lines) - Medium priority, webhook handling
+  - TavusConversation.tsx (394 lines) - Medium priority, conversation UI
+  - conversation-management-service.ts (391 lines) - Low priority, service logic
+  - data-ingestion-service.ts (364 lines) - Low priority, data processing
+  - event-processing-service.ts (358 lines) - Low priority, event handling
+  - conversation/index.tsx (349 lines) - Low priority, component wrapper
+  - tool-call-service.ts (346 lines) - Low priority, tool processing
+  - objectives-service.ts (339 lines) - Low priority, objectives logic
+- [ ] 4.1.2 Create refactoring plan prioritized by impact and complexity
+- _Requirements: 6.1, 6.2_
+
+- [ ] #### Task 4.2: Refactor large component files (Priority 1)
+- [ ] 4.2.1 Break down Reporting.tsx (1347 lines) into smaller, focused components:
+  - Extract chart components (ReportingCharts.tsx)
+  - Extract data table components (ReportingTables.tsx)
+  - Extract filter components (ReportingFilters.tsx)
+  - Extract summary components (ReportingSummary.tsx)
+  - Keep main component under 300 lines
+- [ ] 4.2.2 Refactor experience/page.tsx (880 lines) into focused page components:
+  - Extract conversation interface (ConversationInterface.tsx)
+  - Extract video controls (VideoControls.tsx)
+  - Extract status indicators (StatusIndicators.tsx)
+  - Keep main page component under 300 lines
+- [ ] 4.2.3 Refactor configure/page.tsx (624 lines) into focused page components:
+  - Extract configuration forms (ConfigurationForms.tsx)
+  - Extract settings panels (SettingsPanels.tsx)
+  - Extract preview components (ConfigurationPreview.tsx)
+  - Keep main page component under 300 lines
+- _Requirements: 6.2, 6.3, 6.5_
+
+- [ ] #### Task 4.3: Refactor large service files (Priority 2)
+- [ ] 4.3.1 Split agent-service.ts (829 lines) into focused services:
+  - Extract persona management (persona-management-service.ts)
+  - Extract agent configuration (agent-configuration-service.ts)
+  - Extract agent lifecycle (agent-lifecycle-service.ts)
+  - Keep core agent service under 300 lines
+- [ ] 4.3.2 Split demo-service.ts (536 lines) into focused services:
+  - Extract demo configuration (demo-configuration-service.ts)
+  - Extract demo lifecycle (demo-lifecycle-service.ts)
+  - Keep core demo service under 300 lines
+- [ ] 4.3.3 Split analytics-service.ts (458 lines) into focused modules:
+  - Extract metrics collection (metrics-collection-service.ts)
+  - Extract reporting logic (reporting-service.ts)
+  - Keep core analytics service under 300 lines
+- _Requirements: 6.2, 6.3, 6.5_
+
+- [ ] #### Task 4.4: Refactor large utility and integration files (Priority 3)
+- [ ] 4.4.1 Split toolParser.ts (453 lines) by functional domain:
+  - Extract parsing logic (tool-parsing-utils.ts)
+  - Extract validation logic (tool-validation-utils.ts)
+  - Extract transformation logic (tool-transformation-utils.ts)
+  - Keep main parser under 300 lines
+- [ ] 4.4.2 Split media-service.ts (445 lines) into focused modules:
+  - Extract video processing (video-processing-service.ts)
+  - Extract media validation (media-validation-service.ts)
+  - Keep core media service under 300 lines
+- [ ] 4.4.3 Split integration-service.ts (416 lines) into focused modules:
+  - Extract API integration (api-integration-service.ts)
+  - Extract data synchronization (sync-service.ts)
+  - Keep core integration service under 300 lines
+- _Requirements: 6.2, 6.3, 6.5_
+
+- [ ] #### Task 4.5: Validate large file refactoring
+- [ ]\* 4.5.1 Ensure all refactored files are within 300-600 line target
+- [ ] 4.5.2 Run tests to verify functionality preservation
+- [ ] 4.5.3 Validate component rendering and behavior
+- [ ] 4.5.4 Test service functionality and interfaces
+- [ ] 4.5.5 Ensure no performance regressions
+- [ ] 4.5.6 Update imports across codebase for refactored modules
+- _Requirements: 6.4, 6.5_
+
+### Phase 5: Utility and Component Organization ✅ COMPLETE
 
 **Goal: Consolidate utilities and organize components by domain**
 
-- [x] #### Task 4.1: Consolidate utility modules
-- [x] 4.1.1 Merge duplicate supabase utilities (`src/lib/supabase.ts` vs `src/utils/supabase/server.ts`)
-- [x] 4.1.2 Consolidate security utilities under `src/lib/utils/security/`
-- [x] 4.1.3 Organize validation utilities under `src/lib/utils/validation/`
-- [x] 4.1.4 Organize formatting utilities under `src/lib/utils/formatting/`
-- [x] 4.1.5 Create utility domain groupings by purpose
-- [x] 4.1.6 Update all utility imports across the codebase
+- [x] #### Task 5.1: Consolidate utility modules
+- [x] 5.1.1 Merge duplicate supabase utilities (`src/lib/supabase.ts` vs `src/utils/supabase/server.ts`)
+- [x] 5.1.2 Consolidate security utilities under `src/lib/utils/security/`
+- [x] 5.1.3 Organize validation utilities under `src/lib/utils/validation/`
+- [x] 5.1.4 Organize formatting utilities under `src/lib/utils/formatting/`
+- [x] 5.1.5 Create utility domain groupings by purpose
+- [x] 5.1.6 Update all utility imports across the codebase
 - _Requirements: 4.1, 4.2, 4.4_
 
-- [x] #### Task 4.2: Reorganize React components
-- [x] 4.2.1 Create `src/components/ui/` for shared UI components
-- [x] 4.2.2 Create `src/components/features/` for feature-specific components
-- [x] 4.2.3 Create `src/components/layout/` for layout components
-- [x] 4.2.4 Categorize existing 20+ components by type and domain
-- [x] 4.2.5 Move CVI components to features/cvi structure
-- [x] 4.2.6 Move auth components to features/auth structure
-- [x] 4.2.7 Update component imports across the application
+- [x] #### Task 5.2: Reorganize React components
+- [x] 5.2.1 Create `src/components/ui/` for shared UI components
+- [x] 5.2.2 Create `src/components/features/` for feature-specific components
+- [x] 5.2.3 Create `src/components/layout/` for layout components
+- [x] 5.2.4 Categorize existing 20+ components by type and domain
+- [x] 5.2.5 Move CVI components to features/cvi structure
+- [x] 5.2.6 Move auth components to features/auth structure
+- [x] 5.2.7 Update component imports across the application
 - _Requirements: 5.1, 5.2, 5.5_
 
-- [x] #### Task 4.3: Create component co-location structure
-- [x] 4.3.1 Group related component files (styles, tests, types) together
-- [x] 4.3.2 Organize CVI components with proper co-location
-- [x] 4.3.3 Co-locate component assets and utilities
-- [x] 4.3.4 Update component organization to follow atomic design principles
-- [x] 4.3.5 Create component-specific type definitions
+- [x] #### Task 5.3: Create component co-location structure
+- [x] 5.3.1 Group related component files (styles, tests, types) together
+- [x] 5.3.2 Organize CVI components with proper co-location
+- [x] 5.3.3 Co-locate component assets and utilities
+- [x] 5.3.4 Update component organization to follow atomic design principles
+- [x] 5.3.5 Create component-specific type definitions
 - _Requirements: 5.3, 5.4_
 
-- [x] #### Task 4.4: Update import paths and create barrel exports
-- [x] 4.4.1 Add TypeScript path mapping for clean imports
-- [x] 4.4.2 Create index.ts files for barrel exports in components
-- [x] 4.4.3 Create index.ts files for barrel exports in utilities
-- [x] 4.4.4 Create index.ts files for barrel exports in services
-- [x] 4.4.5 Update all imports to use new path structure
-- [x] 4.4.6 Validate all import paths resolve correctly
+- [x] #### Task 5.4: Update import paths and create barrel exports
+- [x] 5.4.1 Add TypeScript path mapping for clean imports
+- [x] 5.4.2 Create index.ts files for barrel exports in components
+- [x] 5.4.3 Create index.ts files for barrel exports in utilities
+- [x] 5.4.4 Create index.ts files for barrel exports in services
+- [x] 5.4.5 Update all imports to use new path structure
+- [x] 5.4.6 Validate all import paths resolve correctly
 - _Requirements: 4.4, 5.5_
 
-- [x] #### Task 4.5: Validate component and utility organization
-- [x] 4.5.1 Build application to ensure all imports resolve
-- [x] 4.5.2 Run component tests to verify functionality
-- [x] 4.5.3 Test component rendering and behavior
-- [x] 4.5.4 Validate utility function imports and usage
-- [x] 4.5.5 Ensure no broken dependencies or circular imports
+- [x] #### Task 5.5: Validate component and utility organization
+- [x] 5.5.1 Build application to ensure all imports resolve
+- [x] 5.5.2 Run component tests to verify functionality
+- [x] 5.5.3 Test component rendering and behavior
+- [x] 5.5.4 Validate utility function imports and usage
+- [x] 5.5.5 Ensure no broken dependencies or circular imports
 - _Requirements: 4.4, 5.5_
-
-### Phase 5: Large File Refactoring
-
-**Goal: Break down 9 files over 300 lines into focused modules**
-
-- [x] #### Task 5.1: Identify large files for refactoring
-- [x] Files identified: Reporting.tsx (1347 lines), experience/page.tsx (880 lines), agent-service.ts (828 lines), tavus-webhook/handler.ts (693 lines), configure/page.tsx (622 lines), toolParser.ts (453 lines), demo-service.ts (438 lines), objectives-templates.ts (416 lines), CustomObjectivesManager.tsx (404 lines), TavusConversation.tsx (394 lines)
-- [x] Prioritized by complexity and change frequency
-- _Requirements: 6.1, 6.2_
-
-- [ ] #### Task 5.2: Refactor large API handlers and business logic files
-- [ ] 5.2.1 Split tavus-webhook/handler.ts (693 lines) into focused modules
-- [ ] 5.2.2 Break down objectives-templates.ts (416 lines) into smaller modules
-- [ ] 5.2.3 Refactor agent-service.ts (828 lines) into smaller focused services
-- [ ] 5.2.4 Refactor demo-service.ts (438 lines) into smaller focused services
-- [ ] 5.2.5 Extract common patterns and utilities
-- [ ] 5.2.6 Maintain existing functionality and interfaces
-- [ ] 5.2.7 Update imports and dependencies
-- _Requirements: 6.2, 6.3, 6.5_
-
-- [ ] #### Task 5.3: Refactor large component files
-- [ ] 5.3.1 Break down Reporting.tsx (1347 lines) into smaller, focused components
-- [ ] 5.3.2 Refactor experience/page.tsx (880 lines) into focused page components
-- [ ] 5.3.3 Refactor configure/page.tsx (622 lines) into focused page components
-- [ ] 5.3.4 Split CustomObjectivesManager.tsx (404 lines) into focused components
-- [ ] 5.3.5 Refactor TavusConversation.tsx (394 lines) into smaller components
-- [ ] 5.3.6 Extract custom hooks and utility functions
-- [ ] 5.3.7 Maintain component functionality and props interfaces
-- _Requirements: 6.2, 6.3, 6.5_
-
-- [ ] #### Task 5.4: Refactor large utility and service files
-- [ ] 5.4.1 Split toolParser.ts (453 lines) by functional domain
-- [ ] 5.4.2 Create focused service modules with clear responsibilities
-- [ ] 5.4.3 Extract common utility patterns
-- [ ] 5.4.4 Update imports across codebase for refactored modules
-- [ ] 5.4.5 Ensure proper error handling and logging
-- _Requirements: 6.2, 6.3, 6.5_
-
-- [ ] #### Task 5.5: Validate large file refactoring
-- [ ]\* 5.5.1 Ensure all refactored files are within 300-600 line target
-- [ ] 5.5.2 Run tests to verify functionality preservation
-- [ ] 5.5.3 Validate component rendering and behavior
-- [ ] 5.5.4 Test service functionality and interfaces
-- [ ] 5.5.5 Ensure no performance regressions
-- _Requirements: 6.4, 6.5_
 
 ### Phase 6: Comprehensive Code Documentation
 
@@ -370,52 +402,43 @@
 
 **Goal: Final cleanup and optimization for production readiness**
 
-- [ ] #### Task 8.1: Remove backward compatibility redirect routes
-- [ ] 8.1.1 Verify all external integrations have migrated to new URLs
-- [ ] 8.1.2 Update all internal references to use new API structure
-- [ ] 8.1.3 Remove old redirect stub files (track-cta-click, webhook-url, etc.)
-- [ ] 8.1.4 Clean up old webhook event handler redirects
-- [ ] 8.1.5 Update documentation to reflect final URL structure
-- [ ] 8.1.6 Add deprecation notices before removal (if needed)
-- _Requirements: 1.2, 1.3_
-
-- [ ] #### Task 8.2: Remove unused files and directories
-- [ ] 8.2.1 Clean up empty directories from file moves
-- [ ] 8.2.2 Remove any duplicate or unused files
-- [ ] 8.2.3 Clean up old configuration files
-- [ ] 8.2.4 Remove temporary or backup files
+- [ ] #### Task 8.1: Remove unused files and directories
+- [ ] 8.1.1 Clean up empty directories from file moves
+- [ ] 8.1.2 Remove any duplicate or unused files
+- [ ] 8.1.3 Clean up old configuration files
+- [ ] 8.1.4 Remove temporary or backup files
 - _Requirements: 4.2_
 
-- [ ] #### Task 8.3: Optimize import statements
-- [ ] 8.3.1 Remove unused imports across the codebase
-- [ ] 8.3.2 Optimize import grouping and ordering
-- [ ] 8.3.3 Consolidate related imports
-- [ ] 8.3.4 Use barrel exports where appropriate
+- [ ] #### Task 8.2: Optimize import statements
+- [ ] 8.2.1 Remove unused imports across the codebase
+- [ ] 8.2.2 Optimize import grouping and ordering
+- [ ] 8.2.3 Consolidate related imports
+- [ ] 8.2.4 Use barrel exports where appropriate
 - _Requirements: 4.4_
 
-- [ ] #### Task 8.4: Final code quality review
-- [ ] 8.4.1 Run linting and formatting across entire codebase
-- [ ] 8.4.2 Ensure consistent code style and conventions
-- [ ] 8.4.3 Review code for best practices compliance
-- [ ] 8.4.4 Validate TypeScript configurations
+- [ ] #### Task 8.3: Final code quality review
+- [ ] 8.3.1 Run linting and formatting across entire codebase
+- [ ] 8.3.2 Ensure consistent code style and conventions
+- [ ] 8.3.3 Review code for best practices compliance
+- [ ] 8.3.4 Validate TypeScript configurations
 - _Requirements: 7.5_
 
-- [ ] #### Task 8.5: Final validation and testing
-- [ ] 8.5.1 Run complete test suite
-- [ ] 8.5.2 Build and deploy to staging for integration testing
-- [ ] 8.5.3 Verify all functionality works end-to-end
-- [ ] 8.5.4 Performance testing and optimization
-- [ ] 8.5.5 Security review and validation
+- [ ] #### Task 8.4: Final validation and testing
+- [ ] 8.4.1 Run complete test suite
+- [ ] 8.4.2 Build and deploy to staging for integration testing
+- [ ] 8.4.3 Verify all functionality works end-to-end
+- [ ] 8.4.4 Performance testing and optimization
+- [ ] 8.4.5 Security review and validation
 - _Requirements: 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5_
 
 ## Success Criteria
 
 By end of implementation:
 
-- [ ] All tests consolidated into unified `__tests__/` structure
-- [ ] Business logic extracted into service layer
-- [ ] API routes organized by domain (auth, demos, tavus, webhooks, admin)
-- [ ] Components organized by type and domain
+- [x] All tests consolidated into unified `__tests__/` structure
+- [x] Business logic extracted into service layer
+- [ ] API routes fully organized by domain with backward compatibility routes removed
+- [x] Components organized by type and domain
 - [ ] All files under 600 lines with focused responsibilities
 - [ ] Comprehensive code and project documentation
 - [ ] Clean, optimized codebase ready for production

@@ -40,7 +40,7 @@ async function handlePOST(req: NextRequest) {
     const raw = JSON.stringify(testEvent);
     const sigHex = crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('hex');
 
-    const webhookResponse = await fetch('http://localhost:3000/api/tavus-webhook', {
+    const webhookResponse = await fetch('http://localhost:3000/api/tavus/webhook', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

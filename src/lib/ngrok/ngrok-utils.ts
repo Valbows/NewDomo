@@ -64,7 +64,7 @@ export async function autoUpdateWebhookUrls(): Promise<boolean> {
     
     try {
       const { updateWebhookUrlsForAllObjectives } = await import('../tavus/webhook-url-manager');
-      await updateWebhookUrlsForAllObjectives(`${currentUrl}/api/tavus-webhook?t=${process.env.TAVUS_WEBHOOK_TOKEN}`);
+      await updateWebhookUrlsForAllObjectives(`${currentUrl}/api/tavus/webhook?t=${process.env.TAVUS_WEBHOOK_TOKEN}`);
       
       console.log('✅ Webhook URLs updated successfully');
       return true;

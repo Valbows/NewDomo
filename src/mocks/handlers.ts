@@ -26,7 +26,7 @@ export const handlers = [
     return HttpResponse.json({ id: 'mock_video_123', status: 'created' }, { status: 201 });
   }),
   // Mock the create-agent API endpoint
-  http.post(`${MOCK_API_URL}/api/create-agent`, () => {
+  http.post(`${MOCK_API_URL}/api/demos/agents/create`, () => {
     return HttpResponse.json({
       message: 'Agent created successfully.',
       agentId: 'agent_mock_12345',
