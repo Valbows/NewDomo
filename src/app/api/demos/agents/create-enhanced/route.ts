@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase';
+import { createClient } from '@/lib/utils/supabase';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { agentService } from '@/lib/services/demos';

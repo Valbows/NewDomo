@@ -17,9 +17,9 @@ import {
   isToolCallEvent,
   isObjectiveCompletionEvent,
   type WebhookValidationResult
-} from '@/utils/validation/webhook';
+} from '@/lib/utils/validation/webhook';
 
-export { type WebhookValidationResult } from '@/utils/validation/webhook';
+export { type WebhookValidationResult } from '@/lib/utils/validation/webhook';
 
 export class WebhookValidationService {
   /**

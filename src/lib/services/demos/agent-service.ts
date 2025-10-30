@@ -779,7 +779,7 @@ export class AgentService implements IAgentService {
     activeCustomObjective: any
   ): Promise<ServiceResult<void>> {
     try {
-      const { createClient } = await import("@/utils/supabase");
+      const { createClient } = await import("@/lib/utils/supabase");
       const supabase = createClient();
 
       const { error: updateError } = await supabase

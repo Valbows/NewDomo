@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase';
+import { createClient } from '@/lib/utils/supabase';
 import { adminAuth } from '../../middleware';
 
 async function handleGET(req: NextRequest) {

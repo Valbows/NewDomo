@@ -4,7 +4,7 @@
  */
 
 import { IWebhookSecurityService, WebhookSecurityConfig } from './types';
-import { verifyHmacSha256Signature, extractSignature } from '@/utils/security/webhooks';
+import { verifyHmacSha256Signature, extractSignature } from '@/lib/utils/security/webhooks';
 
 export class WebhookSecurityService implements IWebhookSecurityService {
   /**

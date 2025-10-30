@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase';
+import { createClient } from '@/lib/utils/supabase';
 import * as Sentry from '@sentry/nextjs';
 import { getErrorMessage, logError } from '@/lib/errors';
 
