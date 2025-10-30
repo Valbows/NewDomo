@@ -91,7 +91,7 @@ async function handle(req: NextRequest) {
     const sig = crypto.createHmac('sha256', secret).update(payload, 'utf8').digest('base64');
     const baseUrl =
       baseUrlOverride || url.origin || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const target = `${baseUrl.replace(/\/$/, '')}/api/tavus-webhook`;
+    const target = `${baseUrl.replace(/\/$/, '')}/api/tavus/webhook`;
 
     const res = await fetch(target, {
       method: 'POST',

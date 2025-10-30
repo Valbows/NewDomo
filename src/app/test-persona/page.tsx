@@ -23,7 +23,7 @@ export default function TestPersonaPage() {
   const testObjectives = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/verify-agent-objectives?demoId=${demoId}`);
+      const response = await fetch(`/api/admin/verify/agent-objectives?demoId=${demoId}`);
       const data = await response.json();
       setResults(prev => ({ ...prev, objectives: data }));
     } catch (error) {
@@ -35,7 +35,7 @@ export default function TestPersonaPage() {
   const testConfig = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/check-persona-config?demoId=${demoId}`);
+      const response = await fetch(`/api/tavus/personas/config?demoId=${demoId}`);
       const data = await response.json();
       setResults(prev => ({ ...prev, config: data }));
     } catch (error) {

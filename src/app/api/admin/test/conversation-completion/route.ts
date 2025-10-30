@@ -61,7 +61,7 @@ async function handleGET(req: NextRequest) {
     };
 
     // Send this event to your webhook handler
-    const webhookUrl = `${url.origin}/api/tavus-webhook?t=${process.env.TAVUS_WEBHOOK_TOKEN || 'your_webhook_token'}`;
+    const webhookUrl = `${url.origin}/api/tavus/webhook?t=${process.env.TAVUS_WEBHOOK_TOKEN || 'your_webhook_token'}`;
     
     console.log(`🧪 Sending test completion event to webhook: ${webhookUrl}`);
     console.log(`📊 Mock event data:`, JSON.stringify(mockEvent, null, 2));

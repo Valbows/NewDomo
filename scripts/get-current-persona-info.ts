@@ -14,7 +14,7 @@ async function getCurrentPersonaInfo() {
   try {
     // Step 1: Get demo configuration
     console.log('📊 Step 1: Getting Demo Configuration...');
-    const demoResponse = await fetch(`http://localhost:3000/api/debug-conversation-data?demoId=${DEMO_ID}`);
+    const demoResponse = await fetch(`http://localhost:3000/api/admin/debug/conversation-data?demoId=${DEMO_ID}`);
     
     if (!demoResponse.ok) {
       console.error('❌ Failed to get demo data:', demoResponse.status);
@@ -82,7 +82,7 @@ async function getCurrentPersonaInfo() {
 
         // Step 3: Get custom objectives info
         console.log('\n🎯 Step 3: Getting Custom Objectives Info...');
-        const objResponse = await fetch(`http://localhost:3000/api/test-custom-objectives-backend`);
+        const objResponse = await fetch(`http://localhost:3000/api/admin/test/custom-objectives-backend`);
         
         if (objResponse.ok) {
           const objData = await objResponse.json();
@@ -120,7 +120,7 @@ async function getCurrentPersonaInfo() {
         console.log(`Objectives: ${persona.objectives_id || 'None'}`);
         console.log(`System Prompt: ${persona.system_prompt ? `${persona.system_prompt.length} chars` : 'None'}`);
         
-        const objData = await (await fetch(`http://localhost:3000/api/test-custom-objectives-backend`)).json();
+        const objData = await (await fetch(`http://localhost:3000/api/admin/test/custom-objectives-backend`)).json();
         if (objData.success && objData.activeObjective) {
           console.log(`Custom Objectives: ${objData.activeObjective.name} (${objData.activeObjective.steps} steps)`);
         }

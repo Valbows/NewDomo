@@ -1,5 +1,5 @@
 // Analytics sanitization utilities for Tavus webhook ingestion
-// Extracted from /src/app/api/tavus-webhook/route.ts for reusability and unit testing.
+// Extracted from /src/app/api/tavus/webhook/route.ts for reusability and unit testing.
 
 export function sanitizeAnalyticsPayload(input: any): any {
   const PRUNE_KEYS = new Set([

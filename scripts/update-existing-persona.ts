@@ -15,7 +15,7 @@ const GUARDRAILS_ID = 'g178c7c5e032b';
 async function getActiveCustomObjectives() {
   try {
     console.log('🎯 Fetching active custom objectives...');
-    const response = await fetch(`http://localhost:3000/api/test-custom-objectives-backend`);
+    const response = await fetch(`http://localhost:3000/api/admin/test/custom-objectives-backend`);
     
     if (!response.ok) {
       console.log('⚠️  No custom objectives API available');

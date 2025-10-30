@@ -72,7 +72,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
       if (data?.event_type === 'conversation.objective.completed') {
         console.log('🎯 Objective completion detected, forwarding to webhook...');
         try {
-          fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
+          fetch('/api/tavus/webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

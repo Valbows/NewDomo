@@ -328,7 +328,7 @@ export class ObjectivesService {
   private getDefaultWebhookUrl(): string {
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const urlToken = (process.env.TAVUS_WEBHOOK_TOKEN || '').trim();
-    return `${baseUrl}/api/tavus-webhook${urlToken ? `?t=${encodeURIComponent(urlToken)}` : ''}`;
+    return `${baseUrl}/api/tavus/webhook${urlToken ? `?t=${encodeURIComponent(urlToken)}` : ''}`;
   }
 }
 

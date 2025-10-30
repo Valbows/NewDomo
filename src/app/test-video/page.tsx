@@ -15,7 +15,7 @@ export default function TestVideoPage() {
     try {
       addTestResult(`Testing video fetch for: ${videoTitle}`);
       
-      const response = await fetch('/api/test-video-playback', {
+      const response = await fetch('/api/admin/test/video-playback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

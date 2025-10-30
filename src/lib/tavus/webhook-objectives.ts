@@ -27,9 +27,9 @@ export function getWebhookUrl(): string {
   
   const webhookToken = process.env.TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025';
   
-  console.log(`🔗 Generated webhook URL: ${baseUrl}/api/tavus-webhook?t=${webhookToken}`);
+  console.log(`🔗 Generated webhook URL: ${baseUrl}/api/tavus/webhook?t=${webhookToken}`);
   
-  return `${baseUrl}/api/tavus-webhook?t=${webhookToken}`;
+  return `${baseUrl}/api/tavus/webhook?t=${webhookToken}`;
 }
 
 /**

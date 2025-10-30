@@ -14,7 +14,7 @@ async function recreateAgentWithCustomObjectives() {
   try {
     // Step 1: Check current custom objectives
     console.log('🎯 Step 1: Checking Custom Objectives...');
-    const objResponse = await fetch(`http://localhost:3000/api/test-custom-objectives-backend`);
+    const objResponse = await fetch(`http://localhost:3000/api/admin/test/custom-objectives-backend`);
     
     if (!objResponse.ok) {
       console.log('❌ Cannot access custom objectives API');

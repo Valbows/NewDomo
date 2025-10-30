@@ -51,7 +51,7 @@ async function testCompleteIntegration() {
     // Test 2: Guardrails
     console.log('\n🛡️  Testing Guardrails...');
     try {
-      const response = await fetch(`http://localhost:3000/api/debug-conversation-data?demoId=${DEMO_ID}`);
+      const response = await fetch(`http://localhost:3000/api/admin/debug/conversation-data?demoId=${DEMO_ID}`);
       if (response.ok) {
         console.log('   ✅ Guardrails API accessible');
         console.log(`   🔗 Guardrails ID: ${GUARDRAILS_ID}`);
@@ -112,7 +112,7 @@ async function testCompleteIntegration() {
       console.log('   ✅ Persona configured in environment');
       
       // Check if demo has persona assigned
-      const response = await fetch(`http://localhost:3000/api/debug-conversation-data?demoId=${DEMO_ID}`);
+      const response = await fetch(`http://localhost:3000/api/admin/debug/conversation-data?demoId=${DEMO_ID}`);
       if (response.ok) {
         const data = await response.json();
         const demo = data.demo;

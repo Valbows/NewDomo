@@ -11,7 +11,7 @@ async function checkDemoPersona() {
   try {
     // Check demo configuration
     console.log('📡 Fetching demo data...');
-    const response = await fetch(`http://localhost:3000/api/debug-conversation-data?demoId=${DEMO_ID}`);
+    const response = await fetch(`http://localhost:3000/api/admin/debug/conversation-data?demoId=${DEMO_ID}`);
     
     if (!response.ok) {
       console.error('❌ API Error:', response.status, response.statusText);

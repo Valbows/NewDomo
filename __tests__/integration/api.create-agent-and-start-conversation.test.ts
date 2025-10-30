@@ -91,9 +91,9 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/demos/agents/create/route');
 
-    const req = new Request('http://localhost/api/create-agent', {
+    const req = new Request('http://localhost/api/demos/agents/create', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ demoId, agentName: 'Test Agent' }),
@@ -294,9 +294,9 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/demos/agents/create/route');
 
-    const req = new Request('http://localhost/api/create-agent', {
+    const req = new Request('http://localhost/api/demos/agents/create', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ demoId, agentName: 'Test Agent' }),
@@ -372,9 +372,9 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/demos/agents/create/route');
 
-    const req = new Request('http://localhost/api/create-agent', {
+    const req = new Request('http://localhost/api/demos/agents/create', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ demoId, agentName: 'Test Agent' }),
@@ -450,9 +450,9 @@ describe('Create Agent and Start Conversation APIs', () => {
         throw new Error(`Unhandled fetch URL: ${url}`);
       });
 
-    const { POST: CreateAgentPOST } = await import('../../src/app/api/create-agent/route');
+    const { POST: CreateAgentPOST } = await import('../../src/app/api/demos/agents/create/route');
 
-    const req = new Request('http://localhost/api/create-agent', {
+    const req = new Request('http://localhost/api/demos/agents/create', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ demoId, agentName: 'Test Agent' }),

@@ -165,7 +165,7 @@ export class ConversationService {
       // Build callback URL with webhook token
       const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
       const urlToken = (process.env.TAVUS_WEBHOOK_TOKEN || '').trim();
-      const callbackUrl = `${baseUrl}/api/tavus-webhook${urlToken ? `?t=${encodeURIComponent(urlToken)}` : ''}`;
+      const callbackUrl = `${baseUrl}/api/tavus/webhook${urlToken ? `?t=${encodeURIComponent(urlToken)}` : ''}`;
 
       const config: ConversationConfig = {
         persona_id: personaId,

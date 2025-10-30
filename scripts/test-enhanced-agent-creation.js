@@ -10,7 +10,7 @@ async function testEnhancedAgentCreation() {
   try {
     // Step 1: Check custom objectives status
     console.log('🎯 Step 1: Checking Custom Objectives...');
-    const objResponse = await fetch('/api/test-custom-objectives-backend');
+    const objResponse = await fetch('/api/admin/test/custom-objectives-backend');
     const objData = await objResponse.json();
     
     if (objData.success && objData.activeObjective) {
@@ -23,7 +23,7 @@ async function testEnhancedAgentCreation() {
     
     // Step 2: Create enhanced agent
     console.log('\n🚀 Step 2: Creating Enhanced Agent...');
-    const response = await fetch('/api/create-enhanced-agent', {
+    const response = await fetch('/api/demos/agents/create-enhanced', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
