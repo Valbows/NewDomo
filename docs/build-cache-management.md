@@ -165,14 +165,36 @@ If cleanup causes issues:
 
 ## Git Configuration
 
-The `.next` folder is properly ignored in `.gitignore`:
+Build output folders are properly ignored in `.gitignore`:
 ```gitignore
-# Next.js
+# Next.js build output
 /.next/
 .next/
+
+# SWC compiler cache
+.swc/
+
+# Other build artifacts
+dist/
+build/
+*.tsbuildinfo
 ```
 
-**Never commit `.next` folder to version control** - it's build output and should be regenerated on each deployment.
+**Never commit build output folders to version control** - they're auto-generated and should be regenerated on each deployment.
+
+## SWC Compiler Cache
+
+### What is `.swc/`?
+- **SWC (Speedy Web Compiler)**: Rust-based compiler used by Next.js 12+
+- **Performance**: 20x faster than Babel for TypeScript/JavaScript compilation
+- **Auto-managed**: Next.js downloads and manages SWC plugins automatically
+- **Platform-specific**: Contains native binaries for your operating system
+
+### Management
+- **Size**: Usually small (plugins downloaded on-demand)
+- **Cleaning**: Rarely needed (auto-managed by Next.js)
+- **Location**: `.swc/plugins/v{version}_{platform}/`
+- **Git**: Should be ignored (added to .gitignore)
 
 ## Summary
 

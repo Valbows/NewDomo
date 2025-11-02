@@ -58,6 +58,7 @@ test-*-temp.js
 # Build artifacts
 *.tsbuildinfo
 .next/
+.swc/
 dist/
 build/
 

@@ -76,6 +76,7 @@
 
 #### **Build Output Directories (Auto-generated, Git-ignored)**
 - `.next/` - Next.js build output (~409MB, clean regularly with `npm run clean:cache`)
+- `.swc/` - SWC compiler cache and plugins (auto-managed by Next.js)
 - `node_modules/` - Dependencies (auto-generated from package.json)
 - `dist/`, `build/` - Build output directories (if used)
 - `coverage/` - Test coverage reports (auto-generated)
