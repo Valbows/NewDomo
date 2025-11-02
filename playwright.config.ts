@@ -7,14 +7,14 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: '__tests__/e2e',
-  outputDir: 'test-results',
+  outputDir: 'test-artifacts/results',
   timeout: 30_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   workers: isCI ? 2 : undefined,
-  reporter: isCI ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report' }]] : [['list'], ['html', { open: 'on-failure', outputFolder: 'playwright-report' }]],
+  reporter: isCI ? [['github'], ['html', { open: 'never', outputFolder: 'test-artifacts/reports' }]] : [['list'], ['html', { open: 'on-failure', outputFolder: 'test-artifacts/reports' }]],
   use: {
     baseURL,
     trace: 'on-first-retry',

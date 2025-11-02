@@ -4,18 +4,19 @@
 
 Test artifacts (screenshots, videos, traces, reports) should be properly organized and never clutter the root directory. This guide explains the proper structure and management of test artifacts.
 
-## Proper Test Artifacts Structure
+## Proper Test Artifacts Structure (Consolidated)
 
 ```
 project/
-├── test-results/              # ✅ Playwright test artifacts
-│   ├── screenshots/           # Screenshots of failed tests
-│   ├── videos/               # Videos of test runs
-│   ├── traces/               # Debug traces
-│   └── .last-run.json        # Test run metadata
-├── playwright-report/         # ✅ HTML test reports
-│   ├── index.html            # Main report
-│   └── assets/               # Report assets
+├── test-artifacts/            # ✅ Consolidated test artifacts directory
+│   ├── results/              # Playwright test artifacts
+│   │   ├── screenshots/      # Screenshots of failed tests
+│   │   ├── videos/           # Videos of test runs
+│   │   ├── traces/           # Debug traces
+│   │   └── .last-run.json    # Test run metadata
+│   └── reports/              # HTML test reports
+│       ├── index.html        # Main report
+│       └── assets/           # Report assets
 ├── __tests__/                # ✅ Test source code
 │   ├── e2e/                  # E2E tests
 │   ├── unit/                 # Unit tests
@@ -49,12 +50,12 @@ project/
 ### ✅ **The Fix Applied:**
 
 ```typescript
-// AFTER (fixed)
+// AFTER (consolidated structure)
 export default defineConfig({
   testDir: '__tests__/e2e',
-  outputDir: 'test-results',        // ✅ Explicit output directory
+  outputDir: 'test-artifacts/results',        // ✅ Consolidated artifacts directory
   reporter: [['html', { 
-    outputFolder: 'playwright-report' // ✅ Explicit report directory
+    outputFolder: 'test-artifacts/reports'    // ✅ Consolidated reports directory
   }]],
 });
 ```
@@ -67,9 +68,9 @@ export default defineConfig({
 ```typescript
 export default defineConfig({
   testDir: '__tests__/e2e',
-  outputDir: 'test-results',                    // ✅ All artifacts go here
+  outputDir: 'test-artifacts/results',          // ✅ Consolidated artifacts directory
   reporter: [['html', { 
-    outputFolder: 'playwright-report'           // ✅ Reports go here
+    outputFolder: 'test-artifacts/reports'      // ✅ Consolidated reports directory
   }]],
   use: {
     screenshot: 'only-on-failure',              // ✅ Screenshots on failure
@@ -83,9 +84,9 @@ export default defineConfig({
 ```typescript
 export default defineConfig({
   testDir: "__tests__/e2e-real",
-  outputDir: "test-results",                    // ✅ Same output directory
+  outputDir: "test-artifacts/results",          // ✅ Consolidated artifacts directory
   reporter: [["html", { 
-    outputFolder: "playwright-report"           // ✅ Same report directory
+    outputFolder: "test-artifacts/reports"      // ✅ Consolidated reports directory
   }]],
 });
 ```
@@ -93,7 +94,9 @@ export default defineConfig({
 ### ✅ **Git Ignore Configuration (Enhanced)**
 
 ```gitignore
-# Test results and artifacts
+# Test artifacts (consolidated)
+test-artifacts/
+# Legacy directories (in case they get created)
 test-results/
 playwright-report/
 
@@ -115,26 +118,26 @@ playwright-*.png
 
 ### 📸 **Screenshots**
 - **Purpose**: Visual evidence of test failures
-- **Location**: `test-results/[test-name]/[screenshot-name].png`
+- **Location**: `test-artifacts/results/[test-name]/[screenshot-name].png`
 - **Trigger**: `screenshot: 'only-on-failure'`
-- **❌ Never in root**: Should always be in `test-results/`
+- **❌ Never in root**: Should always be in `test-artifacts/results/`
 
 ### 🎥 **Videos**
 - **Purpose**: Full test run recordings
-- **Location**: `test-results/[test-name]/video.webm`
+- **Location**: `test-artifacts/results/[test-name]/video.webm`
 - **Trigger**: `video: 'retain-on-failure'`
 - **Size**: Can be large (10-50MB per test)
 
 ### 🔍 **Traces**
 - **Purpose**: Detailed debugging information
-- **Location**: `test-results/[test-name]/trace.zip`
+- **Location**: `test-artifacts/results/[test-name]/trace.zip`
 - **Trigger**: `trace: 'on-first-retry'`
-- **Usage**: `npx playwright show-trace trace.zip`
+- **Usage**: `npx playwright show-trace test-artifacts/results/[test-name]/trace.zip`
 
 ### 📊 **Reports**
 - **Purpose**: HTML test results and analysis
-- **Location**: `playwright-report/index.html`
-- **Access**: `npx playwright show-report`
+- **Location**: `test-artifacts/reports/index.html`
+- **Access**: `npx playwright show-report test-artifacts/reports`
 - **Size**: Usually small (< 1MB)
 
 ## Cleanup and Management
@@ -156,7 +159,10 @@ npm run clean:all
 ### 📋 **Manual Cleanup**
 
 ```bash
-# Remove test artifacts directories
+# Remove consolidated test artifacts directory
+rm -rf test-artifacts/
+
+# Remove legacy directories (if they exist)
 rm -rf test-results/ playwright-report/
 
 # Remove any artifacts that ended up in root

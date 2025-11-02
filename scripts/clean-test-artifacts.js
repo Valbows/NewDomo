@@ -76,25 +76,31 @@ function cleanTestArtifacts() {
   let totalCleaned = 0;
   let totalFiles = 0;
 
-  // Clean test-results directory
-  const testResultsPath = path.join(ROOT_DIR, 'test-results');
-  if (fs.existsSync(testResultsPath)) {
-    const testResultsSize = removeDir(testResultsPath);
-    if (testResultsSize > 0) {
-      console.log(`📁 Removed test-results/: ${testResultsSize}MB`);
-      totalCleaned += testResultsSize;
+  // Clean consolidated test-artifacts directory
+  const testArtifactsPath = path.join(ROOT_DIR, 'test-artifacts');
+  if (fs.existsSync(testArtifactsPath)) {
+    const artifactsSize = removeDir(testArtifactsPath);
+    if (artifactsSize > 0) {
+      console.log(`📁 Removed test-artifacts/: ${artifactsSize}MB`);
+      totalCleaned += artifactsSize;
     }
   }
 
-  // Clean playwright-report directory
-  const playwrightReportPath = path.join(ROOT_DIR, 'playwright-report');
-  if (fs.existsSync(playwrightReportPath)) {
-    const reportSize = removeDir(playwrightReportPath);
-    if (reportSize > 0) {
-      console.log(`📊 Removed playwright-report/: ${reportSize}MB`);
-      totalCleaned += reportSize;
+  // Clean legacy directories (in case they still exist)
+  const legacyDirs = [
+    { path: path.join(ROOT_DIR, 'test-results'), name: 'test-results/' },
+    { path: path.join(ROOT_DIR, 'playwright-report'), name: 'playwright-report/' }
+  ];
+
+  legacyDirs.forEach(({ path: dirPath, name }) => {
+    if (fs.existsSync(dirPath)) {
+      const size = removeDir(dirPath);
+      if (size > 0) {
+        console.log(`📁 Removed legacy ${name}: ${size}MB`);
+        totalCleaned += size;
+      }
     }
-  }
+  });
 
   // Clean any test screenshots that ended up in root directory
   console.log('\n🖼️  Cleaning test screenshots from root...');
@@ -153,7 +159,7 @@ function cleanTestArtifacts() {
 
   // Summary
   console.log('\n📊 Cleanup Summary:');
-  console.log(`   Directories cleaned: 2`);
+  console.log(`   Directories cleaned: test-artifacts/ + legacy dirs`);
   console.log(`   Files removed: ${totalFiles}`);
   console.log(`   Total space saved: ${totalCleaned}MB`);
 
@@ -165,11 +171,12 @@ function cleanTestArtifacts() {
 
   // Provide usage tips
   console.log('\n💡 Prevention Tips:');
-  console.log('   • Test artifacts should go to test-results/ directory');
-  console.log('   • HTML reports should go to playwright-report/ directory');
-  console.log('   • Both directories are properly git-ignored');
+  console.log('   • All test artifacts now go to test-artifacts/ directory');
+  console.log('   • Screenshots/videos: test-artifacts/results/');
+  console.log('   • HTML reports: test-artifacts/reports/');
+  console.log('   • Consolidated structure keeps root directory clean');
   console.log('   • Run this script after test failures to clean up');
-  console.log('   • Updated Playwright configs now enforce proper output directories');
+  console.log('   • Updated Playwright configs enforce consolidated structure');
 }
 
 // Run cleanup
