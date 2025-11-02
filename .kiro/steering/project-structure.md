@@ -36,6 +36,8 @@
 
 14. **Screenshot & Debug File Prevention**: NEVER commit screenshots, debug images, or temporary files to the repository. Use proper debugging tools and documentation instead of screenshots.
 
+15. **Build Cache Management**: Monitor and clean `.next` folder regularly. Use `npm run clean:cache` weekly and `npm run clean:cache:all` before deployments to manage disk space efficiently.
+
 ## Key Documentation Files
 
 - `docs/GUARDRAILS.md` - Tavus guardrails implementation
@@ -49,6 +51,7 @@
 ### ✅ ALLOWED in Root Directory
 
 #### **Essential Configuration Files**
+
 - `package.json`, `package-lock.json` - Node.js dependencies
 - `tsconfig.json` - TypeScript configuration
 - `next.config.cjs` - Next.js configuration
@@ -59,42 +62,55 @@
 - `playwright.config.ts`, `playwright.real.config.ts` - Playwright configurations
 
 #### **Environment & Setup Files**
+
 - `.env.example`, `.env.development`, `.env.staging`, `.env.production` - Environment templates
 - `.gitignore`, `.dockerignore` - Git/Docker ignore files
 - `README.md` - Main project documentation (ONLY ONE ALLOWED)
 - `next-env.d.ts` - Next.js TypeScript definitions
 
 #### **Build & Development Files**
+
 - `jest.setup.js`, `jest.setup.node.js`, `jest.env.js` - Jest setup files
 - `docker-compose.yml`, `Dockerfile` - Docker configuration
 - `render.yaml` - Deployment configuration
 
+#### **Build Output Directories (Auto-generated, Git-ignored)**
+- `.next/` - Next.js build output (~409MB, clean regularly with `npm run clean:cache`)
+- `node_modules/` - Dependencies (auto-generated from package.json)
+- `dist/`, `build/` - Build output directories (if used)
+- `coverage/` - Test coverage reports (auto-generated)
+
 ### ❌ STRICTLY PROHIBITED in Root Directory
 
 #### **Screenshots & Images (ZERO TOLERANCE)**
+
 - ❌ `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp` - ANY image files
 - ❌ `debug-*.png`, `video-*.png`, `tavus-*.png` - Debug screenshots
 - ❌ `screenshot-*.png`, `test-*.png` - Test screenshots
 - ❌ ANY visual debugging artifacts
 
 #### **Documentation Files**
+
 - ❌ `*.md` files except `README.md` → Move to `docs/`
 - ❌ `IMPLEMENTATION_SUMMARY.md` → `docs/IMPLEMENTATION_SUMMARY.md`
 - ❌ `DEPLOYMENT_GUIDE.md` → `docs/DEPLOYMENT_GUIDE.md`
 - ❌ `GUARDRAILS.md` → `docs/GUARDRAILS.md`
 
 #### **Script Files**
+
 - ❌ `*.sh`, `*.js` executable scripts → Move to `scripts/`
 - ❌ `setup-*.js` → `scripts/setup-*.js`
 - ❌ `validate-*.js` → `scripts/validate-*.js`
 
 #### **Temporary & Backup Files**
+
 - ❌ `*.backup`, `*-old.*`, `*-copy.*` - Backup files
 - ❌ `*.log`, `*.tmp`, `*.cache` - Temporary files
 - ❌ `data-export.json`, `cvi-components.json` - Exported data
 - ❌ `.DS_Store`, `*.swp`, `*.swo` - IDE artifacts
 
 #### **Legacy Configuration**
+
 - ❌ `jest.config.js` → Use `jest.config.cjs`
 - ❌ `next.config.js` → Use `next.config.cjs`
 - ❌ `postcss.config.js` → Use `postcss.config.cjs`
@@ -102,12 +118,14 @@
 ### 🚨 **Enforcement Actions**
 
 #### **Immediate Removal Required**
+
 1. **Screenshots**: Delete immediately, never commit
 2. **Debug files**: Remove and add to `.gitignore`
 3. **Backup files**: Delete or move to appropriate location
 4. **Loose documentation**: Move to `docs/` folder
 
 #### **Prevention Measures**
+
 1. **Pre-commit hooks**: Check for prohibited files
 2. **Regular audits**: Weekly root directory cleanup
 3. **Developer education**: Team training on file organization
@@ -171,23 +189,27 @@ src/
 ### ❌ Instead of Screenshots, Use:
 
 #### **For UI Issues**
+
 - ✅ **Playwright traces**: `npx playwright show-trace trace.zip`
 - ✅ **Browser DevTools**: Network/Console logs in text format
 - ✅ **Component tests**: Automated visual regression tests
 - ✅ **Storybook**: Component documentation and testing
 
 #### **For API Issues**
+
 - ✅ **API logs**: Structured logging with timestamps
 - ✅ **Postman collections**: Shareable API test cases
 - ✅ **Integration tests**: Automated API testing
 - ✅ **OpenAPI specs**: API documentation
 
 #### **For Database Issues**
+
 - ✅ **SQL queries**: Copy-paste actual queries and results
 - ✅ **Database migrations**: Version-controlled schema changes
 - ✅ **Seed data**: Reproducible test data scripts
 
 #### **For Documentation**
+
 - ✅ **Markdown files**: Text-based documentation in `docs/`
 - ✅ **Code comments**: Inline explanations
 - ✅ **README sections**: Setup and usage instructions

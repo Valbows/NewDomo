@@ -33,7 +33,10 @@
     "docker:build": "docker build -t domo-ai .",
     "docker:run": "docker run -p 3000:3000 --env-file .env.production domo-ai",
     "validate-imports": "ts-node --project scripts/tsconfig.json scripts/validate-imports.ts",
-    "validate-imports:js": "node scripts/validate-imports.js"
+    "validate-imports:js": "node scripts/validate-imports.js",
+    "clean:cache": "node scripts/clean-build-cache.js",
+    "clean:cache:all": "node scripts/clean-build-cache.js --all",
+    "clean:next": "rm -rf .next && echo 'Removed .next directory completely'"
   },
   "keywords": [],
   "author": "",
