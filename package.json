@@ -36,7 +36,9 @@
     "validate-imports:js": "node scripts/validate-imports.js",
     "clean:cache": "node scripts/clean-build-cache.js",
     "clean:cache:all": "node scripts/clean-build-cache.js --all",
-    "clean:next": "rm -rf .next && echo 'Removed .next directory completely'"
+    "clean:next": "rm -rf .next && echo 'Removed .next directory completely'",
+    "clean:test": "node scripts/clean-test-artifacts.js",
+    "clean:all": "npm run clean:cache && npm run clean:test"
   },
   "keywords": [],
   "author": "",

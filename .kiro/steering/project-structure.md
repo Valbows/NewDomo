@@ -87,7 +87,10 @@
 
 - ❌ `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp` - ANY image files
 - ❌ `debug-*.png`, `video-*.png`, `tavus-*.png` - Debug screenshots
-- ❌ `screenshot-*.png`, `test-*.png` - Test screenshots
+- ❌ `*-test-*.png`, `*-screenshot-*.png` - Test screenshots (should go to test-results/)
+- ❌ `playwright-*.png`, `*-actual.png`, `*-diff.png` - Playwright artifacts
+- ❌ `*.webm`, `*.mp4` - Test videos (should go to test-results/)
+- ❌ `*-trace.zip` - Playwright traces (should go to test-results/)
 - ❌ ANY visual debugging artifacts
 
 #### **Documentation Files**

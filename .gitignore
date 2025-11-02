@@ -66,6 +66,11 @@ build/
 *.log
 tunnel.log
 
-# Test results
+# Test results and artifacts
 test-results/
 playwright-report/
+# Prevent any test screenshots from ending up in root
+*-test-*.png
+*-screenshot-*.png
+debug-*.png
+test-*.png

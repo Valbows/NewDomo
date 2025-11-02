@@ -7,6 +7,7 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: "__tests__/e2e-real",
+  outputDir: "test-results",
   testMatch: /.*-live\.spec\.ts$/,
   timeout: 60_000,
   expect: { timeout: 15_000 },
@@ -15,8 +16,8 @@ export default defineConfig({
   retries: isCI ? 2 : 0,
   workers: isCI ? 2 : undefined,
   reporter: isCI
-    ? [["github"], ["html", { open: "never" }]]
-    : [["list"], ["html", { open: "on-failure" }]],
+    ? [["github"], ["html", { open: "never", outputFolder: "playwright-report" }]]
+    : [["list"], ["html", { open: "on-failure", outputFolder: "playwright-report" }]],
   globalSetup: "__tests__/e2e-real/global-setup.ts",
   use: {
     baseURL,
