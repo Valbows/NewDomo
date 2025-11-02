@@ -32,6 +32,10 @@
 
 12. **Test Organization Compliance**: ALL test files must be placed in `__tests__/` directory with appropriate subdirectories (unit/, integration/, e2e/, lib/, etc.).
 
+13. **Root Directory Cleanliness**: STRICTLY maintain a clean root directory. Only essential configuration files are allowed. Screenshots, temporary files, backup files, and loose documentation are PROHIBITED.
+
+14. **Screenshot & Debug File Prevention**: NEVER commit screenshots, debug images, or temporary files to the repository. Use proper debugging tools and documentation instead of screenshots.
+
 ## Key Documentation Files
 
 - `docs/GUARDRAILS.md` - Tavus guardrails implementation
@@ -40,6 +44,75 @@
 - `docs/architecture/README.md` - Architecture overview
 - `docs/plan.md` - Project roadmap and requirements
 
+## Root Directory Policy
+
+### ✅ ALLOWED in Root Directory
+
+#### **Essential Configuration Files**
+- `package.json`, `package-lock.json` - Node.js dependencies
+- `tsconfig.json` - TypeScript configuration
+- `next.config.cjs` - Next.js configuration
+- `tailwind.config.js` - Tailwind CSS configuration
+- `eslint.config.js` - ESLint configuration
+- `jest.config.cjs`, `jest.config.dom.cjs`, `jest.config.node.cjs` - Jest configurations
+- `postcss.config.cjs` - PostCSS configuration
+- `playwright.config.ts`, `playwright.real.config.ts` - Playwright configurations
+
+#### **Environment & Setup Files**
+- `.env.example`, `.env.development`, `.env.staging`, `.env.production` - Environment templates
+- `.gitignore`, `.dockerignore` - Git/Docker ignore files
+- `README.md` - Main project documentation (ONLY ONE ALLOWED)
+- `next-env.d.ts` - Next.js TypeScript definitions
+
+#### **Build & Development Files**
+- `jest.setup.js`, `jest.setup.node.js`, `jest.env.js` - Jest setup files
+- `docker-compose.yml`, `Dockerfile` - Docker configuration
+- `render.yaml` - Deployment configuration
+
+### ❌ STRICTLY PROHIBITED in Root Directory
+
+#### **Screenshots & Images (ZERO TOLERANCE)**
+- ❌ `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp` - ANY image files
+- ❌ `debug-*.png`, `video-*.png`, `tavus-*.png` - Debug screenshots
+- ❌ `screenshot-*.png`, `test-*.png` - Test screenshots
+- ❌ ANY visual debugging artifacts
+
+#### **Documentation Files**
+- ❌ `*.md` files except `README.md` → Move to `docs/`
+- ❌ `IMPLEMENTATION_SUMMARY.md` → `docs/IMPLEMENTATION_SUMMARY.md`
+- ❌ `DEPLOYMENT_GUIDE.md` → `docs/DEPLOYMENT_GUIDE.md`
+- ❌ `GUARDRAILS.md` → `docs/GUARDRAILS.md`
+
+#### **Script Files**
+- ❌ `*.sh`, `*.js` executable scripts → Move to `scripts/`
+- ❌ `setup-*.js` → `scripts/setup-*.js`
+- ❌ `validate-*.js` → `scripts/validate-*.js`
+
+#### **Temporary & Backup Files**
+- ❌ `*.backup`, `*-old.*`, `*-copy.*` - Backup files
+- ❌ `*.log`, `*.tmp`, `*.cache` - Temporary files
+- ❌ `data-export.json`, `cvi-components.json` - Exported data
+- ❌ `.DS_Store`, `*.swp`, `*.swo` - IDE artifacts
+
+#### **Legacy Configuration**
+- ❌ `jest.config.js` → Use `jest.config.cjs`
+- ❌ `next.config.js` → Use `next.config.cjs`
+- ❌ `postcss.config.js` → Use `postcss.config.cjs`
+
+### 🚨 **Enforcement Actions**
+
+#### **Immediate Removal Required**
+1. **Screenshots**: Delete immediately, never commit
+2. **Debug files**: Remove and add to `.gitignore`
+3. **Backup files**: Delete or move to appropriate location
+4. **Loose documentation**: Move to `docs/` folder
+
+#### **Prevention Measures**
+1. **Pre-commit hooks**: Check for prohibited files
+2. **Regular audits**: Weekly root directory cleanup
+3. **Developer education**: Team training on file organization
+4. **Automated cleanup**: Scripts to detect and remove violations
+
 ## Before Creating New Files
 
 1. Check if similar documentation exists in `docs/`
@@ -47,6 +120,7 @@
 3. Update existing files rather than creating duplicates
 4. Follow the established naming conventions
 5. Add comprehensive comments for developer understanding
+6. **NEVER** add screenshots or debug images to root directory
 
 ## Current Code Architecture
 
@@ -91,3 +165,51 @@ src/
 - **Single Responsibility**: Each module has one clear purpose
 - **Type Safety**: TypeScript interfaces and validation throughout
 - **Test Organization**: ALL tests belong in `__tests__/` directory with subdirectories for different test types
+
+## Proper Debugging & Documentation Alternatives
+
+### ❌ Instead of Screenshots, Use:
+
+#### **For UI Issues**
+- ✅ **Playwright traces**: `npx playwright show-trace trace.zip`
+- ✅ **Browser DevTools**: Network/Console logs in text format
+- ✅ **Component tests**: Automated visual regression tests
+- ✅ **Storybook**: Component documentation and testing
+
+#### **For API Issues**
+- ✅ **API logs**: Structured logging with timestamps
+- ✅ **Postman collections**: Shareable API test cases
+- ✅ **Integration tests**: Automated API testing
+- ✅ **OpenAPI specs**: API documentation
+
+#### **For Database Issues**
+- ✅ **SQL queries**: Copy-paste actual queries and results
+- ✅ **Database migrations**: Version-controlled schema changes
+- ✅ **Seed data**: Reproducible test data scripts
+
+#### **For Documentation**
+- ✅ **Markdown files**: Text-based documentation in `docs/`
+- ✅ **Code comments**: Inline explanations
+- ✅ **README sections**: Setup and usage instructions
+- ✅ **Architecture diagrams**: Text-based diagrams (Mermaid, ASCII)
+
+### 📁 **Proper File Organization Examples**
+
+```
+✅ CORRECT STRUCTURE:
+├── docs/
+│   ├── api-integration-guide.md
+│   ├── troubleshooting.md
+│   └── images/              # Only if absolutely necessary
+│       └── architecture.png
+├── scripts/
+│   ├── debug-api.js
+│   └── validate-setup.js
+└── README.md               # Only essential project info
+
+❌ INCORRECT STRUCTURE:
+├── debug-screenshot.png    # NEVER!
+├── api-test-results.png    # NEVER!
+├── setup-guide.md          # Move to docs/
+└── validate.js             # Move to scripts/
+```
