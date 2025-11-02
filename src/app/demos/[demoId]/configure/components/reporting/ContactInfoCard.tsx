@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface ContactInfo {
   id: string;
@@ -7,6 +7,9 @@ interface ContactInfo {
   last_name: string | null;
   email: string | null;
   position: string | null;
+  objective_name: string;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
 }
 
@@ -25,13 +28,17 @@ export function ContactInfoCard({ contact }: { contact: ContactInfo | null }) {
         <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
           👤 Contact Information
         </h5>
-        <p className="text-sm text-gray-500">No contact information captured for this conversation</p>
+        <p className="text-sm text-gray-500">
+          No contact information captured for this conversation
+        </p>
       </div>
     );
   }
 
-  const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
-  
+  const fullName = `${contact.first_name || ""} ${
+    contact.last_name || ""
+  }`.trim();
+
   return (
     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
       <h5 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
@@ -43,15 +50,17 @@ export function ContactInfoCard({ contact }: { contact: ContactInfo | null }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <div>
-            <span className="text-xs font-medium text-blue-700">Full Name:</span>
+            <span className="text-xs font-medium text-blue-700">
+              Full Name:
+            </span>
             <p className="text-sm text-blue-900 font-medium">
-              {fullName || 'Not provided'}
+              {fullName || "Not provided"}
             </p>
           </div>
           <div>
             <span className="text-xs font-medium text-blue-700">Email:</span>
             <p className="text-sm text-blue-900">
-              {contact.email || 'Not provided'}
+              {contact.email || "Not provided"}
             </p>
           </div>
         </div>
@@ -59,7 +68,7 @@ export function ContactInfoCard({ contact }: { contact: ContactInfo | null }) {
           <div>
             <span className="text-xs font-medium text-blue-700">Position:</span>
             <p className="text-sm text-blue-900">
-              {contact.position || 'Not provided'}
+              {contact.position || "Not provided"}
             </p>
           </div>
           <div>

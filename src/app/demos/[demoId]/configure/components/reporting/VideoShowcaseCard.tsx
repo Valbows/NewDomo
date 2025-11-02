@@ -1,10 +1,15 @@
+import React from 'react';
+
 interface VideoShowcaseData {
   id: string;
   conversation_id: string;
+  objective_name: string;
   requested_videos: string[] | null;
   videos_shown: string[] | null;
-  objective_name: string;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
+  updated_at?: string;
 }
 
 function formatDate(iso?: string) {

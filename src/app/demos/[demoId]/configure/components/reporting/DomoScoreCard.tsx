@@ -7,24 +7,33 @@ interface ContactInfo {
   last_name: string | null;
   email: string | null;
   position: string | null;
+  objective_name: string;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
 }
 
 interface ProductInterestData {
   id: string;
   conversation_id: string;
+  objective_name: string;
   primary_interest: string | null;
   pain_points: string[] | null;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
 }
 
 interface VideoShowcaseData {
   id: string;
   conversation_id: string;
+  objective_name: string;
   requested_videos: string[] | null;
   videos_shown: string[] | null;
-  objective_name: string;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
+  updated_at?: string;
 }
 
 interface CtaTrackingData {

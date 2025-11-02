@@ -209,7 +209,7 @@ async function handleGET(req: NextRequest) {
           started_at: conversationData.created_at ? new Date(conversationData.created_at).toISOString() : null,
           completed_at: conversationData.completed_at ? new Date(conversationData.completed_at).toISOString() : null,
           duration_seconds: conversationData.duration || null,
-          status: conversationData.status || 'active',
+          status: conversationData.status === 'ended' ? 'completed' : (conversationData.status || 'active'),
         };
 
         // Insert or update the conversation detail

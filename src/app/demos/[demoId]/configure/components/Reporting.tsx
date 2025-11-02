@@ -3,15 +3,14 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, RefreshCw } from "lucide-react";
 
-// Import split components - TEMPORARILY DISABLED DUE TO SYNTAX ERRORS
-// import {
-//   ContactInfoCard,
-//   ProductInterestCard,
-//   VideoShowcaseCard,
-//   CtaTrackingCard,
-//   DomoScoreCard,
-// } from "./reporting/index";
-// Note: ReportingFilters and ReportingTables need interface updates
+// Import split components
+import {
+  ContactInfoCard,
+  ProductInterestCard,
+  VideoShowcaseCard,
+  CtaTrackingCard,
+  DomoScoreCard,
+} from "./reporting/index";
 // Utility functions
 function isValidPerceptionAnalysis(perceptionAnalysis: any): boolean {
   if (!perceptionAnalysis) return false;
@@ -99,24 +98,33 @@ interface ContactInfo {
   last_name: string | null;
   email: string | null;
   position: string | null;
+  objective_name: string;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
 }
 
 interface ProductInterestData {
   id: string;
   conversation_id: string;
+  objective_name: string;
   primary_interest: string | null;
   pain_points: string[] | null;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
 }
 
 interface VideoShowcaseData {
   id: string;
   conversation_id: string;
+  objective_name: string;
   requested_videos: string[] | null;
   videos_shown: string[] | null;
-  objective_name: string;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
+  updated_at?: string;
 }
 
 interface CtaTrackingData {
@@ -174,26 +182,28 @@ export const Reporting = ({ demo }: ReportingProps) => {
 
       setConversations(conversationsData || []);
 
+
+
       // Fetch related data for each conversation
       const conversationIds =
         conversationsData?.map((c) => c.tavus_conversation_id) || [];
 
       if (conversationIds.length > 0) {
-        // Fetch contact info
+        // Fetch contact info (from qualification_data table)
         const { data: contactData } = await supabase
-          .from("contact_info")
+          .from("qualification_data")
           .select("*")
           .in("conversation_id", conversationIds);
 
         // Fetch product interest
         const { data: productData } = await supabase
-          .from("product_interest")
+          .from("product_interest_data")
           .select("*")
           .in("conversation_id", conversationIds);
 
         // Fetch video showcase
         const { data: videoData } = await supabase
-          .from("video_showcase")
+          .from("video_showcase_data")
           .select("*")
           .in("conversation_id", conversationIds);
 
@@ -202,6 +212,20 @@ export const Reporting = ({ demo }: ReportingProps) => {
           .from("cta_tracking")
           .select("*")
           .in("conversation_id", conversationIds);
+
+        console.log(`📊 Fetched related data:`, {
+          contactData: contactData?.length || 0,
+          productData: productData?.length || 0,
+          videoData: videoData?.length || 0,
+          ctaData: ctaData?.length || 0,
+        });
+
+        console.log(
+          "📊 Sample conversation IDs being searched:",
+          conversationIds.slice(0, 3)
+        );
+        console.log("📊 Sample contact data:", contactData?.slice(0, 2));
+        console.log("📊 Sample product data:", productData?.slice(0, 2));
 
         // Convert to lookup objects
         setContactInfo(
@@ -257,6 +281,8 @@ export const Reporting = ({ demo }: ReportingProps) => {
     }
   };
 
+
+
   useEffect(() => {
     fetchConversationData();
   }, [fetchConversationData]);
@@ -283,14 +309,14 @@ export const Reporting = ({ demo }: ReportingProps) => {
   }
 
   const completedConversations = conversations.filter(
-    (c) => c.status === "completed"
+    (c) => c.status === "completed" || c.status === "ended"
   ).length;
   const totalDuration = conversations.reduce(
     (sum, c) => sum + (c.duration_seconds || 0),
     0
   );
   const averageDuration =
-    conversations.length > 0 ? totalDuration / conversations.length : 0;
+    completedConversations > 0 ? totalDuration / completedConversations : 0;
 
   return (
     <div className="space-y-6">
@@ -313,6 +339,37 @@ export const Reporting = ({ demo }: ReportingProps) => {
           {syncing ? "Syncing..." : "Sync Data"}
         </button>
       </div>
+
+      {/* Debug Info */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h4 className="font-medium text-gray-700 mb-2">Debug Info</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Contact Info:</span>
+              <span className="ml-2">{Object.keys(contactInfo).length}</span>
+            </div>
+            <div>
+              <span className="font-medium">Product Interest:</span>
+              <span className="ml-2">
+                {Object.keys(productInterestData).length}
+              </span>
+            </div>
+            <div>
+              <span className="font-medium">Video Showcase:</span>
+              <span className="ml-2">
+                {Object.keys(videoShowcaseData).length}
+              </span>
+            </div>
+            <div>
+              <span className="font-medium">CTA Tracking:</span>
+              <span className="ml-2">
+                {Object.keys(ctaTrackingData).length}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -344,134 +401,174 @@ export const Reporting = ({ demo }: ReportingProps) => {
 
       {/* Conversations List */}
       <div className="space-y-4">
-        {conversations.map((conversation) => (
-          <div
-            key={conversation.id}
-            className="bg-white rounded-lg shadow border p-4"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  {conversation.conversation_name ||
-                    `Conversation ${conversation.id.slice(0, 8)}`}
-                </h4>
-                <p className="text-sm text-gray-600">
-                  {formatDate(conversation.started_at)} •{" "}
-                  {Math.round(conversation.duration_seconds / 60)}m
-                </p>
-              </div>
-              <button
-                onClick={() =>
-                  toggleConversationExpansion(
-                    conversation.tavus_conversation_id
-                  )
-                }
-                className="text-blue-600 hover:text-blue-800"
-              >
-                {expandedConversations.has(conversation.tavus_conversation_id)
-                  ? "Collapse"
-                  : "Expand"}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+        {conversations.map((conversation) => {
+          const isExpanded = expandedConversations.has(conversation.tavus_conversation_id);
+          const hasContact = !!contactInfo[conversation.tavus_conversation_id];
+          const hasProductInterest = !!productInterestData[conversation.tavus_conversation_id];
+          const hasVideoShowcase = !!videoShowcaseData[conversation.tavus_conversation_id];
+          const hasCTA = !!ctaTrackingData[conversation.tavus_conversation_id];
+          const hasPerception = !!conversation.perception_analysis;
 
-      {/* Detailed Conversation Views */}
-      {conversations.map(
-        (conversation) =>
-          expandedConversations.has(conversation.tavus_conversation_id) && (
+          return (
             <div
               key={conversation.id}
-              className="bg-white rounded-lg shadow border p-6"
+              className="bg-white rounded-lg shadow border"
             >
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - Data Cards */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* TEMPORARILY DISABLED DUE TO SYNTAX ERRORS */}
-                  {/* <ContactInfoCard
-                    contact={
-                      contactInfo[conversation.tavus_conversation_id] || null
-                    }
-                  />
-
-                  <ProductInterestCard
-                    productInterest={
-                      productInterestData[conversation.tavus_conversation_id] ||
-                      null
-                    }
-                  />
-
-                  <VideoShowcaseCard
-                    videoShowcase={
-                      videoShowcaseData[conversation.tavus_conversation_id] ||
-                      null
-                    }
-                  />
-
-                  <CtaTrackingCard
-                    ctaTracking={
-                      ctaTrackingData[conversation.tavus_conversation_id] ||
-                      null
-                    }
-                  /> */}
-
-                  {/* Perception Analysis */}
-                  {isValidPerceptionAnalysis(
-                    conversation.perception_analysis
-                  ) && (
-                    <div className="mb-6">
-                      <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                        🧠 Perception Analysis
-                      </h5>
-                      {renderPerceptionAnalysis(
-                        conversation.perception_analysis
+              {/* Conversation Header */}
+              <div className="p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">
+                      {conversation.conversation_name ||
+                        `Conversation ${conversation.id.slice(0, 8)}`}
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {formatDate(conversation.started_at)} •{" "}
+                      {conversation.duration_seconds
+                        ? Math.round(conversation.duration_seconds / 60)
+                        : 0}
+                      m
+                    </p>
+                    
+                    {/* Data Tags */}
+                    <div className="flex flex-wrap gap-2">
+                      {hasContact && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          👤 Contact Info
+                        </span>
+                      )}
+                      {hasProductInterest && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          🎯 Product Interest
+                        </span>
+                      )}
+                      {hasVideoShowcase && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          🎬 Video Showcase
+                        </span>
+                      )}
+                      {hasCTA && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          🎯 CTA Tracking
+                        </span>
+                      )}
+                      {hasPerception && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                          🧠 AI Analysis
+                        </span>
+                      )}
+                      {!hasContact && !hasProductInterest && !hasVideoShowcase && !hasCTA && !hasPerception && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          No data captured
+                        </span>
                       )}
                     </div>
-                  )}
-
-                  {/* Transcript */}
-                  {conversation.transcript && (
-                    <div className="mb-6">
-                      <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                        💬 Conversation Transcript
-                      </h5>
-                      {renderTranscript(conversation.transcript)}
-                    </div>
-                  )}
+                  </div>
+                  
+                  <button
+                    onClick={() =>
+                      toggleConversationExpansion(
+                        conversation.tavus_conversation_id
+                      )
+                    }
+                    className="ml-4 text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {isExpanded ? "Collapse" : "Expand"}
+                  </button>
                 </div>
+              </div>
 
-                {/* Right Column - Domo Score - TEMPORARILY DISABLED */}
-                <div className="lg:col-span-1">
-                  <div className="sticky top-4">
-                    {/* <DomoScoreCard
-                      contact={
-                        contactInfo[conversation.tavus_conversation_id] || null
-                      }
-                      productInterest={
-                        productInterestData[
-                          conversation.tavus_conversation_id
-                        ] || null
-                      }
-                      videoShowcase={
-                        videoShowcaseData[conversation.tavus_conversation_id] ||
-                        null
-                      }
-                      ctaTracking={
-                        ctaTrackingData[conversation.tavus_conversation_id] ||
-                        null
-                      }
-                      perceptionAnalysis={conversation.perception_analysis}
-                    /> */}
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-700">Reporting components temporarily disabled due to syntax errors.</p>
+              {/* Expanded Details - Inline */}
+              {isExpanded && (
+                <div className="border-t bg-gray-50 p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column - Data Cards */}
+                    <div className="lg:col-span-2 space-y-6">
+                      <ContactInfoCard
+                        contact={
+                          contactInfo[conversation.tavus_conversation_id] || null
+                        }
+                      />
+
+                      <ProductInterestCard
+                        productInterest={
+                          productInterestData[conversation.tavus_conversation_id] ||
+                          null
+                        }
+                      />
+
+                      <VideoShowcaseCard
+                        videoShowcase={
+                          videoShowcaseData[conversation.tavus_conversation_id] ||
+                          null
+                        }
+                      />
+
+                      <CtaTrackingCard
+                        ctaTracking={
+                          ctaTrackingData[conversation.tavus_conversation_id] ||
+                          null
+                        }
+                      />
+
+                      {/* Perception Analysis */}
+                      {isValidPerceptionAnalysis(
+                        conversation.perception_analysis
+                      ) && (
+                        <div className="mb-6">
+                          <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                            🧠 Perception Analysis
+                          </h5>
+                          {renderPerceptionAnalysis(
+                            conversation.perception_analysis
+                          )}
+                        </div>
+                      )}
+
+                      {/* Transcript */}
+                      {conversation.transcript && (
+                        <div className="mb-6">
+                          <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                            💬 Conversation Transcript
+                          </h5>
+                          {renderTranscript(conversation.transcript)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column - Domo Score */}
+                    <div className="lg:col-span-1">
+                      <div className="sticky top-4">
+                        <DomoScoreCard
+                          contact={
+                            contactInfo[conversation.tavus_conversation_id] || null
+                          }
+                          productInterest={
+                            productInterestData[
+                              conversation.tavus_conversation_id
+                            ] || null
+                          }
+                          videoShowcase={
+                            videoShowcaseData[conversation.tavus_conversation_id] ||
+                            null
+                          }
+                          ctaTracking={
+                            ctaTrackingData[conversation.tavus_conversation_id] ||
+                            null
+                          }
+                          perceptionAnalysis={conversation.perception_analysis}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )
-      )}
+          );
+        })}
+      </div>
+
+
 
       {/* Privacy Notice */}
       <div className="mt-6 text-xs text-gray-500">

@@ -3,8 +3,11 @@ import React from 'react';
 interface ProductInterestData {
   id: string;
   conversation_id: string;
+  objective_name: string;
   primary_interest: string | null;
   pain_points: string[] | null;
+  event_type: string;
+  raw_payload: any;
   received_at: string;
 }
 
