@@ -19,7 +19,11 @@
     "e2e": "playwright test",
     "e2e:ci": "playwright test --reporter=github,html",
     "e2e:real": "playwright test -c playwright.real.config.ts",
+    "e2e:real:headed": "playwright test -c playwright.real.config.ts --headed",
+    "e2e:real:debug": "playwright test -c playwright.real.config.ts --debug",
     "seed:e2e": "node scripts/seed-e2e.js",
+    "seed:e2e-videos": "node scripts/seed-e2e-videos.js",
+    "setup:e2e": "node scripts/setup-e2e-complete.js",
     "webhook": "node simple-webhook.js",
     "webhook:auto": "./auto-webhook.sh",
     "webhook:setup": "node setup-webhooks.js",
@@ -49,6 +53,7 @@
     "jotai": "^2.12.5",
     "lucide-react": "^0.294.0",
     "next": "^14.0.0",
+    "node-fetch": "^3.3.2",
     "openai": "^4.20.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -82,5 +87,6 @@
   "optionalDependencies": {
     "@rollup/rollup-darwin-x64": "^4.52.5",
     "@rollup/rollup-linux-x64-gnu": "^4.52.5"
-  }
+  },
+  "type": "module"
 }

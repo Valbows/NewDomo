@@ -42,7 +42,7 @@ function getSupabaseConfig(): { url: string; anonKey: string } {
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkZGp1ZHdhd2F2eHdpcnBra3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTgxODMsImV4cCI6MjA3MjMzNDE4M30.YmVUBMGLCw_2ncKE9nU0lneZi1xCbYspVn7iqjoFhuo";
     } else {
       throw new Error(
-        "ERROR: Supabase environment variables are either missing or still set to placeholder values. Please update NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file."
+        "ERROR: Supabase environment variables are either missing or still set to placeholder values. Please update NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.development file."
       );
     }
   }

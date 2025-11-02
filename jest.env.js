@@ -1,14 +1,14 @@
 // jest.env.js - Test environment variables setup
 // This file sets up environment variables for Jest tests
 
-// Load environment variables from .env.local for tests
-require('dotenv').config({ path: '.env.local' });
+// Load environment variables from .env.development for tests
+require('dotenv').config({ path: '.env.development' });
 
 // Set test-specific environment variables
 process.env.NODE_ENV = 'test';
 
 // Ensure required Supabase environment variables are available for tests
-// If they're not in .env.local, set test defaults
+// If they're not in .env.development, set test defaults
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 }

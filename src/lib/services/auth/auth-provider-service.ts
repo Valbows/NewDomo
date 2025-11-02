@@ -37,7 +37,7 @@ export class AuthProviderService {
   constructor(config: AuthProviderConfig = {}) {
     this.config = {
       isE2EMode: process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true',
-      enableLogging: true,
+      enableLogging: process.env.NODE_ENV === 'development', // Only log in development
       ...config
     };
   }

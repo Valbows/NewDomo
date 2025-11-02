@@ -49,10 +49,10 @@ npm install
 Copy the example environment file:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env.development
 ```
 
-Fill in your API keys in `.env.local`:
+Fill in your API keys in `.env.development`:
 
 ```env
 # Supabase (Local Development)
@@ -215,7 +215,7 @@ supabase db reset
 
 ### Environment Variables for Production
 
-Update your `.env.local` with production Supabase URLs and API keys.
+Update your `.env.development` with development Supabase URLs and API keys, or use `.env.production` for production deployment.
 
 ## Contributing
 

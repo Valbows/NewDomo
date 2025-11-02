@@ -24,6 +24,7 @@ export function useDemosRealtime(
   const [demos, setDemos] = useState<Demo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
@@ -37,6 +38,8 @@ export function useDemosRealtime(
   }, []);
 
   const refresh = useCallback(async () => {
+    if (isE2E) return; // Don't fetch in E2E mode
+    
     try {
       const { data, error } = await supabase
         .from('demos')
@@ -44,16 +47,21 @@ export function useDemosRealtime(
         .order('updated_at', { ascending: false });
       if (error) throw error;
       setDemos((data as unknown as Demo[]) || []);
+      setError(null); // Clear error on successful fetch
     } catch (err: any) {
       console.warn('useDemosRealtime: failed to load demos:', err?.message || err);
       setError('Failed to load demos.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isE2E]);
 
+  // Initial load effect - runs only once
   useEffect(() => {
+    if (initialized) return;
+    
     setLoading(true);
+    setInitialized(true);
 
     if (isE2E) {
       // Seed with deterministic demo stubs for tests
@@ -150,18 +158,21 @@ export function useDemosRealtime(
           cleanupChannels();
         };
       }
+    } else {
+      // Normal (non-E2E) path - fetch data once
+      refresh();
     }
 
-    // Normal (non-E2E) path
-    refresh();
     return () => {
       cleanupChannels();
     };
-  }, [refresh, cleanupChannels, isE2E]);
+  }, [initialized, isE2E, refresh]);
 
+  // Realtime subscriptions effect - only runs when demos change
   useEffect(() => {
     if (isE2E) return; // no realtime in E2E; driven via helpers/events
     if (!subscribeToAnalyticsUpdated) return;
+    if (!initialized) return; // Wait for initial load
 
     // Re-subscribe when demo IDs change
     cleanupChannels();
@@ -189,7 +200,7 @@ export function useDemosRealtime(
     return () => {
       cleanupChannels();
     };
-  }, [demos, subscribeToAnalyticsUpdated, refresh, cleanupChannels, isE2E]);
+  }, [demos.length, subscribeToAnalyticsUpdated, isE2E, initialized, refresh]);
 
   return { demos, loading, error, refresh };
 }

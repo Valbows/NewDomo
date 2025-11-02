@@ -15,5 +15,16 @@
 // Domain service exports
 export * from './auth';
 export * from './demos';
-export * from './tavus';
+// Export tavus services with explicit naming to avoid conflicts
+export { 
+  createTavusIntegrationService, 
+  getTavusService,
+  TavusClient,
+  ConversationService,
+  ObjectivesService,
+  GuardrailsService,
+  WebhookService,
+  AnalyticsService,
+  MediaService
+} from './tavus';
 export * from './webhooks';

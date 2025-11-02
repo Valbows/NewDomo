@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env.development' });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY;

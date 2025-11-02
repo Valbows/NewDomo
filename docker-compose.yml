@@ -13,7 +13,7 @@ services:
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1
     env_file:
-      - .env.local
+      - .env.development
     command: sh -c "npm ci && npm run dev"
     restart: unless-stopped
 

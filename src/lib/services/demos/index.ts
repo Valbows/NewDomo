@@ -36,5 +36,10 @@ export { DemoService, demoService } from "./demo-service";
 // Export agent service
 export { AgentService, agentService } from "./agent-service";
 
+// Export specialized agent services
+export { PersonaManagementService, personaManagementService } from "./persona-management-service";
+export { SystemPromptService, systemPromptService } from "./system-prompt-service";
+export { AgentConfigurationService, agentConfigurationService } from "./agent-configuration-service";
+
 // Export video service
 export { VideoService, videoService } from "./video-service";

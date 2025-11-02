@@ -4,8 +4,8 @@ export interface Demo {
   user_id: string;
   created_at: string;
   // Tavus identifiers stored as columns (source of truth)
-  tavus_persona_id?: string | null;
-  tavus_conversation_id?: string | null;
+  tavus_persona_id: string | null;
+  tavus_conversation_id: string | null;
   // Admin-level CTA fields (stored as columns on demos)
   cta_title?: string | null;
   cta_message?: string | null;
