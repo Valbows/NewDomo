@@ -18,6 +18,8 @@ export default [
       // Add any custom rules here
       'no-unused-vars': 'warn',
       'no-console': 'warn',
+      // Disable the problematic rule for conditional imports
+      '@typescript-eslint/no-var-requires': 'off',
     },
   },
 ];
