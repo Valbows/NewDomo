@@ -128,6 +128,11 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 				url: conversationUrl,
 			});
 		}
+		
+		// Track join time for auto-retry logic
+		const w: any = typeof window !== 'undefined' ? window : {};
+		w.__CVI_LAST_JOIN_TIME__ = Date.now();
+		
 		try {
 			Sentry.addBreadcrumb({
 				category: 'daily',
@@ -143,6 +148,22 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'left-meeting' });
 		} catch {}
+		
+		// Auto-retry if we left immediately after joining (likely Tavus replica not ready)
+		const now = Date.now();
+		const w: any = typeof window !== 'undefined' ? window : {};
+		const lastJoinTime = w.__CVI_LAST_JOIN_TIME__ || 0;
+		const timeSinceJoin = now - lastJoinTime;
+		
+		// If we left within 10 seconds of joining, and haven't retried recently, auto-retry
+		if (timeSinceJoin < 10000 && (!w.__CVI_LAST_RETRY__ || now - w.__CVI_LAST_RETRY__ > 30000)) {
+			if (debugDaily) console.log('🔄 Auto-retrying join - left too quickly after joining, Tavus replica might not be ready');
+			w.__CVI_LAST_RETRY__ = now;
+			
+			setTimeout(() => {
+				retryJoin();
+			}, 5000); // Wait 5 seconds before retry
+		}
 	});
 
 	useDailyEvent('participant-joined', (ev) => {
@@ -232,18 +253,27 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		}
 	}, [meetingState, debugDaily]);
 
-	// Initialize call when conversation is available
+	// Initialize call when conversation is available with delay for fresh conversations
 	useEffect(() => {
 		if (!conversationUrl) return;
 		if (isE2E || conversationUrl === 'about:blank') {
 			if (debugDaily) console.log('🧪 E2E mode: Skipping Daily join');
 			return;
 		}
-		if (debugDaily) console.log('🎥 CVI: Joining call with URL:', conversationUrl);
-		try {
-			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'join-call', data: { url: conversationUrl } });
-		} catch {}
-		joinCall({ url: conversationUrl });
+
+		const joinWithDelay = async () => {
+			// Add delay for fresh conversations to let Tavus replica initialize
+			if (debugDaily) console.log('⏳ Waiting 5s for Tavus replica to initialize in fresh conversation...');
+			await new Promise(resolve => setTimeout(resolve, 5000));
+			
+			if (debugDaily) console.log('🎥 CVI: Joining call with URL:', conversationUrl);
+			try {
+				Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'join-call', data: { url: conversationUrl } });
+			} catch {}
+			joinCall({ url: conversationUrl });
+		};
+
+		joinWithDelay();
 	}, [conversationUrl, joinCall, isE2E, debugDaily]);
 
 	// Ensure we leave the call when component unmounts to prevent lingering sessions
@@ -258,10 +288,10 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		};
 	}, [leaveCall, isE2E]);
 
-	const retryJoin = useCallback(() => {
+	const retryJoin = useCallback(async () => {
 		if (isE2E || conversationUrl === 'about:blank') return;
 		try {
-			if (debugDaily) console.log('🔁 Retrying join');
+			if (debugDaily) console.log('🔁 Retrying join with delay for Tavus replica...');
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'retry-join' });
 		} catch {}
 		try {
@@ -269,6 +299,9 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		} catch (_) {
 			// no-op
 		}
+		
+		// Wait a bit longer on retry for Tavus replica to be ready
+		await new Promise(resolve => setTimeout(resolve, 3000));
 		joinCall({ url: conversationUrl });
 	}, [joinCall, leaveCall, conversationUrl, isE2E, debugDaily]);
 
