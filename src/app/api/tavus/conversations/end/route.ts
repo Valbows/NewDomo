@@ -5,6 +5,8 @@ import { getErrorMessage, logError } from '@/lib/errors';
 import { getTavusService } from '@/lib/services/tavus';
 import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 
+export const dynamic = 'force-dynamic';
+
 async function handlePOST(req: AuthenticatedRequest) {
   const supabase = createClient();
 

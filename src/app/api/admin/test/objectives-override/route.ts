@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateObjectivesOverride } from '@/lib/tavus';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Test API endpoint to verify that custom objectives properly override defaults
  * Usage: GET /api/admin/test/objectives-override?demoId=your-demo-id

@@ -3,6 +3,8 @@ import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { videoService } from '@/lib/services/demos';
 
+export const dynamic = 'force-dynamic';
+
 async function handleGET(req: NextRequest) {
   try {
     // Get the demo ID from query params

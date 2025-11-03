@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { demoService } from '@/lib/services/demos';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const demoId = url.searchParams.get('demoId') || 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';

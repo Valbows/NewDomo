@@ -3,6 +3,8 @@ import * as Sentry from '@sentry/nextjs';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { videoService } from '@/lib/services/demos';
 
+export const dynamic = 'force-dynamic';
+
 async function handleGET(req: NextRequest) {
   try {
     const url = new URL(req.url);

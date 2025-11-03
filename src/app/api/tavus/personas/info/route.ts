@@ -9,6 +9,8 @@ import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { demoService } from '@/lib/services/demos';
 
+export const dynamic = 'force-dynamic';
+
 async function handleGET(request: AuthenticatedRequest) {
   try {
     const supabase = createClient();

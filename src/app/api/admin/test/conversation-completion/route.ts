@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 async function handleGET(req: NextRequest) {
   try {
     const url = new URL(req.url);

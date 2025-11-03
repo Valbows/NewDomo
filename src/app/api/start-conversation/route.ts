@@ -3,6 +3,8 @@ import { createClient } from "@/lib/utils/supabase";
 import { wrapRouteHandlerWithSentry } from "@/lib/sentry-utils";
 import { getErrorMessage, logError } from "@/lib/errors";
 
+export const dynamic = 'force-dynamic';
+
 // Validate that a URL points to a Daily room
 const isDailyRoomUrl = (url: string) =>
   /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);

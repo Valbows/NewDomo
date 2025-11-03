@@ -5,6 +5,8 @@ import { getErrorMessage, logError } from '@/lib/errors';
 import { getTavusService } from '@/lib/services/tavus';
 import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 
+export const dynamic = 'force-dynamic';
+
 // Simple in-memory lock to dedupe concurrent starts per demo within a single server instance
 const startLocks = new Map<string, Promise<unknown>>();
 

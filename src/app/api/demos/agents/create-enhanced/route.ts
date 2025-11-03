@@ -11,6 +11,8 @@ import { agentService } from '@/lib/services/demos';
 import { getWebhookUrl } from '@/lib/tavus';
 import { withAuth, getRequestUser, type AuthenticatedRequest } from '@/lib/services/auth/middleware';
 
+export const dynamic = 'force-dynamic';
+
 async function handlePOST(req: AuthenticatedRequest): Promise<NextResponse> {
   const supabase = createClient();
 
