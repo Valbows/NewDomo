@@ -65,8 +65,8 @@ test.describe('Fresh Conversation Success E2E', () => {
     // Should navigate to experience page
     await expect(page).toHaveURL(`/demos/${DEMO_ID}/experience`);
 
-    // Wait for conversation creation and connection (up to 30 seconds)
-    await page.waitForTimeout(30000);
+    // Wait for conversation creation and connection (up to 15 seconds)
+    await page.waitForTimeout(15000);
 
     // Verify fresh conversation was created
     expect(conversationIds.length).toBeGreaterThan(0);
@@ -117,7 +117,7 @@ test.describe('Fresh Conversation Success E2E', () => {
     await expect(page).toHaveURL(`/demos/${DEMO_ID}/experience`);
     
     // Wait for API calls to complete
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(5000);
     
     console.log('📊 Total API calls made:', apiCallCount.count);
     
@@ -177,7 +177,7 @@ test.describe('Fresh Conversation Success E2E', () => {
     await page.goto(`/demos/${DEMO_ID}/experience`);
     
     // Wait for timing sequence
-    await page.waitForTimeout(15000);
+    await page.waitForTimeout(8000);
     
     console.log('⏰ Timing logs captured:', timingLogs);
     
@@ -194,11 +194,11 @@ test.describe('Fresh Conversation Success E2E', () => {
     await page.goto(`/demos/${DEMO_ID}/experience`);
     
     // Wait for conversation to initialize
-    await page.waitForTimeout(20000);
+    await page.waitForTimeout(10000);
     
     // Should see conversation container
     const conversationContainer = page.getByTestId('conversation-container');
-    await expect(conversationContainer).toBeVisible({ timeout: 30000 });
+    await expect(conversationContainer).toBeVisible({ timeout: 15000 });
     
     // Should not be stuck on connecting
     const connectingText = page.locator('text=Connecting...');
@@ -206,7 +206,7 @@ test.describe('Fresh Conversation Success E2E', () => {
     // If connecting appears, it should resolve within reasonable time
     if (await connectingText.isVisible()) {
       console.log('⏳ "Connecting..." detected, waiting for resolution...');
-      await expect(connectingText).not.toBeVisible({ timeout: 30000 });
+      await expect(connectingText).not.toBeVisible({ timeout: 15000 });
     }
     
     console.log('✅ Conversation interface ready');
