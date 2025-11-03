@@ -22,6 +22,7 @@ export function ConfigurationHeader({ demo, demoId }: ConfigurationHeaderProps) 
         <div className="flex space-x-4">
           <a
             href={`/demos/${demoId}/experience`}
+            data-testid="view-demo-experience-button"
             className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
           >
             View Demo Experience
