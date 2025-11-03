@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/user';
-import { authFormService } from '@/services/auth';
+import { authFormService } from '@/lib/services/auth';
 import Link from 'next/link';
 
 const SignupPage = () => {

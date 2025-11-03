@@ -2,7 +2,82 @@
 
 ## 🚨 CRITICAL: Git Workflow Authorization Required
 
-**MANDATORY RULE**: No `git add` commands without explicit permission. Once approved, complete the entire workflow (add → commit → push) automatically.
+**MANDATORY RULE - ZERO TOLERANCE**: 
+
+### **ABSOLUTE PROHIBITION**
+- **NEVER** execute `git add`, `git commit`, `git push`, or ANY git command that modifies the repository without EXPLICIT user permission
+- **NEVER** assume permission is granted based on context, urgency, or previous approvals
+- **NEVER** proceed with git operations even if fixing critical issues or CI/CD failures
+
+### **REQUIRED AUTHORIZATION PROTOCOL**
+
+#### **STEP 1: MANDATORY PRE-AUTHORIZATION REVIEW**
+Before ANY git command, you MUST:
+
+1. **STOP ALL WORK** - Do not execute any git commands
+2. **SHOW CHANGES** - Display exactly what files were modified:
+   ```bash
+   git status
+   git diff --name-only
+   ```
+3. **SUMMARIZE CHANGES** - Provide clear summary of what was changed and why
+4. **REQUEST PERMISSION** - Use this EXACT format:
+
+   ```
+   ## Permission Request for Git Operations
+   
+   ### Files Modified:
+   - [list each file with brief description of changes]
+   
+   ### Summary of Changes:
+   - [clear explanation of what was changed]
+   - [why these changes were necessary]
+   - [impact/benefit of these changes]
+   
+   ### Proposed Git Operations:
+   1. git add [specific files or .]
+   2. git commit -m "[proposed commit message]"
+   3. git push
+   
+   **REQUEST: May I proceed with staging, committing, and pushing these changes?**
+   ```
+
+#### **STEP 2: WAIT FOR EXPLICIT APPROVAL**
+- **REQUIRED RESPONSE**: User must explicitly say "yes", "approve", "proceed", or similar clear affirmative
+- **INSUFFICIENT RESPONSES**: Silence, "ok", "sure", "go ahead" are NOT sufficient
+- **REJECTION HANDLING**: If user says "no" or asks for changes, DO NOT proceed with any git operations
+
+#### **STEP 3: COMPLETE WORKFLOW (Only After Approval)**
+Once explicit permission is granted, execute in this order:
+1. `git add [as specified]`
+2. `git commit -m "[approved message]"`
+3. `git push`
+
+### **VIOLATION CONSEQUENCES**
+
+#### **If This Rule Is Violated:**
+1. **IMMEDIATE ACKNOWLEDGMENT** - Admit the violation and apologize
+2. **EXPLAIN WHAT HAPPENED** - Detail exactly which commands were run without permission
+3. **COMMIT TO COMPLIANCE** - Reaffirm understanding of this protocol
+4. **NO EXCUSES** - Urgency, critical fixes, or CI/CD failures do NOT justify violations
+
+#### **EMERGENCY EXCEPTIONS**
+- **NONE** - There are NO exceptions to this rule
+- **CRITICAL FIXES** - Still require permission, just explain the urgency in the request
+- **CI/CD FAILURES** - Still require permission, explain the impact in the request
+
+### **EXAMPLES OF VIOLATIONS**
+❌ Running `git add .` then asking for permission
+❌ Committing changes and then asking if it was okay
+❌ Pushing changes because "it was urgent"
+❌ Assuming permission based on previous "yes" responses
+❌ Proceeding because "the user wanted the fix"
+
+### **EXAMPLES OF CORRECT BEHAVIOR**
+✅ Making code changes, then requesting permission before any git commands
+✅ Showing git status and diff before asking for permission
+✅ Waiting for explicit "yes" before proceeding
+✅ Asking for permission even for small changes or typo fixes
 
 ## Core Development Rules
 

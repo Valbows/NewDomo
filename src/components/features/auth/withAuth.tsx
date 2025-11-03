@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/user';
-import { protectedGuard, AuthGuardService, type AuthGuardConfig } from '@/services/auth';
+import { protectedGuard, AuthGuardService, type AuthGuardConfig } from '@/lib/services/auth';
 
 interface WithAuthOptions extends AuthGuardConfig {
   loadingComponent?: React.ComponentType;

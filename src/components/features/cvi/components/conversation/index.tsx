@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useEffect, useCallback } from "react";
-import * as Sentry from '@sentry/nextjs';
+// Conditional Sentry import - fallback gracefully if not available
+let Sentry: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  Sentry = require('@sentry/nextjs');
+} catch (e) {
+  // Sentry not available; will fallback to console logging
+}
 import {
 	DailyAudio,
 	DailyVideo,

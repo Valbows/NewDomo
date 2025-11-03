@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail } from 'lucide-react';
 import { useUserStore } from '@/store/user';
-import { authFormService } from '@/services/auth';
+import { authFormService } from '@/lib/services/auth';
 
 const SignInPage = () => {
   const [email, setEmail] = useState('');

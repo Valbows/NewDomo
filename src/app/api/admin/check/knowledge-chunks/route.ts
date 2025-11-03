@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/utils/supabase';
-import * as Sentry from '@sentry/nextjs';
+// Conditional Sentry import - fallback gracefully if not available
+let Sentry: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  Sentry = require('@sentry/nextjs');
+} catch (e) {
+  // Sentry not available; will fallback to console logging
+}
 import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handleGET(req: NextRequest) {
