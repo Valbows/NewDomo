@@ -1,76 +1,82 @@
 #!/bin/bash
 
-# Install Git Hooks for Push Authorization
-# This script sets up a pre-push hook to require explicit permission
+# Install Git Hooks for Add Authorization
+# This script sets up a pre-commit hook to require explicit permission before staging
 
-echo "🔧 Installing Git Push Authorization Hook..."
+echo "🔧 Installing Git Add Authorization Hook..."
 
-# Create the pre-push hook
-cat > .git/hooks/pre-push << 'EOF'
+# Create a wrapper script for git add
+cat > .git/hooks/git-add-wrapper << 'EOF'
 #!/bin/sh
 
-# Git Push Authorization Hook
-# Requires explicit permission before any push operation
+# Git Add Authorization Wrapper
+# Requires explicit permission before any add operation
 
 echo ""
-echo "🚨 GIT PUSH AUTHORIZATION REQUIRED"
-echo "=================================="
+echo "🚨 GIT ADD AUTHORIZATION REQUIRED"
+echo "================================="
 echo ""
-echo "This repository requires explicit permission before pushing changes."
-echo ""
-echo "Please review your changes:"
+echo "This repository requires explicit permission before staging changes."
 echo ""
 
-# Show what will be pushed
-echo "📋 Files to be pushed:"
-git diff --name-only origin/$(git branch --show-current)..HEAD | head -10
-if [ $(git diff --name-only origin/$(git branch --show-current)..HEAD | wc -l) -gt 10 ]; then
-    echo "... and $(( $(git diff --name-only origin/$(git branch --show-current)..HEAD | wc -l) - 10 )) more files"
+# Check if there are changes to stage
+if [ -z "$(git diff --name-only)" ] && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+    echo "ℹ️  No changes to stage"
+    exit 0
+fi
+
+echo "📋 Files to be staged:"
+git status --porcelain | head -10
+if [ $(git status --porcelain | wc -l) -gt 10 ]; then
+    echo "... and $(( $(git status --porcelain | wc -l) - 10 )) more files"
 fi
 
 echo ""
-echo "📝 Commits to be pushed:"
-git log --oneline origin/$(git branch --show-current)..HEAD | head -5
-if [ $(git log --oneline origin/$(git branch --show-current)..HEAD | wc -l) -gt 5 ]; then
-    echo "... and $(( $(git log --oneline origin/$(git branch --show-current)..HEAD | wc -l) - 5 )) more commits"
-fi
+echo "📝 Changes summary:"
+git diff --stat 2>/dev/null || echo "New files and modifications detected"
 
 echo ""
 echo "⚠️  REQUIRED: Request permission from project owner before proceeding"
 echo ""
-echo "Have you received explicit permission to push these changes? (y/N)"
+echo "Have you received explicit permission to stage these changes? (y/N)"
 read -r response
 
 case "$response" in
     [yY]|[yY][eE][sS])
-        echo "✅ Permission confirmed - proceeding with push"
-        exit 0
+        echo "✅ Permission confirmed - proceeding with git add"
+        # Execute the original git add command with all arguments
+        exec git-original "$@"
         ;;
     *)
-        echo "❌ Push cancelled - obtain permission first"
+        echo "❌ Git add cancelled - obtain permission first"
         echo ""
         echo "To request permission, provide this summary:"
-        echo "- Files modified: $(git diff --name-only origin/$(git branch --show-current)..HEAD | wc -l) files"
-        echo "- Commits: $(git log --oneline origin/$(git branch --show-current)..HEAD | wc -l) commits"
+        echo "- Files to stage: $(git status --porcelain | wc -l) files"
         echo "- Branch: $(git branch --show-current)"
+        echo "- Changes: $(git diff --stat 2>/dev/null | tail -1 || echo 'New files detected')"
         echo ""
         exit 1
         ;;
 esac
 EOF
 
-# Make the hook executable
-chmod +x .git/hooks/pre-push
+# Make the wrapper executable
+chmod +x .git/hooks/git-add-wrapper
 
-echo "✅ Git push authorization hook installed successfully!"
+# Create an alias to intercept git add commands
+echo "Creating git add alias..."
+git config alias.add '!sh .git/hooks/git-add-wrapper add'
+
+echo "✅ Git add authorization hook installed successfully!"
 echo ""
 echo "📋 What this does:"
-echo "   - Intercepts all 'git push' commands"
-echo "   - Shows summary of changes to be pushed"
+echo "   - Intercepts all 'git add' commands"
+echo "   - Shows summary of changes to be staged"
 echo "   - Requires explicit 'y' confirmation to proceed"
-echo "   - Cancels push if permission not confirmed"
+echo "   - Cancels add if permission not confirmed"
 echo ""
 echo "🔧 To remove this hook later:"
-echo "   rm .git/hooks/pre-push"
+echo "   git config --unset alias.add"
+echo "   rm .git/hooks/git-add-wrapper"
 echo ""
-echo "⚠️  Remember: Always request permission before pushing!"
+echo "⚠️  Remember: Always request permission before staging changes!"

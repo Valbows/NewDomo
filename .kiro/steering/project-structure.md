@@ -1,16 +1,16 @@
 # Domo AI Project Structure Guidelines
 
-## 🚨 CRITICAL: Git Push Authorization Required
+## 🚨 CRITICAL: Git Add Authorization Required
 
-**MANDATORY RULE**: No `git push` commands without explicit permission. Always request approval before pushing any changes to the repository.
+**MANDATORY RULE**: No `git add` commands without explicit permission. Always request approval before staging any changes to the repository.
 
 ## Core Development Rules
 
-1. **Git Push Authorization**: **NEVER** push code without explicit permission. Always request approval and wait for "yes" before executing `git push`.
+1. **Git Add Authorization**: **NEVER** stage code without explicit permission. Always request approval and wait for "yes" before executing `git add`.
 
 2. **Documentation Organization**: All documentation files belong in `docs/` folder, never create duplicates in root directory. **Exception**: One comprehensive `README.md` is allowed in the root folder for GitHub project overview and initial user guidance.
 
-2. **Environment File Management**:
+3. **Environment File Management**:
 
    - ONLY use these three environment files: `.env.development`, `.env.staging`, `.env.production`
    - `.env.development` replaces `.env.local` for local development and testing
@@ -18,49 +18,53 @@
    - All code must reference the appropriate environment file based on NODE_ENV
    - Jest and other tools should load `.env.development` for local testing
 
-3. **File Reuse**: Always check existing documentation in `docs/` and scripts in `scripts/` before creating new files.
+4. **File Reuse**: Always check existing documentation in `docs/` and scripts in `scripts/` before creating new files.
 
-4. **Code Size Management**: 
+5. **Code Size Management**:
+
    - **STRICT LIMIT**: All files must be between 300-500 lines maximum
    - **Refactoring Required**: Any file exceeding 500 lines must be immediately refactored into smaller, focused modules
    - **Optimal Range**: Target 300-400 lines for maintainability
    - **Exceptions**: Only configuration files (package.json, etc.) are exempt from this rule
 
-5. **Developer Comments**: Write clear comments in all created files explaining purpose, usage, and key functionality for other developers.
+6. **Developer Comments**: Write clear comments in all created files explaining purpose, usage, and key functionality for other developers.
 
-6. **Testing & Debugging**: Debug and test every new feature or function before moving on - it must pass all checks and work correctly.
+7. **Testing & Debugging**: Debug and test every new feature or function before moving on - it must pass all checks and work correctly.
 
-7. **Script Organization**: All SQL files belong in `scripts/` folder with descriptive names following `supabase-table-name.sql` pattern.
+8. **Script Organization**: All SQL files belong in `scripts/` folder with descriptive names following `supabase-table-name.sql` pattern.
 
-8. **Architecture Compliance**: Follow the established domain-driven architecture with service layer separation and component organization patterns.
+9. **Architecture Compliance**: Follow the established domain-driven architecture with service layer separation and component organization patterns.
 
-9. **Code Duplication Prevention**: Always check for existing code before implementing new functionality and perform cleanup to remove duplicates when possible.
+10. **Code Duplication Prevention**: Always check for existing code before implementing new functionality and perform cleanup to remove duplicates when possible.
 
-10. **File & Folder Movement Authorization**: Always ask for user permission and provide clear explanation before moving or removing any files or folders from their current location.
+11. **File & Folder Movement Authorization**: Always ask for user permission and provide clear explanation before moving or removing any files or folders from their current location.
 
-11. **Creation Authorization & Reuse**: Before creating new files or folders, ask for user permission and suggest using existing resources when possible.
+12. **Creation Authorization & Reuse**: Before creating new files or folders, ask for user permission and suggest using existing resources when possible.
 
-12. **Test Organization Compliance**: ALL test files must be placed in `__tests__/` directory with appropriate subdirectories (unit/, integration/, e2e/, lib/, etc.).
+13. **Test Organization Compliance**: ALL test files must be placed in `__tests__/` directory with appropriate subdirectories (unit/, integration/, e2e/, lib/, etc.).
 
-13. **Root Directory Cleanliness**: STRICTLY maintain a clean root directory. Only essential configuration files are allowed. Screenshots, temporary files, backup files, and loose documentation are PROHIBITED.
+14. **Root Directory Cleanliness**: STRICTLY maintain a clean root directory. Only essential configuration files are allowed. Screenshots, temporary files, backup files, and loose documentation are PROHIBITED.
 
-14. **Screenshot & Debug File Prevention**: NEVER commit screenshots, debug images, or temporary files to the repository. Use proper debugging tools and documentation instead of screenshots.
+15. **Screenshot & Debug File Prevention**: NEVER commit screenshots, debug images, or temporary files to the repository. Use proper debugging tools and documentation instead of screenshots.
 
-15. **Build Cache Management**: Monitor and clean `.next` folder regularly. Use `npm run clean:cache` weekly and `npm run clean:cache:all` before deployments to manage disk space efficiently.
+16. **Build Cache Management**: Monitor and clean `.next` folder regularly. Use `npm run clean:cache` weekly and `npm run clean:cache:all` before deployments to manage disk space efficiently.
 
 ## Code Size Management Rules
 
 ### **File Size Limits (STRICTLY ENFORCED)**
+
 - **Maximum**: 500 lines per file
 - **Target Range**: 300-400 lines for optimal maintainability
 - **Minimum**: 50 lines (avoid overly fragmented files)
 
 ### **Refactoring Triggers**
+
 - **Immediate Action Required**: Any file > 500 lines
 - **Consider Refactoring**: Files > 400 lines
 - **Monitor**: Files approaching 350 lines
 
 ### **Refactoring Strategies**
+
 1. **Extract Utility Functions**: Move helper functions to separate utils files
 2. **Separate Types**: Create dedicated types.ts files for interfaces
 3. **Component Decomposition**: Break large components into smaller, focused ones
@@ -68,6 +72,7 @@
 5. **Data Layer**: Separate data fetching/processing logic
 
 ### **File Organization Patterns**
+
 ```
 feature/
 ├── index.ts              # Main exports (< 50 lines)
@@ -117,6 +122,7 @@ feature/
 - `render.yaml` - Deployment configuration
 
 #### **Build Output Directories (Auto-generated, Git-ignored)**
+
 - `.next/` - Next.js build output (~409MB, clean regularly with `npm run clean:cache`)
 - `.swc/` - SWC compiler cache and plugins (auto-managed by Next.js)
 - `test-artifacts/` - Consolidated test artifacts directory
@@ -201,6 +207,7 @@ When ANY prohibited file is found in root directory:
 #### **📋 REMEDIATION STEPS BY FILE TYPE**
 
 ##### **Documentation Files (`*.md`)**
+
 ```bash
 # REQUIRED ACTION: Move to docs/
 mv filename.md docs/filename.md
@@ -209,6 +216,7 @@ git rm filename.md
 ```
 
 ##### **Script Files (`*.sh`, `*.js` executables)**
+
 ```bash
 # REQUIRED ACTION: Move to scripts/
 mv script-name.js scripts/script-name.js
@@ -217,6 +225,7 @@ git rm script-name.js
 ```
 
 ##### **Images & Screenshots**
+
 ```bash
 # REQUIRED ACTION: Delete immediately
 rm *.png *.jpg *.jpeg *.gif *.webp
@@ -226,6 +235,7 @@ echo "*.png" >> .gitignore
 ```
 
 ##### **Temporary & Backup Files**
+
 ```bash
 # REQUIRED ACTION: Delete immediately
 rm *.backup *-old.* *-copy.* *.tmp *.log
@@ -233,6 +243,7 @@ git rm *.backup *-old.* *-copy.* *.tmp *.log
 ```
 
 ##### **Data Files**
+
 ```bash
 # REQUIRED ACTION: Move to data/ or delete
 mkdir -p data/
@@ -244,19 +255,23 @@ git rm *.json *.csv *.xlsx
 #### **🛡️ PREVENTION MEASURES**
 
 ##### **1. Pre-Creation Checklist**
+
 Before creating ANY new file in root directory, ask:
+
 - ✅ Is this an essential configuration file?
 - ✅ Is this file listed in the ALLOWED section?
 - ✅ Does this file belong in `docs/`, `scripts/`, or another folder?
 - ✅ Will this file be needed by the build process or deployment?
 
 ##### **2. Automated Detection Script**
+
 ```bash
 # Available in package.json scripts:
 npm run check:root  # Validates root directory compliance
 ```
 
 **Usage:**
+
 ```bash
 # Check compliance before committing
 npm run check:root
@@ -266,6 +281,7 @@ npm run check:root
 ```
 
 ##### **3. Git Pre-commit Hook**
+
 ```bash
 #!/bin/sh
 # .git/hooks/pre-commit
@@ -277,6 +293,7 @@ fi
 ```
 
 ##### **4. Regular Audits**
+
 - **Daily**: Check root directory before starting work
 - **Weekly**: Run `npm run check:root` to validate compliance
 - **Monthly**: Review and update prohibited file patterns
@@ -284,6 +301,7 @@ fi
 #### **🎯 COMPLIANCE VERIFICATION**
 
 ##### **Root Directory Should Only Contain:**
+
 ```
 ✅ package.json, package-lock.json
 ✅ tsconfig.json, next.config.cjs
@@ -298,6 +316,7 @@ fi
 ```
 
 ##### **Quick Compliance Check:**
+
 ```bash
 # Count non-config files in root (should be minimal)
 ls -la | grep -v "^d" | grep -v "package\|tsconfig\|next.config\|tailwind\|eslint\|jest\|playwright\|\.env\|\.git\|README\|docker\|render" | wc -l
@@ -308,12 +327,14 @@ ls -la | grep -v "^d" | grep -v "package\|tsconfig\|next.config\|tailwind\|eslin
 #### **🚨 ESCALATION PROCESS**
 
 ##### **If Violations Persist:**
+
 1. **First Violation**: Immediate cleanup + documentation review
 2. **Second Violation**: Team discussion on file organization
 3. **Third Violation**: Implement automated enforcement tools
 4. **Ongoing Issues**: Review and strengthen project structure guidelines
 
 ##### **Emergency Cleanup Command:**
+
 ```bash
 # Nuclear option - use with caution
 npm run clean:root:emergency
@@ -324,21 +345,24 @@ This will automatically move/delete common violations according to the rules abo
 ## Testing Framework Guidelines
 
 ### **IMPORTANT: Jest Only - No Vitest**
+
 - **Primary Test Runner**: Jest (configured via `jest.config.cjs`)
 - **DO NOT** add Vitest configurations (`vitest.config.*`)
 - **DO NOT** use Vitest imports (`import { describe } from 'vitest'`)
 - **USE** Jest imports (`import { describe } from '@jest/globals'`)
 
 ### **Test Environment Setup**
+
 ```
 Testing Stack:
 ├── Jest - Unit & Integration tests
-├── Playwright - End-to-end tests  
+├── Playwright - End-to-end tests
 ├── React Testing Library - Component testing
 └── MSW - API mocking
 ```
 
 ### **Test File Organization**
+
 ```
 __tests__/
 ├── unit/                    # Jest unit tests
@@ -348,69 +372,75 @@ __tests__/
 ```
 
 ### **Test Commands**
+
 - `npm run test` - All tests
 - `npm run test:unit` - Unit tests only
 - `npm run test:integration` - Integration tests only
 - `npm run test:e2e` - End-to-end tests only
 
 ### **Configuration Files**
+
 - `jest.config.cjs` - Main Jest configuration
 - `jest.config.dom.cjs` - DOM environment tests
 - `jest.config.node.cjs` - Node.js environment tests
 - `playwright.config.ts` - E2E test configuration
 
-## Git Push Authorization Protocol
+## Git Add Authorization Protocol
 
-### 🚨 **MANDATORY: No Git Push Without Explicit Permission**
+### 🚨 **MANDATORY: No Git Add Without Explicit Permission**
 
-#### **STRICT RULE: All code changes require review and approval before pushing**
+#### **STRICT RULE: All code changes require review and approval before staging**
 
-##### **Before ANY `git push` command:**
+##### **Before ANY `git add` command:**
 
-1. **STOP** - Do not push automatically
+1. **STOP** - Do not add files automatically
 2. **REVIEW** - Examine all changes made in this session
-3. **REQUEST** - Ask for explicit permission to push
+3. **REQUEST** - Ask for explicit permission to stage changes
 4. **WAIT** - Do not proceed until receiving clear "yes" approval
 
 ##### **Required Review Process:**
 
 ```bash
-# 1. Show what will be pushed
+# 1. Show what will be staged
 git status
-git diff --cached
+git diff
 
-# 2. List commits to be pushed
-git log --oneline origin/main..HEAD
+# 2. List all modified files
+git diff --name-only
 
 # 3. Request permission with summary
 "I have made the following changes:
 - [Brief description of changes]
-- [Files modified]
+- [Files modified: list each file]
 - [Purpose/reason for changes]
 
-May I push these changes to the repository?"
+May I stage these changes with git add?"
 
 # 4. Wait for explicit "yes" before proceeding
-# Only push after receiving clear approval
+# Only add after receiving clear approval
 ```
 
-##### **Approved Push Commands (only after permission):**
+##### **Approved Add Commands (only after permission):**
+
 ```bash
-git push                    # After explicit "yes"
-git push origin main        # After explicit "yes"  
-git push origin develop     # After explicit "yes"
+git add .                   # After explicit "yes"
+git add filename.ext        # After explicit "yes"
+git add -A                  # After explicit "yes"
 ```
 
 ##### **NEVER use these without permission:**
+
 ```bash
-git push --force           # ABSOLUTELY FORBIDDEN
-git push --force-with-lease # FORBIDDEN without permission
-git push -f                # FORBIDDEN
+git add .                   # FORBIDDEN without permission
+git add -A                  # FORBIDDEN without permission
+git add *                   # FORBIDDEN without permission
+git commit -am "message"    # FORBIDDEN (bypasses add review)
 ```
 
 #### **Exception Handling:**
 
 ##### **Emergency Situations Only:**
+
 - Critical production bugs requiring immediate fixes
 - Security vulnerabilities needing urgent patches
 - Build failures blocking team development
@@ -418,6 +448,7 @@ git push -f                # FORBIDDEN
 **Even in emergencies:** Still request permission but explain urgency
 
 ##### **Violation Consequences:**
+
 1. **First violation**: Review this protocol and acknowledge understanding
 2. **Repeated violations**: Implement git hooks to prevent unauthorized pushes
 3. **Persistent issues**: Require pull request workflow for all changes
@@ -425,42 +456,47 @@ git push -f                # FORBIDDEN
 #### **Implementation Safeguards:**
 
 ##### **Automated Git Hook Installation:**
+
 ```bash
-# Install pre-push hook to enforce authorization
+# Install git add hook to enforce authorization
 npm run install:hooks
 
 # This creates a git hook that:
-# - Shows summary of changes before push
+# - Intercepts all 'git add' commands
+# - Shows summary of changes before staging
 # - Requires explicit 'y' confirmation
-# - Cancels push if permission not given
+# - Cancels add if permission not given
 # - Provides change summary for permission requests
 ```
 
 ##### **Manual Git Hook Setup (Alternative):**
+
 ```bash
-# Create .git/hooks/pre-push manually
-#!/bin/sh
-echo "🚨 STOP: Git push requires explicit permission"
-echo "Have you received approval to push these changes? (y/N)"
-read -r response
-if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
-    echo "❌ Push cancelled - obtain permission first"
-    exit 1
-fi
+# Create git add alias manually
+git config alias.add '!echo "🚨 STOP: Git add requires explicit permission"; echo "Have you received approval to stage these changes? (y/N)"; read response; if [ "$response" = "y" ] || [ "$response" = "Y" ]; then git add-original "$@"; else echo "❌ Add cancelled - obtain permission first"; exit 1; fi; #'
 ```
 
 ##### **Safe Development Workflow:**
+
 ```bash
-# 1. Make changes and commit locally
+# 1. Make changes (editing files)
+# ... make your code changes ...
+
+# 2. Review changes before staging
+git status
+git diff
+
+# 3. Request permission to stage changes
+# "May I stage these changes with git add?"
+
+# 4. Only add after receiving "yes"
 git add .
 git commit -m "description"
 
-# 2. Review changes before pushing
-git log --oneline -5
-git diff origin/main..HEAD
+# 5. Request permission to push (separate approval)
+# "May I push this commit?"
 
-# 3. Request permission with change summary
-# 4. Only push after receiving "yes"
+# 6. Only push after receiving second "yes"
 git push
 ```
 
@@ -480,12 +516,14 @@ git push
 ## Code Size Monitoring
 
 ### **Development Workflow**
+
 1. **Before Coding**: Check current file size with `wc -l filename`
 2. **During Development**: Monitor line count as you add code
 3. **Before Commit**: Verify no files exceed 500 lines
 4. **Code Review**: Reject PRs with oversized files
 
 ### **Refactoring Checklist**
+
 - [ ] Identify logical boundaries for splitting
 - [ ] Extract reusable utilities
 - [ ] Separate types and interfaces
@@ -532,11 +570,13 @@ src/
 ## Refactoring Success Example: Reporting System
 
 ### **Before Refactoring**
+
 - Single `Reporting.tsx` file: **613 lines** ❌
 - Violated size limits
 - Hard to maintain and test
 
 ### **After Refactoring**
+
 ```
 reporting/
 ├── Reporting.tsx           # 146 lines ✅ (Main container)
@@ -549,6 +589,7 @@ reporting/
 ```
 
 ### **Benefits Achieved**
+
 - **Maintainability**: Easy to find and modify specific functionality
 - **Testability**: Smaller, focused modules with comprehensive Jest tests
 - **Reusability**: Components can be used elsewhere
@@ -558,29 +599,32 @@ reporting/
 ## Testing Best Practices
 
 ### **Writing New Tests**
+
 1. **Unit Tests**: Use Jest with `@jest/globals` imports
 2. **Component Tests**: Use React Testing Library with Jest
 3. **E2E Tests**: Use Playwright for full user workflows
 4. **API Tests**: Use MSW for mocking external services
 
 ### **Test File Naming**
+
 - Unit tests: `*.test.ts` or `*.test.tsx`
 - Integration tests: `*.integration.test.ts`
 - E2E tests: `*.spec.ts` (Playwright convention)
 
 ### **Common Testing Patterns**
+
 ```typescript
 // ✅ Correct Jest import
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from "@jest/globals";
 
 // ❌ Wrong - Don't use Vitest
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
 // ✅ Correct mocking
-jest.mock('@/lib/supabase');
+jest.mock("@/lib/supabase");
 
 // ❌ Wrong - Don't use vi
-vi.mock('@/lib/supabase');
+vi.mock("@/lib/supabase");
 ```
 
 ### Key Principles
