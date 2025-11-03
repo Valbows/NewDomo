@@ -179,11 +179,91 @@ For detailed guardrails documentation, see [GUARDRAILS.md](./GUARDRAILS.md).
 
 ## Development
 
-### Running Tests
+### Testing Framework
+
+This project uses **Jest** for unit and integration testing, and **Playwright** for end-to-end testing.
+
+#### **🚨 Important: Jest Only - No Vitest**
+- **DO NOT** add Vitest configurations (`vitest.config.*`)
+- **DO NOT** use Vitest imports (`import { describe } from 'vitest'`)
+- **USE** Jest imports (`import { describe } from '@jest/globals'`)
+
+#### **Test Structure**
+```
+__tests__/
+├── unit/                    # Jest unit tests
+├── integration/             # Jest integration tests  
+├── e2e/                     # Playwright E2E tests
+└── lib/                     # Test utilities
+```
+
+#### **Running Tests**
 
 ```bash
+# All tests
 npm test
+
+# Unit tests only
+npm run test:unit
+
+# Integration tests only  
+npm run test:integration
+
+# End-to-end tests only
+npm run test:e2e
+
+# Specific test file
+npm run test:unit -- __tests__/unit/reporting/utils.test.ts
 ```
+
+#### **Test Configuration Files**
+- `jest.config.cjs` - Main Jest configuration
+- `jest.config.dom.cjs` - DOM environment tests
+- `jest.config.node.cjs` - Node.js environment tests  
+- `playwright.config.ts` - E2E test configuration
+
+#### **Writing Tests**
+
+**Unit Tests (Jest)**
+```typescript
+// ✅ Correct Jest import
+import { describe, it, expect } from '@jest/globals';
+
+describe('MyComponent', () => {
+  it('should render correctly', () => {
+    // Test implementation
+  });
+});
+```
+
+**Component Tests (React Testing Library + Jest)**
+```typescript
+import { render, screen } from '@testing-library/react';
+import { MyComponent } from './MyComponent';
+
+it('displays the correct content', () => {
+  render(<MyComponent />);
+  expect(screen.getByText('Hello World')).toBeInTheDocument();
+});
+```
+
+**E2E Tests (Playwright)**
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('user can navigate to reporting page', async ({ page }) => {
+  await page.goto('/demos/123/configure');
+  await page.click('[data-testid="reporting-tab"]');
+  await expect(page.locator('text=Conversation Analytics')).toBeVisible();
+});
+```
+
+#### **Testing Best Practices**
+- Write unit tests for utility functions and business logic
+- Use integration tests for component interactions and API calls
+- Use E2E tests for complete user workflows
+- Mock external APIs using MSW (Mock Service Worker)
+- Follow the AAA pattern: Arrange, Act, Assert
 
 ### Database Management
 
@@ -250,6 +330,12 @@ Update your `.env.development` with development Supabase URLs and API keys, or u
 - Verify ElevenLabs API key
 - Check video file format compatibility
 - Monitor API rate limits
+
+**Test Failures**
+- Ensure you're using Jest syntax, not Vitest
+- Check imports use `@jest/globals` not `vitest`
+- Run `npm test` to see detailed error messages
+- For E2E tests, ensure development server is running
 
 ## License
 

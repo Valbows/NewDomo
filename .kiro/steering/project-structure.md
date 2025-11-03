@@ -14,7 +14,11 @@
 
 3. **File Reuse**: Always check existing documentation in `docs/` and scripts in `scripts/` before creating new files.
 
-4. **Code Size Management**: Refactor any file that grows beyond 500 lines into smaller, focused modules.
+4. **Code Size Management**: 
+   - **STRICT LIMIT**: All files must be between 300-500 lines maximum
+   - **Refactoring Required**: Any file exceeding 500 lines must be immediately refactored into smaller, focused modules
+   - **Optimal Range**: Target 300-400 lines for maintainability
+   - **Exceptions**: Only configuration files (package.json, etc.) are exempt from this rule
 
 5. **Developer Comments**: Write clear comments in all created files explaining purpose, usage, and key functionality for other developers.
 
@@ -37,6 +41,38 @@
 14. **Screenshot & Debug File Prevention**: NEVER commit screenshots, debug images, or temporary files to the repository. Use proper debugging tools and documentation instead of screenshots.
 
 15. **Build Cache Management**: Monitor and clean `.next` folder regularly. Use `npm run clean:cache` weekly and `npm run clean:cache:all` before deployments to manage disk space efficiently.
+
+## Code Size Management Rules
+
+### **File Size Limits (STRICTLY ENFORCED)**
+- **Maximum**: 500 lines per file
+- **Target Range**: 300-400 lines for optimal maintainability
+- **Minimum**: 50 lines (avoid overly fragmented files)
+
+### **Refactoring Triggers**
+- **Immediate Action Required**: Any file > 500 lines
+- **Consider Refactoring**: Files > 400 lines
+- **Monitor**: Files approaching 350 lines
+
+### **Refactoring Strategies**
+1. **Extract Utility Functions**: Move helper functions to separate utils files
+2. **Separate Types**: Create dedicated types.ts files for interfaces
+3. **Component Decomposition**: Break large components into smaller, focused ones
+4. **Service Layer**: Extract business logic into service classes
+5. **Data Layer**: Separate data fetching/processing logic
+
+### **File Organization Patterns**
+```
+feature/
+├── index.ts              # Main exports (< 50 lines)
+├── Component.tsx         # Main component (300-400 lines)
+├── types.ts             # TypeScript interfaces (< 200 lines)
+├── utils.ts             # Helper functions (< 300 lines)
+├── service.ts           # Business logic (< 400 lines)
+└── components/          # Sub-components if needed
+    ├── SubComponent1.tsx
+    └── SubComponent2.tsx
+```
 
 ## Key Documentation Files
 
@@ -138,14 +174,72 @@
 3. **Developer education**: Team training on file organization
 4. **Automated cleanup**: Scripts to detect and remove violations
 
+## Testing Framework Guidelines
+
+### **IMPORTANT: Jest Only - No Vitest**
+- **Primary Test Runner**: Jest (configured via `jest.config.cjs`)
+- **DO NOT** add Vitest configurations (`vitest.config.*`)
+- **DO NOT** use Vitest imports (`import { describe } from 'vitest'`)
+- **USE** Jest imports (`import { describe } from '@jest/globals'`)
+
+### **Test Environment Setup**
+```
+Testing Stack:
+├── Jest - Unit & Integration tests
+├── Playwright - End-to-end tests  
+├── React Testing Library - Component testing
+└── MSW - API mocking
+```
+
+### **Test File Organization**
+```
+__tests__/
+├── unit/                    # Jest unit tests
+├── integration/             # Jest integration tests
+├── e2e/                     # Playwright E2E tests
+└── lib/                     # Test utilities
+```
+
+### **Test Commands**
+- `npm run test` - All tests
+- `npm run test:unit` - Unit tests only
+- `npm run test:integration` - Integration tests only
+- `npm run test:e2e` - End-to-end tests only
+
+### **Configuration Files**
+- `jest.config.cjs` - Main Jest configuration
+- `jest.config.dom.cjs` - DOM environment tests
+- `jest.config.node.cjs` - Node.js environment tests
+- `playwright.config.ts` - E2E test configuration
+
 ## Before Creating New Files
 
-1. Check if similar documentation exists in `docs/`
-2. Check if similar scripts exist in `scripts/`
-3. Update existing files rather than creating duplicates
-4. Follow the established naming conventions
-5. Add comprehensive comments for developer understanding
-6. **NEVER** add screenshots or debug images to root directory
+1. **Check File Size**: Ensure existing files don't exceed 500 lines before adding new code
+2. **Refactor First**: If target file is > 400 lines, refactor before adding new functionality
+3. **Use Correct Test Framework**: Jest for unit/integration, Playwright for E2E
+4. Check if similar documentation exists in `docs/`
+5. Check if similar scripts exist in `scripts/`
+6. Update existing files rather than creating duplicates
+7. Follow the established naming conventions
+8. Add comprehensive comments for developer understanding
+9. **NEVER** add screenshots or debug images to root directory
+
+## Code Size Monitoring
+
+### **Development Workflow**
+1. **Before Coding**: Check current file size with `wc -l filename`
+2. **During Development**: Monitor line count as you add code
+3. **Before Commit**: Verify no files exceed 500 lines
+4. **Code Review**: Reject PRs with oversized files
+
+### **Refactoring Checklist**
+- [ ] Identify logical boundaries for splitting
+- [ ] Extract reusable utilities
+- [ ] Separate types and interfaces
+- [ ] Create focused sub-components
+- [ ] Maintain clear imports/exports
+- [ ] Update documentation
+- [ ] Test functionality after refactoring
 
 ## Current Code Architecture
 
@@ -181,6 +275,60 @@ src/
 3. **Service Layer**: Business logic (lib/services/)
 4. **Data Layer**: Supabase integration (lib/supabase/)
 5. **Integration Layer**: External APIs (lib/tavus/, lib/elevenlabs/)
+
+## Refactoring Success Example: Reporting System
+
+### **Before Refactoring**
+- Single `Reporting.tsx` file: **613 lines** ❌
+- Violated size limits
+- Hard to maintain and test
+
+### **After Refactoring**
+```
+reporting/
+├── Reporting.tsx           # 146 lines ✅ (Main container)
+├── types.ts               # 77 lines ✅ (Interfaces)
+├── utils.ts               # 107 lines ✅ (Helper functions)
+├── data-service.ts        # 127 lines ✅ (Data fetching)
+├── ConversationList.tsx   # 143 lines ✅ (List component)
+├── ConversationDetails.tsx # 110 lines ✅ (Detail component)
+└── [existing cards]       # All under 230 lines ✅
+```
+
+### **Benefits Achieved**
+- **Maintainability**: Easy to find and modify specific functionality
+- **Testability**: Smaller, focused modules with comprehensive Jest tests
+- **Reusability**: Components can be used elsewhere
+- **Clarity**: Single responsibility per file
+- **Compliance**: All files under 500-line limit
+
+## Testing Best Practices
+
+### **Writing New Tests**
+1. **Unit Tests**: Use Jest with `@jest/globals` imports
+2. **Component Tests**: Use React Testing Library with Jest
+3. **E2E Tests**: Use Playwright for full user workflows
+4. **API Tests**: Use MSW for mocking external services
+
+### **Test File Naming**
+- Unit tests: `*.test.ts` or `*.test.tsx`
+- Integration tests: `*.integration.test.ts`
+- E2E tests: `*.spec.ts` (Playwright convention)
+
+### **Common Testing Patterns**
+```typescript
+// ✅ Correct Jest import
+import { describe, it, expect } from '@jest/globals';
+
+// ❌ Wrong - Don't use Vitest
+import { describe, it, expect } from 'vitest';
+
+// ✅ Correct mocking
+jest.mock('@/lib/supabase');
+
+// ❌ Wrong - Don't use vi
+vi.mock('@/lib/supabase');
+```
 
 ### Key Principles
 
