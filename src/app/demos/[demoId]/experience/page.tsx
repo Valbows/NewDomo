@@ -218,8 +218,56 @@ export default function DemoExperiencePage() {
           console.warn("Failed to load video titles:", e);
         }
 
-        // Start conversation
-        await startConversation(processedDemoData);
+        // Always obtain a fresh/validated Daily conversation URL from the server
+        // Server will reuse valid existing rooms or create a new one if stale
+        console.log('🚀 Requesting Daily conversation URL from API (ignoring saved metadata)');
+        try {
+          // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
+          const win: any = typeof window !== 'undefined' ? window : undefined;
+          if (win) {
+            win.__startConvInflight = win.__startConvInflight || new Map<string, Promise<any>>();
+          }
+          const inflight: Map<string, Promise<any>> | undefined = win?.__startConvInflight;
+          let startPromise = inflight?.get(processedDemoData.id);
+          if (!startPromise) {
+            startPromise = fetch('/api/start-conversation', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ demoId: processedDemoData.id, forceNew }),
+            }).then(async (resp) => {
+              if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw err;
+              }
+              return resp.json();
+            });
+            inflight?.set(processedDemoData.id, startPromise);
+          } else {
+            console.log('⏳ Waiting for in-flight conversation start (deduped)');
+          }
+          let data: any;
+          try {
+            data = await startPromise;
+          } finally {
+            inflight?.delete(processedDemoData.id);
+          }
+          const url = data?.conversation_url as string | undefined;
+          if (url && isDailyRoomUrl(url)) {
+            console.log('✅ Received Daily conversation URL from API:', url);
+            setConversationUrl(url);
+            setUiState(UIState.CONVERSATION);
+          } else {
+            console.warn('Received non-Daily conversation URL from API:', url);
+            setError('Conversation URL invalid. Please verify Domo configuration.');
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          logError(e, 'Error starting conversation');
+          setError(getErrorMessage(e, 'Failed to start conversation'));
+          setLoading(false);
+          return;
+        }
       } catch (e: unknown) {
         logError(e, "Failed to fetch demo or start conversation");
         setError(getErrorMessage(e));
@@ -230,28 +278,6 @@ export default function DemoExperiencePage() {
 
     fetchDemoAndStartConversation();
   }, [demoId, forceNew]);
-
-  // Start conversation logic
-  const startConversation = async (demoData: Demo) => {
-    try {
-      if (!demoData.metadata?.tavusShareableLink) {
-        setError("Demo not configured with Tavus conversation");
-        return;
-      }
-
-      const shareableLink = demoData.metadata.tavusShareableLink;
-      if (!isDailyRoomUrl(shareableLink)) {
-        setError("Invalid conversation URL format");
-        return;
-      }
-
-      setConversationUrl(shareableLink);
-      setUiState(UIState.CONVERSATION);
-    } catch (e: unknown) {
-      logError(e, "Failed to start conversation");
-      setError(getErrorMessage(e));
-    }
-  };
 
   // Event handlers
   const handleVideoPlay = (
