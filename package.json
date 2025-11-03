@@ -28,6 +28,7 @@
     "webhook:auto": "./auto-webhook.sh",
     "webhook:setup": "node setup-webhooks.js",
     "ngrok": "ngrok http 3000",
+    "check:root": "node scripts/check-root-directory.js",
     "deploy:staging": "echo 'Push to develop branch to deploy to staging'",
     "deploy:production": "echo 'Push to main branch to deploy to production'",
     "docker:build": "docker build -t domo-ai .",

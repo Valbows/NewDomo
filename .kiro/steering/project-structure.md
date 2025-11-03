@@ -122,6 +122,20 @@ feature/
 
 ### ❌ STRICTLY PROHIBITED in Root Directory
 
+#### **🚨 ZERO TOLERANCE POLICY - IMMEDIATE REMOVAL REQUIRED**
+
+Any file in the following categories found in root directory must be immediately moved or deleted:
+
+#### **Documentation Files (ZERO TOLERANCE)**
+
+- ❌ **ANY** `*.md` files except `README.md` → **MUST** move to `docs/`
+- ❌ `log.md`, `changelog.md`, `notes.md` → `docs/log.md`, `docs/changelog.md`, `docs/notes.md`
+- ❌ `IMPLEMENTATION_SUMMARY.md` → `docs/IMPLEMENTATION_SUMMARY.md`
+- ❌ `DEPLOYMENT_GUIDE.md` → `docs/DEPLOYMENT_GUIDE.md`
+- ❌ `GUARDRAILS.md` → `docs/GUARDRAILS.md`
+- ❌ `TODO.md`, `ROADMAP.md`, `FEATURES.md` → `docs/TODO.md`, `docs/ROADMAP.md`, `docs/FEATURES.md`
+- ❌ `API.md`, `ARCHITECTURE.md` → `docs/API.md`, `docs/ARCHITECTURE.md`
+
 #### **Screenshots & Images (ZERO TOLERANCE)**
 
 - ❌ `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp` - ANY image files
@@ -132,47 +146,174 @@ feature/
 - ❌ `*-trace.zip` - Playwright traces (should go to test-results/)
 - ❌ ANY visual debugging artifacts
 
-#### **Documentation Files**
+#### **Script Files (ZERO TOLERANCE)**
 
-- ❌ `*.md` files except `README.md` → Move to `docs/`
-- ❌ `IMPLEMENTATION_SUMMARY.md` → `docs/IMPLEMENTATION_SUMMARY.md`
-- ❌ `DEPLOYMENT_GUIDE.md` → `docs/DEPLOYMENT_GUIDE.md`
-- ❌ `GUARDRAILS.md` → `docs/GUARDRAILS.md`
-
-#### **Script Files**
-
-- ❌ `*.sh`, `*.js` executable scripts → Move to `scripts/`
+- ❌ `*.sh`, `*.js` executable scripts → **MUST** move to `scripts/`
 - ❌ `setup-*.js` → `scripts/setup-*.js`
 - ❌ `validate-*.js` → `scripts/validate-*.js`
+- ❌ `build-*.sh`, `deploy-*.sh` → `scripts/build-*.sh`, `scripts/deploy-*.sh`
+- ❌ `test-*.js`, `seed-*.js` → `scripts/test-*.js`, `scripts/seed-*.js`
 
-#### **Temporary & Backup Files**
+#### **Log & Data Files (ZERO TOLERANCE)**
 
-- ❌ `*.backup`, `*-old.*`, `*-copy.*` - Backup files
-- ❌ `*.log`, `*.tmp`, `*.cache` - Temporary files
-- ❌ `data-export.json`, `cvi-components.json` - Exported data
-- ❌ `.DS_Store`, `*.swp`, `*.swo` - IDE artifacts
+- ❌ `*.log`, `*.tmp`, `*.cache` - Temporary files → Delete or move to appropriate location
+- ❌ `data-export.json`, `cvi-components.json` - Exported data → Move to `data/` or delete
+- ❌ `debug.json`, `output.json`, `results.json` → Move to appropriate folder or delete
+- ❌ `*.csv`, `*.xlsx`, `*.sql` - Data files → Move to `data/` or `scripts/`
 
-#### **Legacy Configuration**
+#### **Temporary & Backup Files (ZERO TOLERANCE)**
+
+- ❌ `*.backup`, `*-old.*`, `*-copy.*` - Backup files → Delete immediately
+- ❌ `*-backup`, `*-temp`, `*-tmp` - Temporary files → Delete immediately
+- ❌ `.DS_Store`, `*.swp`, `*.swo` - IDE artifacts → Delete immediately
+- ❌ `Thumbs.db`, `desktop.ini` - OS artifacts → Delete immediately
+
+#### **Legacy Configuration (ZERO TOLERANCE)**
 
 - ❌ `jest.config.js` → Use `jest.config.cjs`
 - ❌ `next.config.js` → Use `next.config.cjs`
 - ❌ `postcss.config.js` → Use `postcss.config.cjs`
+- ❌ `.env.local`, `.env` → Use `.env.development`
 
-### 🚨 **Enforcement Actions**
+#### **Development Artifacts (ZERO TOLERANCE)**
 
-#### **Immediate Removal Required**
+- ❌ `*.patch`, `*.diff` - Patch files → Move to `patches/` or delete
+- ❌ `*.orig`, `*.rej` - Merge conflict artifacts → Delete immediately
+- ❌ `package-lock.json.bak` - Backup package locks → Delete immediately
 
-1. **Screenshots**: Delete immediately, never commit
-2. **Debug files**: Remove and add to `.gitignore`
-3. **Backup files**: Delete or move to appropriate location
-4. **Loose documentation**: Move to `docs/` folder
+### 🚨 **ENFORCEMENT ACTIONS**
 
-#### **Prevention Measures**
+#### **🔥 IMMEDIATE REMOVAL PROTOCOL**
 
-1. **Pre-commit hooks**: Check for prohibited files
-2. **Regular audits**: Weekly root directory cleanup
-3. **Developer education**: Team training on file organization
-4. **Automated cleanup**: Scripts to detect and remove violations
+When ANY prohibited file is found in root directory:
+
+1. **STOP ALL WORK** - Do not proceed with other tasks
+2. **IDENTIFY VIOLATION** - Determine file type and correct location
+3. **TAKE ACTION** - Follow appropriate remediation steps below
+4. **VERIFY COMPLIANCE** - Ensure root directory is clean before continuing
+
+#### **📋 REMEDIATION STEPS BY FILE TYPE**
+
+##### **Documentation Files (`*.md`)**
+```bash
+# REQUIRED ACTION: Move to docs/
+mv filename.md docs/filename.md
+git add docs/filename.md
+git rm filename.md
+```
+
+##### **Script Files (`*.sh`, `*.js` executables)**
+```bash
+# REQUIRED ACTION: Move to scripts/
+mv script-name.js scripts/script-name.js
+git add scripts/script-name.js
+git rm script-name.js
+```
+
+##### **Images & Screenshots**
+```bash
+# REQUIRED ACTION: Delete immediately
+rm *.png *.jpg *.jpeg *.gif *.webp
+git rm *.png *.jpg *.jpeg *.gif *.webp
+# Add to .gitignore if needed
+echo "*.png" >> .gitignore
+```
+
+##### **Temporary & Backup Files**
+```bash
+# REQUIRED ACTION: Delete immediately
+rm *.backup *-old.* *-copy.* *.tmp *.log
+git rm *.backup *-old.* *-copy.* *.tmp *.log
+```
+
+##### **Data Files**
+```bash
+# REQUIRED ACTION: Move to data/ or delete
+mkdir -p data/
+mv *.json *.csv *.xlsx data/
+git add data/
+git rm *.json *.csv *.xlsx
+```
+
+#### **🛡️ PREVENTION MEASURES**
+
+##### **1. Pre-Creation Checklist**
+Before creating ANY new file in root directory, ask:
+- ✅ Is this an essential configuration file?
+- ✅ Is this file listed in the ALLOWED section?
+- ✅ Does this file belong in `docs/`, `scripts/`, or another folder?
+- ✅ Will this file be needed by the build process or deployment?
+
+##### **2. Automated Detection Script**
+```bash
+# Available in package.json scripts:
+npm run check:root  # Validates root directory compliance
+```
+
+**Usage:**
+```bash
+# Check compliance before committing
+npm run check:root
+
+# Should output:
+✅ Root directory is compliant with project structure guidelines!
+```
+
+##### **3. Git Pre-commit Hook**
+```bash
+#!/bin/sh
+# .git/hooks/pre-commit
+node scripts/check-root-directory.js
+if [ $? -ne 0 ]; then
+  echo "❌ Root directory contains prohibited files. Fix before committing."
+  exit 1
+fi
+```
+
+##### **4. Regular Audits**
+- **Daily**: Check root directory before starting work
+- **Weekly**: Run `npm run check:root` to validate compliance
+- **Monthly**: Review and update prohibited file patterns
+
+#### **🎯 COMPLIANCE VERIFICATION**
+
+##### **Root Directory Should Only Contain:**
+```
+✅ package.json, package-lock.json
+✅ tsconfig.json, next.config.cjs
+✅ tailwind.config.js, eslint.config.js
+✅ jest.config.cjs, playwright.config.ts
+✅ .env.example, .env.development, .env.staging, .env.production
+✅ .gitignore, .dockerignore
+✅ README.md (ONLY ONE)
+✅ next-env.d.ts
+✅ jest.setup.js, docker-compose.yml, render.yaml
+✅ Auto-generated directories: .next/, node_modules/, coverage/
+```
+
+##### **Quick Compliance Check:**
+```bash
+# Count non-config files in root (should be minimal)
+ls -la | grep -v "^d" | grep -v "package\|tsconfig\|next.config\|tailwind\|eslint\|jest\|playwright\|\.env\|\.git\|README\|docker\|render" | wc -l
+
+# Should return 0 or very low number
+```
+
+#### **🚨 ESCALATION PROCESS**
+
+##### **If Violations Persist:**
+1. **First Violation**: Immediate cleanup + documentation review
+2. **Second Violation**: Team discussion on file organization
+3. **Third Violation**: Implement automated enforcement tools
+4. **Ongoing Issues**: Review and strengthen project structure guidelines
+
+##### **Emergency Cleanup Command:**
+```bash
+# Nuclear option - use with caution
+npm run clean:root:emergency
+```
+
+This will automatically move/delete common violations according to the rules above.
 
 ## Testing Framework Guidelines
 
