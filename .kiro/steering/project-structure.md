@@ -1,12 +1,12 @@
 # Domo AI Project Structure Guidelines
 
-## 🚨 CRITICAL: Git Add Authorization Required
+## 🚨 CRITICAL: Git Workflow Authorization Required
 
-**MANDATORY RULE**: No `git add` commands without explicit permission. Always request approval before staging any changes to the repository.
+**MANDATORY RULE**: No `git add` commands without explicit permission. Once approved, complete the entire workflow (add → commit → push) automatically.
 
 ## Core Development Rules
 
-1. **Git Add Authorization**: **NEVER** stage code without explicit permission. Always request approval and wait for "yes" before executing `git add`.
+1. **Git Workflow Authorization**: **NEVER** stage code without explicit permission. Request approval once, then complete the full git workflow (add + commit + push).
 
 2. **Documentation Organization**: All documentation files belong in `docs/` folder, never create duplicates in root directory. **Exception**: One comprehensive `README.md` is allowed in the root folder for GitHub project overview and initial user guidance.
 
@@ -401,7 +401,7 @@ __tests__/
 ##### **Required Review Process:**
 
 ```bash
-# 1. Show what will be staged
+# 1. Show what will be staged and pushed
 git status
 git diff
 
@@ -414,18 +414,18 @@ git diff --name-only
 - [Files modified: list each file]
 - [Purpose/reason for changes]
 
-May I stage these changes with git add?"
+May I stage and push these changes?"
 
 # 4. Wait for explicit "yes" before proceeding
-# Only add after receiving clear approval
+# After approval, complete: git add + git commit + git push
 ```
 
-##### **Approved Add Commands (only after permission):**
+##### **Approved Workflow (only after permission):**
 
 ```bash
 git add .                   # After explicit "yes"
-git add filename.ext        # After explicit "yes"
-git add -A                  # After explicit "yes"
+git commit -m "description" # Automatically after add
+git push                    # Automatically after commit
 ```
 
 ##### **NEVER use these without permission:**
@@ -486,17 +486,12 @@ git config alias.add '!echo "🚨 STOP: Git add requires explicit permission"; e
 git status
 git diff
 
-# 3. Request permission to stage changes
-# "May I stage these changes with git add?"
+# 3. Request permission for complete workflow
+# "May I stage and push these changes?"
 
-# 4. Only add after receiving "yes"
+# 4. After receiving "yes", complete entire process
 git add .
 git commit -m "description"
-
-# 5. Request permission to push (separate approval)
-# "May I push this commit?"
-
-# 6. Only push after receiving second "yes"
 git push
 ```
 
