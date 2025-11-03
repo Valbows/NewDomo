@@ -35,25 +35,21 @@ export default function GlobalError({
   };
 
   return (
-    <html>
-      <body>
-        <ErrorFallback>
-          <div style={{ padding: 24 }}>
-            <h2 style={{ fontWeight: 600, marginBottom: 12 }}>Something went wrong</h2>
-            <button
-              onClick={() => reset()}
-              style={{
-                padding: '8px 12px',
-                background: '#111827',
-                color: '#fff',
-                borderRadius: 6,
-              }}
-            >
-              Try again
-            </button>
-          </div>
-        </ErrorFallback>
-      </body>
-    </html>
+    <ErrorFallback>
+      <div style={{ padding: 24 }}>
+        <h2 style={{ fontWeight: 600, marginBottom: 12 }}>Something went wrong</h2>
+        <button
+          onClick={() => reset()}
+          style={{
+            padding: '8px 12px',
+            background: '#111827',
+            color: '#fff',
+            borderRadius: 6,
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    </ErrorFallback>
   );
 }

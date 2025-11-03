@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/services/auth';
@@ -10,6 +10,11 @@ const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const setUser = useUserStore((state) => state.setUser);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleLogout = async () => {
     const result = await authService.signOut();
@@ -21,6 +26,21 @@ const Sidebar = () => {
       router.push('/');
     }
   };
+
+  // Prevent hydration mismatch by only rendering navigation after client-side hydration
+  if (!isClient) {
+    return (
+      <div className="w-64 bg-white shadow-md">
+        <div className="p-5 text-2xl font-bold text-domo-dark-text">DOMO</div>
+        <nav className="mt-10 flex flex-col space-y-1 px-2">
+          <div className="block py-2.5 px-4 rounded bg-gray-100 animate-pulse h-10"></div>
+          <div className="block py-2.5 px-4 rounded bg-gray-100 animate-pulse h-10"></div>
+          <div className="block py-2.5 px-4 rounded bg-gray-100 animate-pulse h-10"></div>
+          <div className="block py-2.5 px-4 rounded bg-gray-100 animate-pulse h-10"></div>
+        </nav>
+      </div>
+    );
+  }
 
   return (
     <div className="w-64 bg-white shadow-md">
