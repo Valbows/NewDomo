@@ -1,9 +1,13 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/store/user';
-import { protectedGuard, AuthGuardService, type AuthGuardConfig } from '@/lib/services/auth';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useUserStore } from "@/store/user";
+import {
+  protectedGuard,
+  AuthGuardService,
+  type AuthGuardConfig,
+} from "@/lib/services/auth";
 
 interface WithAuthOptions extends AuthGuardConfig {
   loadingComponent?: React.ComponentType;
@@ -21,23 +25,24 @@ const withAuth = <P extends object>(
     const [shouldRender, setShouldRender] = useState(false);
 
     // Create auth guard with custom options or use default protected guard
-    const authGuard = options.requireAuth !== undefined || options.allowedRoles
-      ? new AuthGuardService(options)
-      : protectedGuard;
+    const authGuard =
+      options.requireAuth !== undefined || options.allowedRoles
+        ? new AuthGuardService(options)
+        : protectedGuard;
 
     useEffect(() => {
       const validateAuth = async () => {
         setIsValidating(true);
-        
+
         try {
           const result = await authGuard.validateForComponent(user, {
             push: router.push,
-            replace: router.replace
+            replace: router.replace,
           });
-          
+
           setShouldRender(result.shouldRender);
         } catch (error) {
-          console.error('Auth validation error:', error);
+          console.error("Auth validation error:", error);
           setShouldRender(false);
         } finally {
           setIsValidating(false);
@@ -63,19 +68,24 @@ const withAuth = <P extends object>(
   };
 
   // Set display name for debugging
-  WithAuthComponent.displayName = `withAuth(${WrappedComponent.displayName || WrappedComponent.name})`;
+  WithAuthComponent.displayName = `withAuth(${
+    WrappedComponent.displayName || WrappedComponent.name
+  })`;
 
   return WithAuthComponent;
 };
 
 // Convenience HOCs for common use cases
-export const withProtectedAuth = <P extends object>(component: React.ComponentType<P>) =>
-  withAuth(component, { requireAuth: true });
+export const withProtectedAuth = <P extends object>(
+  component: React.ComponentType<P>
+) => withAuth(component, { requireAuth: true });
 
-export const withAdminAuth = <P extends object>(component: React.ComponentType<P>) =>
-  withAuth(component, { requireAuth: true, allowedRoles: ['admin'] });
+export const withAdminAuth = <P extends object>(
+  component: React.ComponentType<P>
+) => withAuth(component, { requireAuth: true, allowedRoles: ["admin"] });
 
-export const withOptionalAuth = <P extends object>(component: React.ComponentType<P>) =>
-  withAuth(component, { requireAuth: false });
+export const withOptionalAuth = <P extends object>(
+  component: React.ComponentType<P>
+) => withAuth(component, { requireAuth: false });
 
 export default withAuth;

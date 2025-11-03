@@ -11,7 +11,7 @@
     "start": "next start",
     "start:staging": "env-cmd -f .env.staging next start",
     "start:production": "env-cmd -f .env.production next start",
-    "lint": "next lint",
+    "lint": "eslint src --ext .ts,.tsx --fix",
     "test": "jest",
     "test:unit": "jest --selectProjects dom node --testPathPatterns=__tests__/unit",
     "test:integration": "jest --selectProjects node --testPathPatterns=__tests__/integration",
@@ -88,7 +88,7 @@
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
-    "typescript": "5.8.3",
+    "typescript": "^5.8.3",
     "whatwg-fetch": "^3.6.20"
   },
   "optionalDependencies": {

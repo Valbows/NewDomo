@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  eslint: {
+    // Use our existing ESLint configuration
+    ignoreDuringBuilds: false,
+  },
   webpack: (config, { isServer }) => {
     // Daily.co webpack configuration
     if (!isServer) {
