@@ -1,8 +1,14 @@
 # Domo AI Project Structure Guidelines
 
+## 🚨 CRITICAL: Git Push Authorization Required
+
+**MANDATORY RULE**: No `git push` commands without explicit permission. Always request approval before pushing any changes to the repository.
+
 ## Core Development Rules
 
-1. **Documentation Organization**: All documentation files belong in `docs/` folder, never create duplicates in root directory. **Exception**: One comprehensive `README.md` is allowed in the root folder for GitHub project overview and initial user guidance.
+1. **Git Push Authorization**: **NEVER** push code without explicit permission. Always request approval and wait for "yes" before executing `git push`.
+
+2. **Documentation Organization**: All documentation files belong in `docs/` folder, never create duplicates in root directory. **Exception**: One comprehensive `README.md` is allowed in the root folder for GitHub project overview and initial user guidance.
 
 2. **Environment File Management**:
 
@@ -353,17 +359,123 @@ __tests__/
 - `jest.config.node.cjs` - Node.js environment tests
 - `playwright.config.ts` - E2E test configuration
 
+## Git Push Authorization Protocol
+
+### 🚨 **MANDATORY: No Git Push Without Explicit Permission**
+
+#### **STRICT RULE: All code changes require review and approval before pushing**
+
+##### **Before ANY `git push` command:**
+
+1. **STOP** - Do not push automatically
+2. **REVIEW** - Examine all changes made in this session
+3. **REQUEST** - Ask for explicit permission to push
+4. **WAIT** - Do not proceed until receiving clear "yes" approval
+
+##### **Required Review Process:**
+
+```bash
+# 1. Show what will be pushed
+git status
+git diff --cached
+
+# 2. List commits to be pushed
+git log --oneline origin/main..HEAD
+
+# 3. Request permission with summary
+"I have made the following changes:
+- [Brief description of changes]
+- [Files modified]
+- [Purpose/reason for changes]
+
+May I push these changes to the repository?"
+
+# 4. Wait for explicit "yes" before proceeding
+# Only push after receiving clear approval
+```
+
+##### **Approved Push Commands (only after permission):**
+```bash
+git push                    # After explicit "yes"
+git push origin main        # After explicit "yes"  
+git push origin develop     # After explicit "yes"
+```
+
+##### **NEVER use these without permission:**
+```bash
+git push --force           # ABSOLUTELY FORBIDDEN
+git push --force-with-lease # FORBIDDEN without permission
+git push -f                # FORBIDDEN
+```
+
+#### **Exception Handling:**
+
+##### **Emergency Situations Only:**
+- Critical production bugs requiring immediate fixes
+- Security vulnerabilities needing urgent patches
+- Build failures blocking team development
+
+**Even in emergencies:** Still request permission but explain urgency
+
+##### **Violation Consequences:**
+1. **First violation**: Review this protocol and acknowledge understanding
+2. **Repeated violations**: Implement git hooks to prevent unauthorized pushes
+3. **Persistent issues**: Require pull request workflow for all changes
+
+#### **Implementation Safeguards:**
+
+##### **Automated Git Hook Installation:**
+```bash
+# Install pre-push hook to enforce authorization
+npm run install:hooks
+
+# This creates a git hook that:
+# - Shows summary of changes before push
+# - Requires explicit 'y' confirmation
+# - Cancels push if permission not given
+# - Provides change summary for permission requests
+```
+
+##### **Manual Git Hook Setup (Alternative):**
+```bash
+# Create .git/hooks/pre-push manually
+#!/bin/sh
+echo "🚨 STOP: Git push requires explicit permission"
+echo "Have you received approval to push these changes? (y/N)"
+read -r response
+if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+    echo "❌ Push cancelled - obtain permission first"
+    exit 1
+fi
+```
+
+##### **Safe Development Workflow:**
+```bash
+# 1. Make changes and commit locally
+git add .
+git commit -m "description"
+
+# 2. Review changes before pushing
+git log --oneline -5
+git diff origin/main..HEAD
+
+# 3. Request permission with change summary
+# 4. Only push after receiving "yes"
+git push
+```
+
 ## Before Creating New Files
 
 1. **Check File Size**: Ensure existing files don't exceed 500 lines before adding new code
 2. **Refactor First**: If target file is > 400 lines, refactor before adding new functionality
 3. **Use Correct Test Framework**: Jest for unit/integration, Playwright for E2E
-4. Check if similar documentation exists in `docs/`
-5. Check if similar scripts exist in `scripts/`
-6. Update existing files rather than creating duplicates
-7. Follow the established naming conventions
-8. Add comprehensive comments for developer understanding
-9. **NEVER** add screenshots or debug images to root directory
+4. **Request Push Permission**: Never push without explicit approval
+5. Check if similar documentation exists in `docs/`
+6. Check if similar scripts exist in `scripts/`
+7. Update existing files rather than creating duplicates
+8. Follow the established naming conventions
+9. Add comprehensive comments for developer understanding
+10. **NEVER** add screenshots or debug images to root directory
 
 ## Code Size Monitoring
 
