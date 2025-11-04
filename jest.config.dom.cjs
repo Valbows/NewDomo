@@ -6,7 +6,6 @@ const nextJest = require('next/jest')({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   displayName: 'dom',
-  // if using TypeScript with a baseUrl set to the root directory then you need the below for alias' to work
   moduleDirectories: ['node_modules', '<rootDir>/'],
   setupFiles: ['<rootDir>/jest.env.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
@@ -26,10 +25,6 @@ const customJestConfig = {
   transformIgnorePatterns: [
     'node_modules/(?!(msw|@mswjs|until-async|@open-draft)/)'
   ],
-  transform: {
-    '^.+\\.(js|jsx)$': ['babel-jest', { presets: ['next/babel'] }],
-    '^.+\\.(ts|tsx)$': ['ts-jest'],
-  },
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

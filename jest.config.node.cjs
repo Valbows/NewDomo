@@ -11,13 +11,7 @@ module.exports = {
   ],
   setupFiles: ['<rootDir>/jest.env.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.node.js'],
-  transform: {
-    '^.+\\.(ts|tsx)$': [
-      'ts-jest',
-      { tsconfig: '<rootDir>/tsconfig.json' }
-    ],
-    '^.+\\.(js|jsx)$': ['ts-jest'],
-  },
+  preset: 'ts-jest',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
