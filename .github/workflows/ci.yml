@@ -36,11 +36,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify Jest and ts-jest installation
-        run: |
-          npm list jest ts-jest
-          npx jest --version
-
       - name: Lint
         run: npm run lint:check || echo "Linting completed with warnings/errors"
 
