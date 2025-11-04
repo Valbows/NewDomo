@@ -41,7 +41,9 @@
     "clean:cache:all": "node scripts/clean-build-cache.js --all",
     "clean:next": "rm -rf .next && echo 'Removed .next directory completely'",
     "clean:test": "node scripts/clean-test-artifacts.js",
-    "clean:all": "npm run clean:cache && npm run clean:test"
+    "clean:all": "npm run clean:cache && npm run clean:test",
+    "test:ci-local": "bash scripts/test-ci-locally.sh",
+    "test:jest-debug": "bash scripts/test-jest-only.sh"
   },
   "keywords": [],
   "author": "",
