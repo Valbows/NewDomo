@@ -16,10 +16,14 @@ module.exports = {
       'ts-jest',
       { tsconfig: '<rootDir>/tsconfig.json' }
     ],
+    '^.+\\.(js|jsx)$': ['ts-jest'],
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(msw|@mswjs|until-async|@open-draft)/)'
+  ],
   watchPathIgnorePatterns: ['<rootDir>/.next/'],
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
 };

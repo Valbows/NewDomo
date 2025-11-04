@@ -22,7 +22,7 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 
   const email = 'test@example.com';
   const password = 'password123'; // unified password to match Playwright spec
-  const demoId = '42beb287-f385-4100-86a4-bfe7008d531b';
+  const demoId = 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
 
   // 1) Ensure user exists and has the unified password
   const list = await admin.auth.admin.listUsers();

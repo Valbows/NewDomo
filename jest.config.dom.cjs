@@ -21,6 +21,14 @@ const customJestConfig = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    'until-async': '<rootDir>/src/mocks/__mocks__/until-async.js',
+  },
+  transformIgnorePatterns: [
+    'node_modules/(?!(msw|@mswjs|until-async|@open-draft)/)'
+  ],
+  transform: {
+    '^.+\\.(js|jsx)$': ['babel-jest', { presets: ['next/babel'] }],
+    '^.+\\.(ts|tsx)$': ['ts-jest'],
   },
 };
 

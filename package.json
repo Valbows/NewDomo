@@ -13,12 +13,12 @@
     "start:production": "env-cmd -f .env.production next start",
     "lint": "npx eslint src --ext .ts,.tsx --fix",
     "lint:check": "npx eslint src --ext .ts,.tsx --quiet",
-    "test": "jest",
-    "test:unit": "jest --selectProjects dom node --testPathPatterns=__tests__/unit",
-    "test:integration": "jest --selectProjects node --testPathPatterns=__tests__/integration",
-    "test:lib": "jest --selectProjects node --testPathPatterns=__tests__/lib",
+    "test": "npx jest",
+    "test:unit": "npx jest --selectProjects dom node --testPathPatterns=__tests__/unit",
+    "test:integration": "npx jest --selectProjects node --testPathPatterns=__tests__/integration",
+    "test:lib": "npx jest --selectProjects node --testPathPatterns=__tests__/lib",
     "e2e": "playwright test",
-    "e2e:ci": "playwright test --reporter=github,html",
+    "e2e:ci": "playwright test -c playwright.ci.config.ts --reporter=github,html",
     "e2e:real": "playwright test -c playwright.real.config.ts",
     "e2e:real:headed": "playwright test -c playwright.real.config.ts --headed",
     "e2e:real:debug": "playwright test -c playwright.real.config.ts --debug",
@@ -95,6 +95,5 @@
   "optionalDependencies": {
     "@rollup/rollup-darwin-x64": "^4.52.5",
     "@rollup/rollup-linux-x64-gnu": "^4.52.5"
-  },
-  "type": "module"
+  }
 }
