@@ -4,7 +4,7 @@ import React, { useEffect, useCallback } from "react";
 // Conditional Sentry import - fallback gracefully if not available
 let Sentry: any = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line
   Sentry = require('@sentry/nextjs');
 } catch (e) {
   // Sentry not available; will fallback to console logging
