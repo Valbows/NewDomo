@@ -40,7 +40,7 @@ jobs:
         run: npm run lint:check || echo "Linting completed with warnings/errors"
 
       - name: Unit & Integration Tests
-        run: npm test
+        run: npm run test:unit && npm run test:integration
 
       - name: Build
         run: npm run build
