@@ -92,6 +92,19 @@ jobs:
       - name: Install Playwright browsers and system deps
         run: npx playwright install --with-deps
 
+      - name: Verify Supabase secrets
+        run: |
+          if [ -z "${{ secrets.SUPABASE_SECRET_KEY }}" ]; then
+            echo "❌ Missing Supabase secrets: set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in repository secrets."
+            exit 1
+          fi
+          case "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" in
+            *127.0.0.1*|*localhost*|*::1*)
+              echo "❌ Supabase URL points to localhost; supply real supabase project URL in secrets."
+              exit 1
+              ;;
+          esac
+
       - name: Seed E2E user and demo
         run: npm run seed:e2e
 

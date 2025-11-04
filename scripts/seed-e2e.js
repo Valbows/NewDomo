@@ -2,14 +2,28 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
+import fs from 'fs';
 
-config({ path: '.env.development' });
+// Only load .env.development when no SUPABASE envs are present and we're running locally
+const hasSupabaseEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY);
+const runningInGH = Boolean(process.env.GITHUB_ACTIONS || process.env.CI);
 
+if (!hasSupabaseEnv && fs.existsSync('.env.development') && !runningInGH) {
+  config({ path: '.env.development' });
+}
+
+// After loading envs, validate
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SECRET_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('❌ Missing envs: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY');
+  console.error('❌ Missing envs: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY. In CI provide these via repository secrets.');
+  process.exit(1);
+}
+
+// If running in CI, refuse to use localhost addresses (likely wrong)
+if (runningInGH && (SUPABASE_URL.includes('127.0.0.1') || SUPABASE_URL.includes('localhost'))) {
+  console.error(`❌ Supabase URL "${SUPABASE_URL}" points to localhost. Configure NEXT_PUBLIC_SUPABASE_URL to your hosted Supabase project via repository secrets.`);
   process.exit(1);
 }
 
