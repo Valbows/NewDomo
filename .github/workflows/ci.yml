@@ -56,84 +56,13 @@ jobs:
       - name: Install Playwright browsers and system deps
         run: npx playwright install --with-deps
 
-      - name: E2E Tests
+      - name: E2E Tests (Fast, Mocked)
         run: npm run e2e:ci
+        
+      # Note: Real backend E2E tests are available via 'npm run e2e:real' 
+      # but are not run in CI to avoid external dependencies and secrets
 
-  e2e-real:
-    name: Real Backend E2E
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      NODE_ENV: "production"
-      NEXT_TELEMETRY_DISABLED: "1"
-      # Supabase and webhook secrets must be configured in repository settings
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      TAVUS_WEBHOOK_SECRET: ${{ secrets.TAVUS_WEBHOOK_SECRET }}
-      # Optional, but useful for tool call UI fallbacks
-      NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK: "true"
-      # Port used by playwright.real.config.ts (default 3102)
-      PW_E2E_PORT: "3102"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci --include=dev
-
-      - name: Install Playwright browsers and system deps
-        run: npx playwright install --with-deps
-
-      - name: Check Supabase secrets availability
-        id: check-secrets
-        run: |
-          if [ -z "${{ secrets.SUPABASE_SECRET_KEY }}" ] || [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" ]; then
-            echo "⚠️  Supabase secrets not configured - skipping real E2E tests"
-            echo "To enable real E2E tests, set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in repository secrets."
-            echo "secrets-available=false" >> $GITHUB_OUTPUT
-          else
-            case "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" in
-              *127.0.0.1*|*localhost*|*::1*)
-                echo "❌ Supabase URL points to localhost; supply real supabase project URL in secrets."
-                exit 1
-                ;;
-              *)
-                echo "✅ Supabase secrets configured - proceeding with real E2E tests"
-                echo "secrets-available=true" >> $GITHUB_OUTPUT
-                ;;
-            esac
-          fi
-
-      - name: Seed E2E user and demo
-        if: steps.check-secrets.outputs.secrets-available == 'true'
-        run: npm run seed:e2e
-
-      - name: Run real-backend E2E
-        if: steps.check-secrets.outputs.secrets-available == 'true'
-        run: npm run e2e:real
-
-      - name: Skip real E2E tests
-        if: steps.check-secrets.outputs.secrets-available == 'false'
-        run: |
-          echo "⏭️  Skipping real E2E tests - Supabase secrets not configured"
-          echo "This is expected for forks and development branches"
-          echo "Main CI tests have already passed successfully"
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-real
-          path: playwright-report
-          if-no-files-found: ignore
 
   notify-render-staging:
     name: Notify Render Staging Deploy
