@@ -5,7 +5,7 @@
  */
 
 const DEMO_ID = 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
-const PERSONA_ID = 'pe9ed46b7319';
+const PERSONA_ID = 'p1a1ed6bd5bf';
 const OBJECTIVES_ID = 'o4f2d4eb9b217';
 const GUARDRAILS_ID = 'g178c7c5e032b';
 

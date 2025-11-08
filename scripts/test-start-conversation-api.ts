@@ -13,7 +13,7 @@ async function testStartConversationAPI() {
   const testDemoId = '8cc16f2d-b407-4895-9639-643d1a976da4'; // WorkDay Platform Demo
   
   console.log(`🎭 Test Demo ID: ${testDemoId}`);
-  console.log(`🎯 Expected Persona: pe9ed46b7319\n`);
+  console.log(`🎯 Expected Persona: p1a1ed6bd5bf\n`);
 
   try {
     console.log("📤 Making request to /api/start-conversation...");
@@ -130,7 +130,7 @@ async function main() {
     if (result.success) {
       console.log("\n🎉 API test successful!");
       console.log("✅ Your /api/start-conversation endpoint is working");
-      console.log("✅ Persona pe9ed46b7319 is properly configured");
+      console.log("✅ Persona p1a1ed6bd5bf is properly configured");
       console.log("✅ All components (System Prompt + Guardrails + Objectives) are active");
     } else {
       console.log("\n❌ API test failed");

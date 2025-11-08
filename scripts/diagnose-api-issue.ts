@@ -8,7 +8,7 @@ async function checkTavusAPI() {
   
   const apiKey = '9e3a9a6a54e44edaa2e456191ba0d0f3';
   const baseUrl = 'https://tavusapi.com/v2';
-  const personaId = 'pe9ed46b7319';
+  const personaId = 'p1a1ed6bd5bf';
   const replicaId = 'rf4703150052';
   
   console.log(`🔑 API Key: ${apiKey.substring(0, 8)}...`);
@@ -127,11 +127,11 @@ async function checkSupabaseConnection() {
       });
       
       // Check if any demo has our target persona
-      const hasTargetPersona = demos.some((d: any) => d.tavus_persona_id === 'pe9ed46b7319');
+      const hasTargetPersona = demos.some((d: any) => d.tavus_persona_id === 'p1a1ed6bd5bf');
       if (hasTargetPersona) {
-        console.log(\`\n✅ Found demos using target persona pe9ed46b7319\`);
+        console.log(\`\n✅ Found demos using target persona p1a1ed6bd5bf\`);
       } else {
-        console.log(\`\n⚠️ No demos found using target persona pe9ed46b7319\`);
+        console.log(\`\n⚠️ No demos found using target persona p1a1ed6bd5bf\`);
       }
       
       return true;
@@ -163,7 +163,7 @@ async function provideDiagnosticSummary(tavusOk: boolean, supabaseOk: boolean) {
     console.log(\`4. Check the browser console for more specific error messages\`);
     
     console.log(\`\n🔗 Direct conversation test (bypasses your app):\`);
-    console.log(\`https://app.tavus.io/conversations/new?persona_id=pe9ed46b7319\`);
+    console.log(\`https://app.tavus.io/conversations/new?persona_id=p1a1ed6bd5bf\`);
   } else {
     console.log(\`\n❌ Issues detected that need to be resolved:\`);
     

@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const NEW_PERSONA_ID = 'pe9ed46b7319';
+const NEW_PERSONA_ID = 'p1a1ed6bd5bf';
 
 async function updateDemoPersonas() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

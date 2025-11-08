@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const DEMO_ID = 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
-const EXISTING_PERSONA_ID = 'pe9ed46b7319';
+const EXISTING_PERSONA_ID = 'p1a1ed6bd5bf';
 const TAVUS_API_KEY = '9e3a9a6a54e44edaa2e456191ba0d0f3';
 const GUARDRAILS_ID = 'g178c7c5e032b';
 

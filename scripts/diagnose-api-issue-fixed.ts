@@ -8,7 +8,7 @@ async function checkTavusAPI() {
   
   const apiKey = '9e3a9a6a54e44edaa2e456191ba0d0f3';
   const baseUrl = 'https://tavusapi.com/v2';
-  const personaId = 'pe9ed46b7319';
+  const personaId = 'p1a1ed6bd5bf';
   const replicaId = 'rf4703150052';
   
   console.log(`🔑 API Key: ${apiKey.substring(0, 8)}...`);
@@ -115,7 +115,7 @@ async function main() {
       console.log(`4. Check the browser console for more specific error messages`);
       
       console.log(`\n🔗 Direct conversation test (bypasses your app):`);
-      console.log(`https://app.tavus.io/conversations/new?persona_id=pe9ed46b7319`);
+      console.log(`https://app.tavus.io/conversations/new?persona_id=p1a1ed6bd5bf`);
     } else {
       console.log(`\n❌ Tavus API issues detected - check the errors above`);
     }
