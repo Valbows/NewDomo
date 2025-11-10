@@ -8,6 +8,7 @@ interface ConversationInterfaceProps {
   onToolCall: (toolName: string, args: any) => Promise<void>;
   debugVideoTitles: string[];
   onExpandConversation: () => void;
+  onConversationEnd?: () => void;
 }
 
 export function ConversationInterface({
@@ -17,6 +18,7 @@ export function ConversationInterface({
   onToolCall,
   debugVideoTitles,
   onExpandConversation,
+  onConversationEnd,
 }: ConversationInterfaceProps) {
   return (
     <div
@@ -62,6 +64,7 @@ export function ConversationInterface({
                 onLeave={onLeave}
                 onToolCall={onToolCall}
                 debugVideoTitles={debugVideoTitles}
+                onConversationEnd={onConversationEnd}
               />
             </div>
           ) : (

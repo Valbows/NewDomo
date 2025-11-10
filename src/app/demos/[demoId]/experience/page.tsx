@@ -313,6 +313,35 @@ export default function DemoExperiencePage() {
     setAlert(null);
   };
 
+  const handleConversationEnd = async () => {
+    console.log('🎯 Conversation ended - routing to reporting page');
+    
+    try {
+      // End the conversation via API
+      const response = await fetch('/api/end-conversation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          demoId: demoId,
+          conversationId: demo?.tavus_conversation_id,
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to end conversation via API, but continuing with redirect');
+      } else {
+        console.log('✅ Conversation ended successfully via API');
+      }
+    } catch (error) {
+      console.warn('Error ending conversation via API:', error);
+    }
+
+    // Navigate to reporting page with tab parameter
+    router.push(`/demos/${demoId}/configure?tab=reporting`);
+  };
+
   // CTA configuration
   const ctaTitle =
     ctaOverrides?.cta_title ??
@@ -395,6 +424,7 @@ export default function DemoExperiencePage() {
                 conversationUrl={conversationUrl}
                 uiState={uiState}
                 onLeave={() => router.push("/dashboard")}
+                onConversationEnd={handleConversationEnd}
                 onToolCall={async (toolName, args) => {
                   if (toolName === "fetch_video" && args?.title) {
                     console.log("🎬 Video tool call received:", toolName, args);

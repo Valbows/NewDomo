@@ -30,6 +30,7 @@ import styles from "./conversation.module.css";
 interface ConversationProps {
 	onLeave: () => void;
 	conversationUrl: string;
+	onConversationEnd?: () => void;
 }
 
 const VideoPreview = React.memo(({ id }: { id: string }) => {
@@ -105,7 +106,7 @@ const MainVideo = React.memo(() => {
 	);
 });
 
-export const Conversation = React.memo(({ onLeave, conversationUrl }: ConversationProps) => {
+export const Conversation = React.memo(({ onLeave, conversationUrl, onConversationEnd }: ConversationProps) => {
 	const { joinCall, leaveCall } = useCVICall();
 	const meetingState = useMeetingState();
 	const { hasMicError } = useDevices()
@@ -202,6 +203,16 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'participant-left', data: { id: ev?.participant?.session_id } });
 		} catch {}
+		
+		// Check if this is the AI agent leaving (conversation ended)
+		const participant = ev?.participant;
+		if (participant && participant.user_name && participant.user_name.toLowerCase().includes('tavus')) {
+			if (debugDaily) console.log('🤖 AI agent left - conversation ended, routing to reporting');
+			// Trigger conversation end routing
+			setTimeout(() => {
+				handleConversationEnd();
+			}, 2000); // Small delay to allow for cleanup
+		}
 	});
 
 	useDailyEvent('camera-error', (ev) => {
@@ -319,6 +330,21 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		leaveCall();
 		onLeave();
 	}, [leaveCall, onLeave]);
+
+	const handleConversationEnd = useCallback(() => {
+		try {
+			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'conversation-ended' });
+		} catch {}
+		if (debugDaily) console.log('🎯 Conversation ended - triggering end handler');
+		
+		// Call the conversation end handler if provided
+		if (onConversationEnd) {
+			onConversationEnd();
+		} else {
+			// Fallback to regular leave if no end handler provided
+			handleLeave();
+		}
+	}, [onConversationEnd, handleLeave, debugDaily]);
 
 	return (
 		<div className={styles.container}>

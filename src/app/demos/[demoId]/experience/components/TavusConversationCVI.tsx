@@ -10,6 +10,7 @@ interface TavusConversationCVIProps {
   onLeave: () => void;
   onToolCall?: (toolName: string, args: any) => void;
   debugVideoTitles?: string[]; // dev-only helper to avoid typos
+  onConversationEnd?: () => void;
 }
 
 export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
@@ -17,6 +18,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
   onLeave,
   onToolCall,
   debugVideoTitles,
+  onConversationEnd,
 }) => {
   const daily = useDaily();
   const meetingState = useMeetingState();
@@ -183,6 +185,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
       <Conversation 
         conversationUrl={conversationUrl}
         onLeave={onLeave}
+        onConversationEnd={onConversationEnd}
       />
       
       {/* Manual test button for debugging */}
