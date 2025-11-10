@@ -10,6 +10,17 @@ import type { InlineVideoPlayerHandle } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { getErrorMessage, logError } from '@/lib/errors';
 
+// Helper function to extract conversation ID from Tavus Daily URL
+function extractConversationIdFromUrl(url: string): string | null {
+  try {
+    // Tavus URLs are in format: https://tavus.daily.co/{conversation_id}
+    const match = url.match(/tavus\.daily\.co\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 // Custom styles for PiP video layout
 const pipStyles = `
   .pip-video-layout {
@@ -460,6 +471,28 @@ export default function DemoExperiencePage() {
         }
 
         console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
+        
+        // Track video viewing for Domo Score - use current conversation ID
+        const currentConversationId = conversationUrl ? extractConversationIdFromUrl(conversationUrl) : demo?.tavus_conversation_id;
+        if (currentConversationId && demo?.id) {
+          try {
+            await fetch('/api/track-video-view', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                conversation_id: currentConversationId,
+                demo_id: demo.id,
+                video_title: normalizedTitle
+              })
+            });
+            console.log('✅ Video view tracked successfully:', normalizedTitle);
+          } catch (error) {
+            console.warn('⚠️ Failed to track video view:', error);
+          }
+        }
+        
         // New video source: reset any saved paused position
         pausedPositionRef.current = 0;
         setPlayingVideoUrl(signedUrlData.signedUrl);
@@ -838,24 +871,43 @@ export default function DemoExperiencePage() {
                         console.log('🔗 CTA Button clicked - Redirecting to configured URL');
                         console.log('🎯 CTA URL resolved:', ctaButtonUrl);
                         
-                        // Track CTA click
-                        if (demo?.tavus_conversation_id && demo?.id) {
+                        // Track CTA click - use current conversation ID from URL
+                        const currentConversationId = conversationUrl ? extractConversationIdFromUrl(conversationUrl) : demo?.tavus_conversation_id;
+                        if (currentConversationId && demo?.id) {
                           try {
-                            await fetch('/api/track-cta-click', {
+                            console.log('🎯 Tracking CTA click with data:', {
+                              conversation_id: currentConversationId,
+                              demo_id: demo.id,
+                              cta_url: ctaButtonUrl,
+                              source: conversationUrl ? 'current_url' : 'demo_metadata'
+                            });
+                            
+                            const response = await fetch('/api/track-cta-click', {
                               method: 'POST',
                               headers: {
                                 'Content-Type': 'application/json',
                               },
                               body: JSON.stringify({
-                                conversation_id: demo.tavus_conversation_id,
+                                conversation_id: currentConversationId,
                                 demo_id: demo.id,
                                 cta_url: ctaButtonUrl
                               })
                             });
-                            console.log('✅ CTA click tracked successfully');
+                            
+                            if (response.ok) {
+                              console.log('✅ CTA click tracked successfully');
+                            } else {
+                              const errorData = await response.json();
+                              console.warn('⚠️ CTA tracking failed with response:', errorData);
+                            }
                           } catch (error) {
                             console.warn('⚠️ Failed to track CTA click:', error);
                           }
+                        } else {
+                          console.warn('⚠️ Missing demo data for CTA tracking:', {
+                            tavus_conversation_id: demo?.tavus_conversation_id,
+                            demo_id: demo?.id
+                          });
                         }
                       }}
                       className="inline-flex items-center justify-center px-6 py-2 bg-white text-green-600 font-semibold rounded-lg shadow hover:bg-gray-50 transition-colors duration-200 text-sm"
