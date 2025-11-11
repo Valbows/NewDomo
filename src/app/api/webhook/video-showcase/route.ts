@@ -45,20 +45,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Extract video data
-    const requestedVideos = outputVariables.requested_videos;
+    // Extract video data (only videos_shown after schema update)
     const videosShown = outputVariables.videos_shown;
 
     // Convert single strings to arrays if needed
-    let requestedVideosArray = null;
-    if (requestedVideos) {
-      if (Array.isArray(requestedVideos)) {
-        requestedVideosArray = requestedVideos;
-      } else if (typeof requestedVideos === 'string') {
-        requestedVideosArray = [requestedVideos];
-      }
-    }
-
     let videosShownArray = null;
     if (videosShown) {
       if (Array.isArray(videosShown)) {
@@ -69,16 +59,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`🎬 Video data extracted:`, {
-      requested: requestedVideosArray,
       shown: videosShownArray
     });
 
-    // Store in database
+    // Store in database (only videos_shown column after schema update)
     const { data, error } = await supabase
       .from('video_showcase_data')
       .insert({
         conversation_id: conversationId,
-        requested_videos: requestedVideosArray,
         videos_shown: videosShownArray,
         objective_name: objectiveName,
         event_type: eventType,
@@ -103,7 +91,6 @@ export async function POST(request: NextRequest) {
       data: {
         conversation_id: conversationId,
         objective_name: objectiveName,
-        requested_videos: requestedVideosArray,
         videos_shown: videosShownArray,
         stored_at: new Date().toISOString()
       }

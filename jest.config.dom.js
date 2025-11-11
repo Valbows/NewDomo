@@ -1,4 +1,6 @@
 // jest.config.dom.js
+require('dotenv').config({ path: '.env.test' });
+
 const nextJest = require('next/jest')({
   dir: './',
 });
@@ -14,6 +16,9 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(msw|@mswjs|until-async)/)'
+  ],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

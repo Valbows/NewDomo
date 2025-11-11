@@ -66,7 +66,6 @@ interface ProductInterestData {
 interface VideoShowcaseData {
   id: string;
   conversation_id: string;
-  requested_videos: string[] | null;
   videos_shown: string[] | null;
   objective_name: string;
   received_at: string;
@@ -227,11 +226,11 @@ function VideoShowcaseCard({ videoShowcase }: { videoShowcase: VideoShowcaseData
         </span>
       </h5>
       <div className="space-y-4">
-        {videoShowcase.requested_videos && videoShowcase.requested_videos.length > 0 && (
+        {videoShowcase.videos_shown && videoShowcase.videos_shown.length > 0 ? (
           <div>
-            <span className="text-xs font-medium text-purple-700">Videos Requested:</span>
+            <span className="text-xs font-medium text-purple-700">Videos Viewed:</span>
             <ul className="mt-1 space-y-1">
-              {videoShowcase.requested_videos.map((video, index) => (
+              {videoShowcase.videos_shown.map((video, index) => (
                 <li key={index} className="text-sm text-purple-900 flex items-start gap-2">
                   <span className="text-purple-600 mt-1">🎥</span>
                   <span className="font-medium">{video}</span>
@@ -239,28 +238,11 @@ function VideoShowcaseCard({ videoShowcase }: { videoShowcase: VideoShowcaseData
               ))}
             </ul>
           </div>
-        )}
-        
-        {videoShowcase.videos_shown && videoShowcase.videos_shown.length > 0 && (
-          <div>
-            <span className="text-xs font-medium text-purple-700">Videos Actually Shown:</span>
-            <ul className="mt-1 space-y-1">
-              {videoShowcase.videos_shown.map((video, index) => (
-                <li key={index} className="text-sm text-purple-900 flex items-start gap-2">
-                  <span className="text-purple-600 mt-1">✅</span>
-                  <span>{video}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        
-        {(!videoShowcase.requested_videos || videoShowcase.requested_videos.length === 0) && 
-         (!videoShowcase.videos_shown || videoShowcase.videos_shown.length === 0) && (
+        ) : (
           <div>
             <span className="text-xs font-medium text-purple-700">Status:</span>
             <p className="text-sm text-purple-900 mt-1">
-              Video showcase objective completed but no specific videos were captured
+              Video showcase objective completed but no videos were viewed
             </p>
           </div>
         )}
@@ -377,8 +359,7 @@ function calculateDomoScore(
   const breakdown = {
     contactConfirmation: !!(contact?.email || contact?.first_name || contact?.last_name),
     reasonForVisit: !!(productInterest?.primary_interest || (productInterest?.pain_points && productInterest.pain_points.length > 0)),
-    platformFeatureInterest: !!(videoShowcase?.requested_videos && videoShowcase.requested_videos.length > 0) || 
-                             !!(videoShowcase?.videos_shown && videoShowcase.videos_shown.length > 0),
+    platformFeatureInterest: !!(videoShowcase?.videos_shown && videoShowcase.videos_shown.length > 0),
     ctaExecution: !!(ctaTracking?.cta_clicked_at),
     perceptionAnalysis: isValidPerceptionAnalysis(perceptionAnalysis)
   };
@@ -818,6 +799,18 @@ export const Reporting = ({ demo }: ReportingProps) => {
     fetchVideoShowcaseData();
     fetchCtaTrackingData();
   }, [fetchConversationDetails, fetchContactInfo, fetchProductInterestData, fetchVideoShowcaseData, fetchCtaTrackingData]);
+
+  // Auto-refresh data every 30 seconds to catch real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchContactInfo();
+      fetchProductInterestData();
+      fetchVideoShowcaseData();
+      fetchCtaTrackingData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchContactInfo, fetchProductInterestData, fetchVideoShowcaseData, fetchCtaTrackingData]);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return "—";

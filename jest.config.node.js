@@ -1,4 +1,6 @@
 // jest.config.node.js
+require('dotenv').config({ path: '.env.test' });
+
 module.exports = {
   displayName: 'node',
   testEnvironment: 'node',
