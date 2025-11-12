@@ -1,5 +1,5 @@
 // jest.config.dom.js
-require('dotenv').config({ path: '.env.test' });
+require('dotenv').config({ path: '.env.development' });
 
 const nextJest = require('next/jest')({
   dir: './',
@@ -12,7 +12,11 @@ const customJestConfig = {
   moduleDirectories: ['node_modules', '<rootDir>/'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
-  testMatch: ['<rootDir>/src/__tests__/**/*.spec.tsx'],
+  testMatch: [
+    '<rootDir>/__tests__/unit/**/*.test.tsx',
+    '<rootDir>/__tests__/unit/**/*.test.ts',
+    '<rootDir>/src/__tests__/**/*.spec.tsx'
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

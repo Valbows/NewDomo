@@ -1,10 +1,13 @@
 // jest.config.node.js
-require('dotenv').config({ path: '.env.test' });
+require('dotenv').config({ path: '.env.development' });
 
 module.exports = {
   displayName: 'node',
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/__tests__/**/*.test.ts'],
+  testMatch: [
+    '<rootDir>/__tests__/integration/**/*.test.ts',
+    '<rootDir>/__tests__/**/*.test.ts'
+  ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.node.js'],
   transform: {
     '^.+\\.(ts|tsx)$': [

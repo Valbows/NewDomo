@@ -25,6 +25,32 @@ global.BroadcastChannel = MockBroadcastChannel;
 // Extends Jest with custom matchers
 require('@testing-library/jest-dom');
 
+// E2E Testing with Development Supabase Database
+// Import test database utilities
+const { setupTestData, cleanupTestData } = require('./__tests__/utils/test-db.ts');
+
+// Global test setup and teardown
+beforeAll(async () => {
+  // Set up test data before all tests (only if needed)
+  try {
+    console.log('🚀 Using development database for E2E tests');
+    // Optionally set up test data - commented out to avoid interfering with dev data
+    // await setupTestData();
+  } catch (error) {
+    console.error('❌ Failed to initialize test database:', error);
+  }
+});
+
+afterAll(async () => {
+  // Clean up test data after all tests (only test-specific data)
+  try {
+    await cleanupTestData();
+    console.log('🧹 Test data cleaned up');
+  } catch (error) {
+    console.warn('⚠️ Failed to clean up test database:', error);
+  }
+});
+
 // MSW setup
 // Temporarily disabled due to ES modules compatibility issues
 try {
