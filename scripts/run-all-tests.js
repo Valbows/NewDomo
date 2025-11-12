@@ -85,7 +85,7 @@ async function main() {
   log(`${colors.blue}===================${colors.reset}`);
   
   const unitTestResult = runCommand(
-    'npm run test -- --testPathPattern=unit --verbose --coverage',
+    'npm run test:unit -- --verbose --coverage',
     'Unit Tests (Components, Functions, Utilities)'
   );
   results.push({ name: 'Unit Tests', passed: unitTestResult });
@@ -95,7 +95,7 @@ async function main() {
   log(`${colors.blue}===========================${colors.reset}`);
   
   const integrationTestResult = runCommand(
-    'npm run test -- --testPathPattern=integration --verbose',
+    'npm run test:integration -- --verbose',
     'Integration Tests (API Endpoints, Database Operations)'
   );
   results.push({ name: 'Integration Tests', passed: integrationTestResult });

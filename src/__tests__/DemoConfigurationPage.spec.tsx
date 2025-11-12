@@ -49,6 +49,26 @@ jest.mock('@/lib/supabase', () => {
   };
 });
 
+// Mock fetch to prevent network requests
+global.fetch = jest.fn().mockImplementation((url) => {
+  if (url.includes('/api/demos/demo-123/custom-objectives')) {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ objectives: [] }),
+    });
+  }
+  if (url.includes('/api/webhook-url')) {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ success: true, url: 'https://test-webhook.com' }),
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+  });
+});
+
 describe('DemoConfigurationPage', () => {
   // Use real timers to allow the async save in useEffect to work correctly
   beforeAll(() => {
@@ -58,6 +78,7 @@ describe('DemoConfigurationPage', () => {
   afterAll(() => {
     jest.useFakeTimers();
   });
+  
   beforeEach(() => {
     jest.clearAllMocks();
   });

@@ -669,8 +669,90 @@ export default function DemoExperiencePage() {
     }
     
     setUiState(UIState.IDLE);
+    
     // Redirect to the reporting page (configure page with reporting tab)
-    router.push(`/demos/${demoId}/configure?tab=reporting`);
+    const targetUrl = `/demos/${demoId}/configure?tab=reporting`;
+    console.log('🎯 About to navigate to:', targetUrl);
+    console.log('📍 Current URL before navigation:', window.location.href);
+    
+    // More robust navigation approach with multiple attempts
+    let navigationAttempts = 0;
+    const maxAttempts = 3;
+    
+    const performNavigation = () => {
+      navigationAttempts++;
+      console.log(`🔄 Performing navigation attempt ${navigationAttempts}/${maxAttempts}...`);
+      console.log('📍 Current location before navigation:', window.location.href);
+      
+      // Force immediate navigation using window.location.href (most reliable)
+      try {
+        console.log('🔄 Using window.location.href for immediate navigation...');
+        window.location.href = targetUrl;
+        console.log('✅ window.location.href called successfully');
+        return true;
+      } catch (locationError) {
+        console.error('❌ window.location.href failed:', locationError);
+        
+        // Fallback to router methods
+        try {
+          console.log('🔄 Falling back to router.replace (more forceful than push)...');
+          router.replace(targetUrl);
+          console.log('✅ router.replace called as fallback');
+          return true;
+        } catch (routerError) {
+          console.error('❌ router.replace failed, trying router.push:', routerError);
+          
+          try {
+            console.log('🔄 Last resort: router.push...');
+            router.push(targetUrl);
+            console.log('✅ router.push called as last resort');
+            return true;
+          } catch (pushError) {
+            console.error('❌ All navigation methods failed:', { locationError, routerError, pushError });
+            return false;
+          }
+        }
+      }
+    };
+    
+    // Perform navigation immediately
+    const success = performNavigation();
+    
+    // Set up multiple fallback attempts with increasing delays
+    if (!success || navigationAttempts < maxAttempts) {
+      // First retry after 1 second
+      setTimeout(() => {
+        console.log('⏰ First retry navigation check...');
+        if (window.location.pathname.includes('/experience') && navigationAttempts < maxAttempts) {
+          console.log('⚠️ Still on experience page, attempting retry...');
+          performNavigation();
+        } else {
+          console.log('✅ Navigation successful or max attempts reached');
+        }
+      }, 1000);
+      
+      // Second retry after 3 seconds
+      setTimeout(() => {
+        console.log('⏰ Second retry navigation check...');
+        if (window.location.pathname.includes('/experience') && navigationAttempts < maxAttempts) {
+          console.log('⚠️ Still on experience page, final attempt...');
+          performNavigation();
+        } else {
+          console.log('✅ Navigation successful or max attempts reached');
+        }
+      }, 3000);
+      
+      // Final check after 5 seconds
+      setTimeout(() => {
+        console.log('⏰ Final navigation status check...');
+        if (window.location.pathname.includes('/experience')) {
+          console.error('❌ Navigation failed after all attempts. Current URL:', window.location.href);
+          console.error('❌ Target URL was:', targetUrl);
+        } else {
+          console.log('✅ Navigation ultimately successful!');
+        }
+      }, 5000);
+    }
   };
 
   const handleVideoEnd = () => {

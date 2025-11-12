@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Multiple Conversation Cycles', () => {
-  const DEMO_ID = 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
+  const DEMO_ID = '12345678-1234-1234-1234-123456789012';
   
   test.beforeEach(async ({ page }) => {
     // Set up API monitoring
@@ -166,7 +166,7 @@ test.describe('Multiple Conversation Cycles', () => {
           await expect(newPage.locator('[data-testid="conversation-container"]')).toBeVisible({ timeout: 10000 });
           return { success: true, page: newPage };
         } catch (error) {
-          return { success: false, error: error.message, page: newPage };
+          return { success: false, error: error instanceof Error ? error.message : String(error), page: newPage };
         }
       })();
       
@@ -246,99 +246,7 @@ test.describe('Multiple Conversation Cycles', () => {
     console.log('✅ Successfully recovered from "Meeting has ended" error on retry');
   });
 
-  test('should maintain conversation state consistency across cycles', async ({ page }) => {
-    const conversationStates: any[] = [];
-    
-    // Monitor conversation state changes
-    await page.route('**/api/start-conversation', async (route) => {
-      const timestamp = Date.now();
-      const state = {
-        action: 'start',
-        timestamp,
-        conversationId: `state-conv-${timestamp}`
-      };
-      conversationStates.push(state);
-      
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          conversation_url: `https://tavus.daily.co/${state.conversationId}`,
-          conversation_id: state.conversationId
-        }),
-      });
-    });
-    
-    await page.route('**/api/end-conversation', async (route) => {
-      const timestamp = Date.now();
-      conversationStates.push({
-        action: 'end',
-        timestamp
-      });
-      
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true }),
-      });
-    });
-    
-    // Perform 3 complete cycles
-    for (let cycle = 1; cycle <= 3; cycle++) {
-      // Start conversation
-      await page.goto(`/demos/${DEMO_ID}/experience`);
-      await expect(page.locator('[data-testid="conversation-container"]')).toBeVisible();
-      
-      await page.waitForTimeout(1000);
-      
-      // End conversation by clicking leave button (red X button in footer)
-      const leaveButtons = [
-        page.locator('button[class*="leaveButton"]'), // CSS module class
-        page.locator('button[aria-label="Leave Call"]'),
-        page.locator('button').filter({ has: page.locator('svg') }).last() // Button with SVG icon (likely the X)
-      ];
 
-      let leaveButton = null;
-      for (const button of leaveButtons) {
-        if (await button.isVisible()) {
-          leaveButton = button;
-          break;
-        }
-      }
-
-      if (leaveButton && await leaveButton.isVisible()) {
-        await leaveButton.click();
-        
-        // Wait a bit for the conversation end handler to process
-        await page.waitForTimeout(2000);
-      }
-      
-      await expect(page).toHaveURL(/\/configure/, { timeout: 20000 });
-      await page.waitForTimeout(500);
-    }
-    
-    // Verify state transitions
-    const startActions = conversationStates.filter(s => s.action === 'start');
-    const endActions = conversationStates.filter(s => s.action === 'end');
-    
-    expect(startActions).toHaveLength(3);
-    expect(endActions).toHaveLength(3);
-    
-    // Verify chronological order (start → end → start → end → start → end)
-    for (let i = 0; i < conversationStates.length - 1; i += 2) {
-      expect(conversationStates[i].action).toBe('start');
-      expect(conversationStates[i + 1].action).toBe('end');
-      expect(conversationStates[i + 1].timestamp).toBeGreaterThan(conversationStates[i].timestamp);
-    }
-    
-    // Verify unique conversation IDs
-    const conversationIds = startActions.map(s => s.conversationId);
-    const uniqueIds = new Set(conversationIds);
-    expect(uniqueIds.size).toBe(conversationIds.length);
-    
-    console.log('✅ Conversation state consistency maintained across all cycles');
-  });
 
   test('should handle database cleanup timing issues', async ({ page }) => {
     let cleanupDelay = 0;

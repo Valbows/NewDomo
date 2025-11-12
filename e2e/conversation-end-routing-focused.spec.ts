@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Conversation End Routing - Focused Test', () => {
-  const DEMO_ID = 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
+  const DEMO_ID = '12345678-1234-1234-1234-123456789012';
 
   test('should route to reporting page when conversation ends - real APIs', async ({ page }) => {
     test.setTimeout(60000);

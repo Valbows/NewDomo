@@ -9,10 +9,10 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 30_000,
   expect: { timeout: 10_000 },
-  fullyParallel: true,
+  fullyParallel: false, // Disable parallel execution to prevent test interference
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  workers: isCI ? 2 : undefined,
+  workers: 1, // Force sequential execution with single worker
   reporter: isCI ? [['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'on-failure' }]],
   use: {
     baseURL,

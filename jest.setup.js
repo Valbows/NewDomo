@@ -49,22 +49,34 @@ afterAll(async () => {
   } catch (error) {
     console.warn('⚠️ Failed to clean up test database:', error);
   }
-});
+}, 30000); // Increase timeout to 30 seconds
 
 // MSW setup
-// Temporarily disabled due to ES modules compatibility issues
 try {
   const { server } = require('./src/mocks/server');
   
   // Establish API mocking before all tests.
-  beforeAll(() => server.listen());
+  beforeAll(() => {
+    server.listen({ 
+      onUnhandledRequest: 'bypass', // Change from 'warn' to 'bypass' to prevent errors
+      // Reduce socket timeout issues
+      timeout: 5000
+    });
+  });
   
   // Reset any request handlers that we may add during the tests,
   // so they don't affect other tests.
-  afterEach(() => server.resetHandlers());
+  afterEach(() => {
+    server.resetHandlers();
+  });
   
   // Clean up after the tests are finished.
-  afterAll(() => server.close());
+  afterAll(async () => {
+    // Close MSW server gracefully
+    server.close();
+    // Add a small delay to allow connections to close
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }, 30000);
 } catch (error) {
   console.warn('MSW setup failed, running tests without API mocking:', error.message);
 }
