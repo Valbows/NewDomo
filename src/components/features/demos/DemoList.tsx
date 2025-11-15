@@ -43,7 +43,7 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
         </div>
       )}
 
-      {!loading && !demos.length && (
+      {!loading && !error && !demos.length && (
         <div className="text-sm text-gray-500">No demos yet. Create your first demo to get started.</div>
       )}
 

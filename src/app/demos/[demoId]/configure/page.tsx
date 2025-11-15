@@ -179,7 +179,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Demo Not Found</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Demo not found</h2>
           <p className="text-gray-600">The requested demo could not be found.</p>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               value="cta"
               className="w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 data-[state=active]:bg-white data-[state=active]:shadow"
             >
-              CTA Settings
+              Call-to-Action
             </Tabs.Trigger>
             <Tabs.Trigger
               value="reporting"

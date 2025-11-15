@@ -11,6 +11,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const isE2E = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "true";
 const isProduction = process.env.NODE_ENV === "production";
+const isTest = process.env.NODE_ENV === "test";
 
 /**
  * Get validated Supabase configuration
@@ -34,6 +35,11 @@ function getSupabaseConfig(): { url: string; anonKey: string } {
       );
       url = "https://e2e.invalid";
       anonKey = "e2e-key";
+    } else if (isTest) {
+      // In test mode, use dummy values to allow tests to run
+      console.warn("Test mode: Using dummy Supabase configuration");
+      url = "https://test.supabase.co";
+      anonKey = "test-anon-key";
     } else if (isProduction) {
       // In production, use default values if env vars are missing
       console.warn("Production: Using default Supabase configuration");

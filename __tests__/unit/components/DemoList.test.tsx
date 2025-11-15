@@ -4,7 +4,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import DemoList from '@/components/DemoList';
+import DemoList from '@/components/features/demos/DemoList';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
 
 // Mock Next.js Link component
@@ -15,7 +15,7 @@ jest.mock('next/link', () => {
 });
 
 // Mock DemoListItem component
-jest.mock('@/components/DemoListItem', () => {
+jest.mock('@/components/features/demos/DemoListItem', () => {
   return function MockDemoListItem({ demo }: { demo: any }) {
     return <div data-testid="demo-item">{demo.name}</div>;
   };

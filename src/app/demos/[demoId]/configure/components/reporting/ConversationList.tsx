@@ -19,7 +19,7 @@ export function ConversationList({
   if (conversations.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-gray-500 mb-4">No conversations found</div>
+        <div className="text-gray-500 mb-4">No detailed conversations found</div>
         <div className="text-sm text-gray-400">
           Conversations will appear here once visitors interact with your demo
         </div>

@@ -4,7 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import DemoListItem from '@/components/DemoListItem';
+import DemoListItem from '@/components/features/demos/DemoListItem';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
 
 // Mock Next.js Link component
@@ -236,7 +236,7 @@ describe('DemoListItem Component', () => {
     it('has proper CSS classes for layout', () => {
       render(<DemoListItem demo={baseMockDemo} />);
 
-      const container = screen.getByText('Test Demo').closest('div')?.parentElement;
+      const container = screen.getByTestId('demo-list-item');
       expect(container).toHaveClass('bg-white');
       expect(container).toHaveClass('p-4');
       expect(container).toHaveClass('rounded-lg');

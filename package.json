@@ -44,7 +44,8 @@
     "clean:test": "node scripts/clean-test-artifacts.js",
     "clean:all": "npm run clean:cache && npm run clean:test",
     "test:ci-local": "bash scripts/test-ci-locally.sh",
-    "test:jest-debug": "bash scripts/test-jest-only.sh"
+    "test:jest-debug": "bash scripts/test-jest-only.sh",
+    "check:duplicates": "node scripts/check-duplicates.js"
   },
   "keywords": [],
   "author": "",

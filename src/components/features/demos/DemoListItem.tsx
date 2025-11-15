@@ -6,7 +6,9 @@
  function formatDate(iso?: string | null) {
    if (!iso) return '—';
    try {
-     return new Date(iso).toLocaleDateString();
+     const date = new Date(iso);
+     if (isNaN(date.getTime())) return '—';
+     return date.toLocaleDateString();
    } catch {
      return '—';
    }
@@ -35,7 +37,7 @@
    const isActive = Boolean(demo.tavus_persona_id || demo.tavus_conversation_id);
  
    return (
-     <div className="bg-white p-4 rounded-lg shadow-sm flex items-center justify-between border border-gray-100">
+     <div className="bg-white p-4 rounded-lg shadow-sm flex items-center justify-between border border-gray-100" data-testid="demo-list-item">
        <div className="min-w-0">
          <h3 className="text-lg font-bold text-domo-dark-text truncate">{demo.name}</h3>
          <p className="text-xs text-domo-light-text mt-1">

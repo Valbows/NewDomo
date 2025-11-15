@@ -45,10 +45,23 @@ export function calculateConversationStats(conversations: any[]) {
   const averageDuration =
     completedConversations > 0 ? totalDuration / completedConversations : 0;
 
+  // Calculate average Domo Score (0-5 scale)
+  const conversationsWithScore = conversations.filter(c => c.domo_score != null);
+  const averageDomoScore = conversationsWithScore.length > 0 
+    ? (conversationsWithScore.reduce((sum, c) => sum + (c.domo_score || 0), 0) / conversationsWithScore.length).toFixed(1)
+    : null;
+
+  // Get last conversation time
+  const lastConversation = conversations.length > 0 
+    ? formatDate(conversations[0].started_at) // conversations are ordered by started_at desc
+    : null;
+
   return {
     totalConversations: conversations.length,
     completedConversations,
     averageDuration,
+    averageDomoScore,
+    lastConversation,
     status: conversations.length > 0 ? "Active" : "No Data"
   };
 }

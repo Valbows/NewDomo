@@ -570,18 +570,215 @@ git commit -m "description"
 git push
 ```
 
+## 🚨 CRITICAL: DUPLICATE PREVENTION PROTOCOL
+
+### **MANDATORY PRE-CREATION CHECKS - ZERO TOLERANCE**
+
+Before creating ANY new file or component, you MUST:
+
+#### **STEP 1: COMPREHENSIVE DUPLICATE SEARCH**
+
+1. **Search by Component Name**:
+   ```bash
+   # Search for existing components with similar names
+   find src/ -name "*ComponentName*" -type f
+   find src/ -name "*component-name*" -type f
+   ```
+
+2. **Search by Functionality**:
+   ```bash
+   # Search for similar functionality in codebase
+   grep -r "similar functionality keywords" src/
+   ```
+
+3. **Check Features Directory First**:
+   ```bash
+   # Always check features directory for existing implementations
+   ls -la src/components/features/*/
+   find src/components/features/ -name "*ComponentName*"
+   ```
+
+4. **Search Import Patterns**:
+   ```bash
+   # Check how similar components are imported
+   grep -r "import.*ComponentName" src/
+   grep -r "from.*ComponentName" src/
+   ```
+
+#### **STEP 2: ARCHITECTURE COMPLIANCE CHECK**
+
+1. **Domain-Driven Location**: Verify component belongs in correct domain folder:
+   - `src/components/ui/` - Reusable UI atoms/molecules
+   - `src/components/features/[domain]/` - Feature-specific organisms
+   - `src/components/layout/` - Layout templates
+   - `src/lib/services/[domain]/` - Business logic services
+
+2. **Existing Implementation Priority**:
+   - **ALWAYS** use `src/components/features/` versions over root-level components
+   - Features components are production-ready and architecturally sound
+   - Root-level components are often temporary or incomplete
+
+#### **STEP 3: TEST IMPORT ALIGNMENT**
+
+When using existing components, update test imports to match:
+
+```typescript
+// ❌ WRONG - Don't create new component if features version exists
+import Component from '@/components/Component';
+
+// ✅ CORRECT - Use features version
+import Component from '@/components/features/domain/Component';
+
+// ✅ CORRECT - Update test mocks accordingly
+jest.mock('@/components/features/domain/Component', () => {
+  return function MockComponent(props: any) {
+    return <div data-testid="mock-component">{props.children}</div>;
+  };
+});
+```
+
+#### **STEP 4: MANDATORY DUPLICATE PREVENTION CHECKLIST**
+
+Before creating any file, verify:
+
+- [ ] **No existing component** with same/similar name exists
+- [ ] **No features version** exists in `src/components/features/`
+- [ ] **No similar functionality** exists in codebase
+- [ ] **Correct domain location** chosen based on architecture
+- [ ] **Test imports** will use correct component path
+- [ ] **Index exports** updated if creating in features directory
+
+### **DUPLICATE DETECTION COMMANDS**
+
+```bash
+# Quick duplicate check for component creation
+npm run check:duplicates ComponentName
+
+# Search for existing implementations
+find src/ -name "*ComponentName*" -o -name "*component-name*"
+
+# Check features directory specifically
+find src/components/features/ -name "*ComponentName*"
+
+# Search for similar imports in tests
+grep -r "ComponentName" __tests__/
+```
+
+### **VIOLATION CONSEQUENCES**
+
+#### **If Duplicates Are Created:**
+
+1. **IMMEDIATE CLEANUP** - Remove duplicate immediately
+2. **UPDATE IMPORTS** - Fix all import paths to use correct version
+3. **TEST ALIGNMENT** - Update test mocks and imports
+4. **VERIFY FUNCTIONALITY** - Ensure no functionality is lost
+
+#### **DUPLICATE RESOLUTION PRIORITY**
+
+1. **Features Version Wins** - Always prefer `src/components/features/` implementations
+2. **Production Usage** - Check which version is used in production code
+3. **Test Compatibility** - Ensure chosen version passes all tests
+4. **Architecture Compliance** - Follow domain-driven structure
+
+## 🛑 CRITICAL: TEST FILE PROTECTION PROTOCOL
+
+### **ABSOLUTE PROHIBITION - ZERO TOLERANCE**
+
+#### **AUTOFIX SYSTEM FAILURE**
+The autofix system has repeatedly violated test protection rules and is **COMPLETELY BROKEN**. 
+
+**VIOLATION COUNT: 10+ INCIDENTS**
+- DemoList.test.tsx ✗ (removed essential mocks)
+- CTASettings.test.tsx ✗ (broke working tests)  
+- CreateDemoPage.test.tsx ✗ (changed expectations)
+- KnowledgeBaseManagement.test.tsx ✗ (multiple violations)
+- AgentSettings.test.tsx ✗ (repeated violations)
+- VideoManagement.test.tsx ✗ (functionality broken)
+- test-protection.md ✗ (even modified protection files!)
+
+#### **EMERGENCY MEASURES - IMMEDIATE IMPLEMENTATION**
+
+1. **DISABLE AUTOFIX** for all test files immediately
+2. **REQUIRE EXPLICIT USER APPROVAL** for ANY test file changes
+3. **BACKUP TEST FILES** before any modifications
+4. **VERIFY TESTS PASS** before and after any changes
+
+#### **ABSOLUTE PROHIBITION LIST**
+
+```
+__tests__/**/*
+*.test.ts
+*.test.tsx  
+*.spec.ts
+*.spec.tsx
+**/test/**/*
+**/tests/**/*
+jest.config.*
+playwright.config.*
+```
+
+#### **MANDATORY TEST MODIFICATION PROTOCOL**
+
+Before modifying ANY test file:
+
+1. **STOP ALL WORK** - Do not proceed with test modifications
+2. **REQUEST PERMISSION** - Ask user explicitly for approval
+3. **EXPLAIN CHANGES** - Detail exactly what will be modified and why
+4. **BACKUP FIRST** - Create backup of test file
+5. **VERIFY AFTER** - Run tests to ensure they still pass
+
+#### **TEST IMPORT UPDATES - SAFE PROCEDURE**
+
+When updating test imports (e.g., for duplicate resolution):
+
+1. **PRESERVE TEST LOGIC** - Never change test expectations or assertions
+2. **UPDATE IMPORTS ONLY** - Only change import paths, not test functionality
+3. **UPDATE MOCKS** - Adjust mock paths to match new import paths
+4. **VERIFY COMPATIBILITY** - Ensure new component matches test interface
+5. **RUN TESTS** - Verify all tests pass after import changes
+
+```typescript
+// ✅ SAFE - Only changing import path, preserving test logic
+// OLD:
+import Component from '@/components/Component';
+jest.mock('@/components/Component', () => MockComponent);
+
+// NEW:
+import Component from '@/components/features/domain/Component';
+jest.mock('@/components/features/domain/Component', () => MockComponent);
+// Test logic remains EXACTLY the same
+```
+
+#### **AUTOFIX SYSTEM RESTRICTIONS**
+
+**NEVER ALLOW AUTOFIX TO:**
+- Modify test files without explicit permission
+- Change test expectations or assertions
+- Remove or modify test mocks
+- Alter test data or fixtures
+- Update test configuration files
+- Touch any file in `__tests__/` directory
+
+**AUTOFIX VIOLATIONS WILL RESULT IN:**
+- Immediate system shutdown
+- Manual rollback of all changes
+- Comprehensive test suite verification
+- Developer frustration and wasted time
+
 ## Before Creating New Files
 
-1. **Check File Size**: Ensure existing files don't exceed 500 lines before adding new code
-2. **Refactor First**: If target file is > 400 lines, refactor before adding new functionality
-3. **Use Correct Test Framework**: Jest for unit/integration, Playwright for E2E
-4. **Request Push Permission**: Never push without explicit approval
-5. Check if similar documentation exists in `docs/`
-6. Check if similar scripts exist in `scripts/`
-7. Update existing files rather than creating duplicates
-8. Follow the established naming conventions
-9. Add comprehensive comments for developer understanding
-10. **NEVER** add screenshots or debug images to root directory
+1. **🚨 MANDATORY: Run Duplicate Prevention Protocol** (see above)
+2. **Check File Size**: Ensure existing files don't exceed 500 lines before adding new code
+3. **Refactor First**: If target file is > 400 lines, refactor before adding new functionality
+4. **Use Correct Test Framework**: Jest for unit/integration, Playwright for E2E
+5. **Request Push Permission**: Never push without explicit approval
+6. **Check Features Directory**: Always check `src/components/features/` for existing implementations
+7. **Verify Architecture Compliance**: Ensure correct domain-driven location
+8. **Update Test Imports**: Align test imports with chosen component location
+9. **Follow Naming Conventions**: Use established patterns
+10. **Add Developer Comments**: Explain purpose and functionality
+11. **NEVER** add screenshots or debug images to root directory
+12. **NEVER** modify test files without explicit permission
 
 ## Code Size Monitoring
 

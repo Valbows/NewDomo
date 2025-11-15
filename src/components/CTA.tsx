@@ -77,15 +77,13 @@ const CTA: React.FC<CTAProps> = ({
               >
                 {primaryAction?.text || buttonText}
               </a>
-              {secondaryAction && (
-                <a 
-                  href={secondaryAction.href} 
-                  onClick={secondaryAction.onClick}
-                  className="text-sm font-semibold leading-6 text-white"
-                >
-                  {secondaryAction.text} <span aria-hidden="true">→</span>
-                </a>
-              )}
+              <a 
+                href={secondaryAction?.href || "#"} 
+                onClick={secondaryAction?.onClick}
+                className="text-sm font-semibold leading-6 text-white"
+              >
+                {secondaryAction?.text || "Learn more"} <span aria-hidden="true">→</span>
+              </a>
             </div>
           </div>
           {backgroundImage && (

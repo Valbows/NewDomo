@@ -100,8 +100,8 @@ export class ReportingDataService {
 
   static async syncConversations(demoId: string): Promise<any> {
     try {
-      const response = await fetch(`/api/demos/${demoId}/sync`, {
-        method: "POST",
+      const response = await fetch(`/api/sync-tavus-conversations?demoId=${demoId}`, {
+        method: "GET",
       });
 
       if (!response.ok) {
