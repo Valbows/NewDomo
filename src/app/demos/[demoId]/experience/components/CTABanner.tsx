@@ -1,28 +1,4 @@
-interface Demo {
-  id: string;
-  name: string;
-  user_id: string;
-  tavus_conversation_id: string | null;
-  metadata: {
-    agentName?: string;
-    agentPersonality?: string;
-    agentGreeting?: string;
-    tavusAgentId?: string;
-    tavusShareableLink?: string;
-    tavusPersonaId?: string;
-    agentCreatedAt?: string;
-    ctaTitle?: string;
-    ctaMessage?: string;
-    ctaButtonText?: string;
-    ctaButtonUrl?: string;
-  } | null;
-  cta_title?: string;
-  cta_message?: string;
-  cta_button_text?: string;
-  cta_button_url?: string;
-  cta_text?: string;
-  cta_link?: string;
-}
+import { Demo } from '@/app/demos/[demoId]/configure/types';
 
 interface CTABannerProps {
   showCTA: boolean;

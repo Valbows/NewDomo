@@ -6,12 +6,7 @@ import { withAuth } from '@/components/features/auth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/services/auth';
-
-interface Demo {
-  id: string;
-  name: string;
-  created_at: string;
-}
+import { Demo } from '@/app/demos/[demoId]/configure/types';
 
 function DemosPage() {
   const [demos, setDemos] = useState<Demo[]>([]);

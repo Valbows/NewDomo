@@ -6,9 +6,9 @@ const baseURL = `http://localhost:${PORT}`;
 const isCI = !!process.env.CI;
 
 export default defineConfig({
-  testDir: "__tests__/e2e-real",
+  testDir: "__tests__/e2e",
   outputDir: "test-artifacts/results",
-  testMatch: /.*-live\.spec\.ts$/,
+  testMatch: /.*\.spec\.ts$/,
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: true,
@@ -18,7 +18,6 @@ export default defineConfig({
   reporter: isCI
     ? [["github"], ["html", { open: "never", outputFolder: "test-artifacts/reports" }]]
     : [["list"], ["html", { open: "on-failure", outputFolder: "test-artifacts/reports" }]],
-  globalSetup: "__tests__/e2e-real/global-setup.ts",
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -40,14 +39,20 @@ export default defineConfig({
     },
   },
   projects: [
+    // Setup project
+    { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    
+    // Test projects
     {
       name: "chromium-real",
       use: {
         ...devices["Desktop Chrome"],
+        storageState: "__tests__/e2e/.auth/user.json",
         launchOptions: {
           args: ["--autoplay-policy=no-user-gesture-required", "--mute-audio"],
         },
       },
+      dependencies: ['setup'],
     },
   ],
 });

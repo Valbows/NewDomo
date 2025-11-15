@@ -2,34 +2,7 @@ import {useState, useEffect} from 'react';
 import {supabase} from '@/lib/utils/supabase/browser';
 
 import {getErrorMessage, logError} from '@/lib/errors';
-
-interface Demo {
-  id: string;
-  name: string;
-  user_id: string;
-  tavus_conversation_id: string | null;
-  metadata: {
-    agentName?: string;
-    agentPersonality?: string;
-    agentGreeting?: string;
-    tavusAgentId?: string;
-    tavusShareableLink?: string;
-    tavusPersonaId?: string;
-    agentCreatedAt?: string;
-    ctaTitle?: string;
-    ctaMessage?: string;
-    ctaButtonText?: string;
-    ctaButtonUrl?: string;
-  } | null;
-  // Admin-level CTA fields (new)
-  cta_title?: string;
-  cta_message?: string;
-  cta_button_text?: string;
-  cta_button_url?: string;
-  // Legacy CTA fields
-  cta_text?: string;
-  cta_link?: string;
-}
+import { Demo } from '@/app/demos/[demoId]/configure/types';
 
 // Validate that a URL points to a Daily room (required by our CVI join logic)
 const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);

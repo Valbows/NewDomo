@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 const CreateDemoPage: React.FC = () => {
   const [demoName, setDemoName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const sanitizeFileName = (name: string): string => {
+    return name.replace(/[^a-zA-Z0-9\s]/g, '_').replace(/\s+/g, '_') + '_demo';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,25 +24,54 @@ const CreateDemoPage: React.FC = () => {
     setError(null);
 
     try {
-      // Simulate demo creation
-      const response = await fetch('/api/demos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: demoName.trim(),
-          fileName: demoName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create demo');
+      // Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        setError('User authentication failed');
+        return;
       }
 
-      const demo = await response.json();
-      // Simulate redirect
-      console.log(`Redirecting to /demos/${demo.id}/configure`);
+      // Generate upload ID and timestamp
+      const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const uploadTimestamp = new Date().toISOString();
+      const fileName = sanitizeFileName(demoName.trim());
+
+      // Create demo with metadata structure expected by tests
+      const demoData = {
+        name: demoName.trim(),
+        user_id: user.id,
+        upload_id: uploadId,
+        video_storage_path: '',
+        metadata: {
+          userId: user.id,
+          fileName: fileName,
+          fileType: 'demo_configuration',
+          fileSize: 0,
+          demoName: demoName.trim(),
+          uploadId: uploadId,
+          uploadTimestamp: uploadTimestamp,
+        },
+      };
+
+      const { data, error: insertError } = await supabase
+        .from('demos')
+        .insert(demoData)
+        .select()
+        .single();
+
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
+
+      if (!data) {
+        setError('Failed to create demo');
+        return;
+      }
+
+      // Redirect to configure page
+      router.push(`/demos/${data.id}/configure`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create demo');
     } finally {

@@ -680,6 +680,119 @@ grep -r "ComponentName" __tests__/
 3. **Test Compatibility** - Ensure chosen version passes all tests
 4. **Architecture Compliance** - Follow domain-driven structure
 
+## 🚨 CRITICAL: INTERFACE ORGANIZATION & DUPLICATION PREVENTION
+
+### **LAYERED ARCHITECTURE INTERFACE RULES**
+
+#### **✅ ALLOWED INTERFACE PATTERNS:**
+
+1. **Canonical Domain Interfaces** - One authoritative definition per domain
+2. **Service Layer Interfaces** - Domain-specific service contracts  
+3. **Component Re-exports** - Layer-appropriate re-exports with props
+4. **Props Interfaces** - Component-specific prop definitions
+
+#### **❌ PROHIBITED DUPLICATE PATTERNS:**
+
+- **Local interface definitions** when canonical version exists
+- **Copy-paste interfaces** across files
+- **Inline interfaces** in components that should be in types.ts
+
+### **PROPER INTERFACE ARCHITECTURE:**
+
+#### **Domain Entity Interfaces (Canonical)**
+```typescript
+// ✅ CANONICAL LOCATION: src/app/[domain]/[route]/types.ts
+export interface Demo {
+  id: string;
+  name: string;
+  // ... complete interface
+}
+```
+
+#### **Service Layer Interfaces**
+```typescript
+// ✅ SERVICE LAYER: src/lib/services/[domain]/types.ts
+export interface DemoConfig {
+  // Service-specific configuration
+}
+
+export interface IDemoService {
+  // Service contract
+}
+```
+
+#### **Component Layer Re-exports + Props**
+```typescript
+// ✅ COMPONENT LAYER: src/components/features/[domain]/types.ts
+// Re-export canonical interface
+export type { Demo } from '@/app/demos/[demoId]/configure/types';
+
+// Component-specific props
+export interface DemoListProps {
+  demos?: Demo[];
+  loading?: boolean;
+}
+```
+
+### **BEFORE CREATING ANY INTERFACE:**
+
+#### **STEP 1: CHECK EXISTING ARCHITECTURE**
+```bash
+# Find existing interfaces by name
+grep -r "interface InterfaceName" src/
+grep -r "export.*InterfaceName" src/
+```
+
+#### **STEP 2: DETERMINE CORRECT LAYER**
+- **Domain Entity**: `src/app/[domain]/[route]/types.ts`
+- **Service Contract**: `src/lib/services/[domain]/types.ts`  
+- **Component Props**: `src/components/features/[domain]/types.ts`
+- **Database Entity**: `src/lib/supabase/[table].ts`
+
+#### **STEP 3: IMPORT OR RE-EXPORT, DON'T DUPLICATE**
+```typescript
+// ✅ CORRECT - Import from canonical location
+import { Demo } from '@/app/demos/[demoId]/configure/types';
+
+// ✅ CORRECT - Re-export in component layer
+export type { Demo } from '@/app/demos/[demoId]/configure/types';
+
+// ❌ WRONG - Creating duplicate interface
+interface Demo {
+  id: string;
+  name: string;
+}
+```
+
+### **CURRENT ARCHITECTURE EXAMPLE:**
+
+```
+Demo Interface Architecture:
+├── src/app/demos/[demoId]/configure/types.ts    # ✅ Canonical Demo
+├── src/lib/services/demos/types.ts              # ✅ DemoConfig, IDemoService  
+├── src/components/features/demos/types.ts       # ✅ Re-export + DemoListProps
+└── Individual components                         # ✅ Import, don't define
+```
+
+### **DETECTION COMMANDS**
+```bash
+# Find potential duplicates (exclude service interfaces)
+grep -r "^interface Demo[^A-Za-z]" src/ | grep -v "DemoConfig\|DemoService\|DemoMetadata"
+
+# Find local interfaces that should be imports
+find src/ -name "*.tsx" -exec grep -l "^interface Demo[^A-Za-z]" {} \;
+
+# Find Props interfaces not in types.ts files
+grep -r "interface.*Props" src/ | grep -v "types.ts" | grep -v "export"
+```
+
+### **VIOLATION CONSEQUENCES**
+1. **First violation**: Review architecture and fix imports
+2. **Repeated violations**: Mandatory interface audit
+3. **Persistent issues**: Implement automated detection
+
+**🎯 GOAL: LAYERED ARCHITECTURE WITH PROPER SEPARATION OF CONCERNS**
+
 ## 🛑 CRITICAL: TEST FILE PROTECTION PROTOCOL
 
 ### **ABSOLUTE PROHIBITION - ZERO TOLERANCE**

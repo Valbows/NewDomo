@@ -47,8 +47,8 @@ export default defineConfig({
       TAVUS_TOOLS_ENABLED: 'true',
       TAVUS_MINIMAL_TOOLS: 'false',
       
-      // Mock Webhooks
-      TAVUS_WEBHOOK_SECRET: 'mock-secret',
+      // Mock Webhooks (use same secret as test for signature verification)
+      TAVUS_WEBHOOK_SECRET: 'domo_webhook_secret_dev_2025',
       TAVUS_WEBHOOK_TOKEN: 'mock-token',
       NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN: 'mock-token',
       NEXT_PUBLIC_BASE_URL: baseURL,

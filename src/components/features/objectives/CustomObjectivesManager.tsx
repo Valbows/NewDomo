@@ -5,16 +5,7 @@ import { Plus, Edit, Trash2, Play, Copy, CheckCircle } from 'lucide-react';
 import { useCustomObjectives } from '@/hooks';
 import { ObjectiveDefinition } from '@/lib/services/tavus/types';
 import { CustomObjective } from '@/lib/supabase/custom-objectives';
-
-interface CustomObjectivesManagerProps {
-  demoId: string;
-}
-
-interface ObjectiveFormData {
-  name: string;
-  description: string;
-  objectives: ObjectiveDefinition[];
-}
+import { CustomObjectivesManagerProps, ObjectiveFormData } from './types';
 
 const EMPTY_OBJECTIVE: ObjectiveDefinition = {
   objective_name: '',

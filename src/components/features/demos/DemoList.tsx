@@ -4,13 +4,7 @@ import Link from 'next/link';
 import DemoListItem from './DemoListItem';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
 import { useDemosRealtime } from '@/hooks';
-
-interface DemoListProps {
-  demos?: Demo[];
-  loading?: boolean;
-  error?: string | null;
-  onRefresh?: () => void;
-}
+import { DemoListProps } from './types';
 
 const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingProp, error: errorProp, onRefresh }) => {
   // Always call the hook (safe with React rules). Disable subscription if parent provides demos.

@@ -14,7 +14,7 @@ interface ObjectivesData {
 
 export function useObjectives() {
   const [objectives, setObjectives] = useState<ObjectivesData[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const manager = createObjectivesManager();
@@ -24,7 +24,15 @@ export function useObjectives() {
     setError(null);
     try {
       const result = await manager.getAllObjectives();
-      setObjectives(result.data);
+      // Extract data array from result object or use result directly if it's an array
+      const resultArray = result?.data ? result.data : (Array.isArray(result) ? result : []);
+      const objectivesData = resultArray.map(obj => ({
+        uuid: obj.uuid,
+        name: obj.name,
+        data: obj.data,
+        created_at: obj.created_at || new Date().toISOString(),
+      }));
+      setObjectives(objectivesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load objectives');
     } finally {

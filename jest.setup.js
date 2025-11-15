@@ -195,15 +195,15 @@ jest.mock('@/lib/tavus/objectives-manager', () => ({
 }))
 
 // Mock components
-jest.mock('@/components/ObjectivesStatus', () => ({
+jest.mock('@/components/features/objectives/ObjectivesStatus', () => ({
   ObjectivesStatus: jest.fn(() => null),
 }))
 
-jest.mock('@/components/CustomObjectivesManager', () => ({
+jest.mock('@/components/features/objectives/CustomObjectivesManager', () => ({
   CustomObjectivesManager: jest.fn(() => null),
 }))
 
-jest.mock('@/components/WebhookUrlDisplay', () => ({
+jest.mock('@/components/features/webhooks/WebhookUrlDisplay', () => ({
   __esModule: true,
   default: jest.fn(() => null),
 }))

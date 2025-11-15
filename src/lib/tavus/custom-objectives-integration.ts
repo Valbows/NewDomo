@@ -26,11 +26,12 @@ export async function getObjectivesForDemo(demoId: string): Promise<string | nul
     
     // Try to get or create default product demo objectives
     try {
-      const defaultObjectives = await objectivesManager.ensureObjectives(
-        OBJECTIVES_TEMPLATES.PRODUCT_DEMO
+      await objectivesManager.ensureObjectives(
+        OBJECTIVES_TEMPLATES.PRODUCT_DEMO.objectives.map(obj => obj.objective_name)
       );
       console.log(`Using default product demo objectives for demo ${demoId}`);
-      return defaultObjectives;
+      // Return null to indicate using default objectives (no specific ID)
+      return null;
     } catch (error) {
       console.error('Failed to get default objectives:', error);
       return null;

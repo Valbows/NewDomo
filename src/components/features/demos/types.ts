@@ -2,26 +2,14 @@
  * Type definitions for demos feature components
  */
 
-export interface Demo {
-  id: string;
-  name: string;
-  description?: string;
-  status: 'active' | 'inactive' | 'draft';
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  metadata?: Record<string, any>;
-  cta_url?: string;
-  cta_text?: string;
-}
+// Use canonical Demo interface
+export type { Demo } from '@/app/demos/[demoId]/configure/types';
 
 export interface DemoListProps {
-  demos: Demo[];
+  demos?: Demo[];
   loading?: boolean;
   error?: string | null;
-  onDemoSelect?: (demo: Demo) => void;
-  onDemoDelete?: (demoId: string) => void;
-  onDemoEdit?: (demo: Demo) => void;
+  onRefresh?: () => void;
 }
 
 export interface DemoListItemProps {

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       console.log('🔚 Ending Tavus conversation:', conversationId);
       const endResult = await tavusService.endConversationForDemo(
         demoId,
-        null, // userId not needed for ending
+        '', // userId not needed for ending
         conversationId,
         supabase
       );

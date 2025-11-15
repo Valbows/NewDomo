@@ -19,7 +19,7 @@ export async function updateWebhookUrlsForAllObjectives(newWebhookUrl?: string):
     // Get all objectives
     const allObjectives = await objectivesManager.getAllObjectives();
     
-    for (const objective of allObjectives.data) {
+    for (const objective of allObjectives) {
       if (objective.data && objective.data.length > 0) {
         // Check if any objectives in this set need webhook URLs
         const needsUpdate = objective.data.some((obj: any) => 

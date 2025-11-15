@@ -1,1 +1,67 @@
-import React, { createContext, useContext, ReactNode } from 'react';\n\ninterface CVIContextType {\n  isConnected: boolean;\n  conversationId?: string;\n  status: 'idle' | 'connecting' | 'connected' | 'disconnected';\n  startConversation: () => void;\n  endConversation: () => void;\n}\n\nconst CVIContext = createContext<CVIContextType | undefined>(undefined);\n\ninterface CVIProviderProps {\n  children: ReactNode;\n  conversationId?: string;\n}\n\nexport const CVIProvider: React.FC<CVIProviderProps> = ({ \n  children, \n  conversationId \n}) => {\n  const [isConnected, setIsConnected] = React.useState(false);\n  const [status, setStatus] = React.useState<CVIContextType['status']>('idle');\n\n  const startConversation = React.useCallback(() => {\n    setStatus('connecting');\n    // Simulate connection\n    setTimeout(() => {\n      setIsConnected(true);\n      setStatus('connected');\n    }, 1000);\n  }, []);\n\n  const endConversation = React.useCallback(() => {\n    setStatus('disconnected');\n    setIsConnected(false);\n    setTimeout(() => {\n      setStatus('idle');\n    }, 500);\n  }, []);\n\n  const value: CVIContextType = {\n    isConnected,\n    conversationId,\n    status,\n    startConversation,\n    endConversation,\n  };\n\n  return (\n    <CVIContext.Provider value={value}>\n      <div data-testid=\"cvi-provider\">\n        {children}\n      </div>\n    </CVIContext.Provider>\n  );\n};\n\nexport const useCVI = (): CVIContextType => {\n  const context = useContext(CVIContext);\n  if (context === undefined) {\n    throw new Error('useCVI must be used within a CVIProvider');\n  }\n  return context;\n};\n\nexport default CVIProvider;"
+import React, { createContext, useContext, ReactNode } from 'react';
+
+interface CVIContextType {
+  isConnected: boolean;
+  conversationId?: string;
+  status: 'idle' | 'connecting' | 'connected' | 'disconnected';
+  startConversation: () => void;
+  endConversation: () => void;
+}
+
+const CVIContext = createContext<CVIContextType | undefined>(undefined);
+
+interface CVIProviderProps {
+  children: ReactNode;
+  conversationId?: string;
+}
+
+export const CVIProvider: React.FC<CVIProviderProps> = ({ 
+  children, 
+  conversationId 
+}) => {
+  const [isConnected, setIsConnected] = React.useState(false);
+  const [status, setStatus] = React.useState<CVIContextType['status']>('idle');
+
+  const startConversation = React.useCallback(() => {
+    setStatus('connecting');
+    // Simulate connection
+    setTimeout(() => {
+      setIsConnected(true);
+      setStatus('connected');
+    }, 1000);
+  }, []);
+
+  const endConversation = React.useCallback(() => {
+    setStatus('disconnected');
+    setIsConnected(false);
+    setTimeout(() => {
+      setStatus('idle');
+    }, 500);
+  }, []);
+
+  const value: CVIContextType = {
+    isConnected,
+    conversationId,
+    status,
+    startConversation,
+    endConversation,
+  };
+
+  return (
+    <CVIContext.Provider value={value}>
+      <div data-testid="cvi-provider">
+        {children}
+      </div>
+    </CVIContext.Provider>
+  );
+};
+
+export const useCVI = (): CVIContextType => {
+  const context = useContext(CVIContext);
+  if (context === undefined) {
+    throw new Error('useCVI must be used within a CVIProvider');
+  }
+  return context;
+};
+
+export default CVIProvider;

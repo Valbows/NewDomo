@@ -1,10 +1,4 @@
-interface Demo {
-  id: string;
-  name: string;
-  user_id: string;
-  tavus_conversation_id: string | null;
-  metadata: any;
-}
+import { Demo } from '../types';
 
 interface ConfigurationHeaderProps {
   demo: Demo | null;

@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react';
-
-interface CustomObjective {
-  id: string;
-  name: string;
-  description?: string;
-  active: boolean;
-}
+import { CustomObjective } from '@/lib/supabase/custom-objectives';
+import { ObjectiveFormData } from '@/components/features/objectives/types';
 
 interface UseCustomObjectivesReturn {
   objectives: CustomObjective[];
   loading: boolean;
   error: string | null;
-  createObjective: (objective: Omit<CustomObjective, 'id'>) => Promise<void>;
+  createObjective: (objective: ObjectiveFormData) => Promise<void>;
   updateObjective: (id: string, updates: Partial<CustomObjective>) => Promise<void>;
   deleteObjective: (id: string) => Promise<void>;
   activateObjective: (id: string) => Promise<void>;
@@ -34,8 +29,19 @@ export const useCustomObjectives = (demoId?: string): UseCustomObjectivesReturn 
     }
   }, [demoId]);
 
-  const createObjective = async (objective: Omit<CustomObjective, 'id'>) => {
+  const createObjective = async (objective: ObjectiveFormData) => {
     // Implementation would go here
+    // Convert ObjectiveFormData to CustomObjective format
+    const newObjective: Omit<CustomObjective, 'id'> = {
+      demo_id: demoId || '',
+      name: objective.name,
+      description: objective.description,
+      objectives: objective.objectives,
+      is_active: true, // Default to active
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    // Would save to database here
   };
 
   const updateObjective = async (id: string, updates: Partial<CustomObjective>) => {

@@ -45,14 +45,12 @@ test.describe('Create Agent API - Real Integration', () => {
 
   test('should create agent and update demo with persona ID', async ({ page }) => {
     // Test the actual API endpoint
-    const response = await page.request.post('/api/create-agent', {
+    const response = await page.request.post('/api/demos/agents/create', {
       data: {
         demoId: TEST_DEMO_ID,
-        userId: TEST_USER_ID,
         agentName: 'Test Agent',
         agentPersonality: 'Friendly test assistant',
-        agentGreeting: 'Hello from test!',
-        objectives: ['Test objective 1', 'Test objective 2']
+        agentGreeting: 'Hello from test!'
       },
       headers: {
         'Content-Type': 'application/json'
@@ -74,7 +72,7 @@ test.describe('Create Agent API - Real Integration', () => {
   });
 
   test('should handle missing required fields gracefully', async ({ page }) => {
-    const response = await page.request.post('/api/create-agent', {
+    const response = await page.request.post('/api/demos/agents/create', {
       data: {
         // Missing required fields
         demoId: TEST_DEMO_ID
@@ -101,14 +99,12 @@ test.describe('Create Agent API - Real Integration', () => {
       });
     });
 
-    const response = await page.request.post('/api/create-agent', {
+    const response = await page.request.post('/api/demos/agents/create', {
       data: {
         demoId: TEST_DEMO_ID,
-        userId: TEST_USER_ID,
         agentName: 'Test Agent',
         agentPersonality: 'Friendly test assistant',
-        agentGreeting: 'Hello from test!',
-        objectives: ['Test objective 1']
+        agentGreeting: 'Hello from test!'
       },
       headers: {
         'Content-Type': 'application/json'
@@ -123,14 +119,12 @@ test.describe('Create Agent API - Real Integration', () => {
   });
 
   test('should validate agent configuration parameters', async ({ page }) => {
-    const response = await page.request.post('/api/create-agent', {
+    const response = await page.request.post('/api/demos/agents/create', {
       data: {
         demoId: TEST_DEMO_ID,
-        userId: TEST_USER_ID,
         agentName: '', // Empty name should be invalid
         agentPersonality: 'Valid personality',
-        agentGreeting: 'Valid greeting',
-        objectives: [] // Empty objectives might be invalid
+        agentGreeting: 'Valid greeting'
       },
       headers: {
         'Content-Type': 'application/json'

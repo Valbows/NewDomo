@@ -13,6 +13,7 @@ import { StatusIndicators } from "./components/StatusIndicators";
 import { VideoControls } from "./components/VideoControls";
 import type { InlineVideoPlayerHandle } from "./components/InlineVideoPlayer";
 import { UIState } from "@/lib/tavus";
+import { Demo } from "@/app/demos/[demoId]/configure/types";
 import { getErrorMessage, logError } from "@/lib/errors";
 
 // Custom styles for PiP video layout
@@ -60,33 +61,7 @@ const pipStyles = `
 const isDailyRoomUrl = (url: string) =>
   /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
 
-interface Demo {
-  id: string;
-  name: string;
-  user_id: string;
-  tavus_conversation_id: string | null;
-  metadata: {
-    agentName?: string;
-    agentPersonality?: string;
-    agentGreeting?: string;
-    tavusAgentId?: string;
-    tavusShareableLink?: string;
-    tavusPersonaId?: string;
-    agentCreatedAt?: string;
-    ctaTitle?: string;
-    ctaMessage?: string;
-    ctaButtonText?: string;
-    ctaButtonUrl?: string;
-  } | null;
-  // Admin-level CTA fields (new)
-  cta_title?: string;
-  cta_message?: string;
-  cta_button_text?: string;
-  cta_button_url?: string;
-  // Legacy CTA fields
-  cta_text?: string;
-  cta_link?: string;
-}
+
 
 // CTA override payload shape from Realtime broadcasts
 type CtaOverrides = {
