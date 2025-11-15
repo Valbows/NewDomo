@@ -6,7 +6,9 @@
  function formatDate(iso?: string | null) {
    if (!iso) return '—';
    try {
-     return new Date(iso).toLocaleDateString();
+     const date = new Date(iso);
+     if (isNaN(date.getTime())) return '—';
+     return date.toLocaleDateString();
    } catch {
      return '—';
    }

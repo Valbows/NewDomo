@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Comprehensive test runner for the main branch
- * Runs all tests to ensure functionality is preserved during refactoring
+ * Unified Test Runner
+ * Runs both Jest (unit/integration) and Playwright (e2e) tests
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
+const { spawn } = require('child_process');
 const path = require('path');
 
 // Colors for console output
@@ -25,186 +24,93 @@ function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
-function runCommand(command, description) {
-  log(`\n${colors.blue}🔄 ${description}${colors.reset}`);
-  log(`${colors.cyan}Command: ${command}${colors.reset}`);
-  
-  try {
-    const output = execSync(command, { 
+function runCommand(command, args, description) {
+  return new Promise((resolve, reject) => {
+    log(`\n${colors.cyan}🚀 ${description}${colors.reset}`);
+    log(`${colors.yellow}Running: ${command} ${args.join(' ')}${colors.reset}\n`);
+
+    const child = spawn(command, args, {
       stdio: 'inherit',
+      shell: true,
       cwd: process.cwd(),
-      env: { ...process.env, NODE_ENV: 'test' }
     });
-    log(`${colors.green}✅ ${description} - PASSED${colors.reset}`);
-    return true;
-  } catch (error) {
-    log(`${colors.red}❌ ${description} - FAILED${colors.reset}`);
-    log(`${colors.red}Error: ${error.message}${colors.reset}`);
-    return false;
-  }
-}
 
-function checkTestFiles() {
-  const testDirs = [
-    '__tests__/unit',
-    '__tests__/integration',
-    '__tests__/e2e',
-  ];
-  
-  let totalTests = 0;
-  
-  testDirs.forEach(dir => {
-    if (fs.existsSync(dir)) {
-      const files = fs.readdirSync(dir).filter(file => 
-        file.endsWith('.test.ts') || 
-        file.endsWith('.test.tsx') || 
-        file.endsWith('.spec.ts')
-      );
-      totalTests += files.length;
-      log(`${colors.cyan}📁 ${dir}: ${files.length} test files${colors.reset}`);
-    }
+    child.on('close', (code) => {
+      if (code === 0) {
+        log(`\n${colors.green}✅ ${description} completed successfully${colors.reset}`);
+        resolve(code);
+      } else {
+        log(`\n${colors.red}❌ ${description} failed with exit code ${code}${colors.reset}`);
+        reject(new Error(`${description} failed`));
+      }
+    });
+
+    child.on('error', (error) => {
+      log(`\n${colors.red}❌ Error running ${description}: ${error.message}${colors.reset}`);
+      reject(error);
+    });
   });
-  
-  return totalTests;
 }
 
-async function main() {
-  log(`${colors.bright}${colors.magenta}🧪 COMPREHENSIVE TEST SUITE - MAIN BRANCH${colors.reset}`);
-  log(`${colors.magenta}================================================${colors.reset}`);
-  
+async function runAllTests() {
   const startTime = Date.now();
-  const results = [];
   
-  // Check test files
-  log(`\n${colors.yellow}📋 Test File Summary:${colors.reset}`);
-  const totalTestFiles = checkTestFiles();
-  log(`${colors.bright}Total test files: ${totalTestFiles}${colors.reset}`);
-  
-  // 1. Unit Tests
-  log(`\n${colors.bright}${colors.blue}PHASE 1: UNIT TESTS${colors.reset}`);
-  log(`${colors.blue}===================${colors.reset}`);
-  
-  const unitTestResult = runCommand(
-    'npm run test:unit -- --verbose --coverage',
-    'Unit Tests (Components, Functions, Utilities)'
-  );
-  results.push({ name: 'Unit Tests', passed: unitTestResult });
-  
-  // 2. Integration Tests
-  log(`\n${colors.bright}${colors.blue}PHASE 2: INTEGRATION TESTS${colors.reset}`);
-  log(`${colors.blue}===========================${colors.reset}`);
-  
-  const integrationTestResult = runCommand(
-    'npm run test:integration -- --verbose',
-    'Integration Tests (API Endpoints, Database Operations)'
-  );
-  results.push({ name: 'Integration Tests', passed: integrationTestResult });
-  
-  // 3. Lint and Type Check
-  log(`\n${colors.bright}${colors.blue}PHASE 3: CODE QUALITY${colors.reset}`);
-  log(`${colors.blue}======================${colors.reset}`);
-  
-  const lintResult = runCommand(
-    'npm run lint',
-    'ESLint Code Quality Check'
-  );
-  results.push({ name: 'Lint Check', passed: lintResult });
-  
-  const typeCheckResult = runCommand(
-    'npx tsc --noEmit',
-    'TypeScript Type Check'
-  );
-  results.push({ name: 'Type Check', passed: typeCheckResult });
-  
-  // 4. Build Test
-  log(`\n${colors.bright}${colors.blue}PHASE 4: BUILD VERIFICATION${colors.reset}`);
-  log(`${colors.blue}============================${colors.reset}`);
-  
-  const buildResult = runCommand(
-    'npm run build',
-    'Production Build Test'
-  );
-  results.push({ name: 'Build Test', passed: buildResult });
-  
-  // 5. E2E Tests (if server is running)
-  log(`\n${colors.bright}${colors.blue}PHASE 5: END-TO-END TESTS${colors.reset}`);
-  log(`${colors.blue}=========================${colors.reset}`);
-  
-  log(`${colors.yellow}⚠️  E2E tests require a running development server${colors.reset}`);
-  log(`${colors.yellow}   Run 'npm run dev' in another terminal, then run 'npm run e2e'${colors.reset}`);
-  
-  // Check if server is running
+  log(`${colors.bright}${colors.magenta}🧪 COMPREHENSIVE TEST SUITE RUNNER${colors.reset}`);
+  log(`${colors.bright}Running Jest (Unit/Integration) + Playwright (E2E) Tests${colors.reset}\n`);
+
+  const results = {
+    jest: { success: false, duration: 0 },
+    playwright: { success: false, duration: 0 },
+  };
+
   try {
-    const response = await fetch('http://localhost:3000/api/health').catch(() => null);
-    if (response && response.ok) {
-      const e2eResult = runCommand(
-        'npm run e2e',
-        'End-to-End Tests (Full User Flows)'
-      );
-      results.push({ name: 'E2E Tests', passed: e2eResult });
-    } else {
-      log(`${colors.yellow}⏭️  Skipping E2E tests - development server not running${colors.reset}`);
-      results.push({ name: 'E2E Tests', passed: null, skipped: true });
-    }
+    // Run Jest tests (unit + integration)
+    const jestStart = Date.now();
+    await runCommand('npm', ['run', 'test'], 'Jest Tests (Unit + Integration)');
+    results.jest.success = true;
+    results.jest.duration = Date.now() - jestStart;
+
+    // Run Playwright tests (e2e)
+    const playwrightStart = Date.now();
+    await runCommand('npm', ['run', 'test:e2e'], 'Playwright Tests (E2E)');
+    results.playwright.success = true;
+    results.playwright.duration = Date.now() - playwrightStart;
+
+    // Success summary
+    const totalDuration = Date.now() - startTime;
+    log(`\n${colors.bright}${colors.green}🎉 ALL TESTS PASSED!${colors.reset}`);
+    log(`${colors.green}✅ Jest: ${(results.jest.duration / 1000).toFixed(1)}s${colors.reset}`);
+    log(`${colors.green}✅ Playwright: ${(results.playwright.duration / 1000).toFixed(1)}s${colors.reset}`);
+    log(`${colors.bright}${colors.green}Total Duration: ${(totalDuration / 1000).toFixed(1)}s${colors.reset}\n`);
+
   } catch (error) {
-    log(`${colors.yellow}⏭️  Skipping E2E tests - development server not accessible${colors.reset}`);
-    results.push({ name: 'E2E Tests', passed: null, skipped: true });
-  }
-  
-  // Summary
-  const endTime = Date.now();
-  const duration = Math.round((endTime - startTime) / 1000);
-  
-  log(`\n${colors.bright}${colors.magenta}📊 TEST RESULTS SUMMARY${colors.reset}`);
-  log(`${colors.magenta}=======================${colors.reset}`);
-  
-  let passedCount = 0;
-  let failedCount = 0;
-  let skippedCount = 0;
-  
-  results.forEach(result => {
-    if (result.skipped) {
-      log(`${colors.yellow}⏭️  ${result.name}: SKIPPED${colors.reset}`);
-      skippedCount++;
-    } else if (result.passed) {
-      log(`${colors.green}✅ ${result.name}: PASSED${colors.reset}`);
-      passedCount++;
-    } else {
-      log(`${colors.red}❌ ${result.name}: FAILED${colors.reset}`);
-      failedCount++;
-    }
-  });
-  
-  log(`\n${colors.bright}Summary:${colors.reset}`);
-  log(`${colors.green}✅ Passed: ${passedCount}${colors.reset}`);
-  log(`${colors.red}❌ Failed: ${failedCount}${colors.reset}`);
-  log(`${colors.yellow}⏭️  Skipped: ${skippedCount}${colors.reset}`);
-  log(`${colors.cyan}⏱️  Duration: ${duration}s${colors.reset}`);
-  
-  if (failedCount === 0) {
-    log(`\n${colors.bright}${colors.green}🎉 ALL TESTS PASSED! Main branch is ready for refactoring.${colors.reset}`);
-    log(`${colors.green}You can now safely switch to the refactoring branch and run these same tests.${colors.reset}`);
-    process.exit(0);
-  } else {
-    log(`\n${colors.bright}${colors.red}💥 SOME TESTS FAILED! Fix issues before refactoring.${colors.reset}`);
-    log(`${colors.red}The main branch must be fully functional before refactoring begins.${colors.reset}`);
+    // Failure summary
+    const totalDuration = Date.now() - startTime;
+    log(`\n${colors.bright}${colors.red}❌ TEST SUITE FAILED${colors.reset}`);
+    log(`${colors.red}Jest: ${results.jest.success ? '✅' : '❌'} ${(results.jest.duration / 1000).toFixed(1)}s${colors.reset}`);
+    log(`${colors.red}Playwright: ${results.playwright.success ? '✅' : '❌'} ${(results.playwright.duration / 1000).toFixed(1)}s${colors.reset}`);
+    log(`${colors.bright}${colors.red}Total Duration: ${(totalDuration / 1000).toFixed(1)}s${colors.reset}`);
+    log(`${colors.red}Error: ${error.message}${colors.reset}\n`);
+    
     process.exit(1);
   }
 }
 
-// Handle uncaught errors
-process.on('uncaughtException', (error) => {
-  log(`${colors.red}💥 Uncaught Exception: ${error.message}${colors.reset}`);
-  process.exit(1);
-});
+// Handle command line arguments
+const args = process.argv.slice(2);
+if (args.includes('--help') || args.includes('-h')) {
+  log(`${colors.bright}Unified Test Runner${colors.reset}`);
+  log('Runs both Jest and Playwright tests in sequence\n');
+  log('Usage:');
+  log('  npm run test:all     # Run all tests');
+  log('  npm run test         # Run Jest only');
+  log('  npm run test:e2e     # Run Playwright only');
+  log('  npm run test:watch   # Run Jest in watch mode');
+  process.exit(0);
+}
 
-process.on('unhandledRejection', (reason, promise) => {
-  log(`${colors.red}💥 Unhandled Rejection at: ${promise}, reason: ${reason}${colors.reset}`);
-  process.exit(1);
-});
-
-// Run the test suite
-main().catch(error => {
-  log(`${colors.red}💥 Test suite failed: ${error.message}${colors.reset}`);
+// Run the tests
+runAllTests().catch((error) => {
+  log(`${colors.red}Fatal error: ${error.message}${colors.reset}`);
   process.exit(1);
 });
