@@ -317,8 +317,10 @@ describe('Tavus Webhook Tool Calls', () => {
             eq: jest.fn(() => builder),
             single: jest.fn(() => {
               if (table === 'demos') return { data: null, error: 'not found' };
+              if (table === 'processed_webhook_events') return { data: null, error: 'not found' };
               return { data: null, error: 'noop' };
             }),
+            insert: jest.fn((rows: any) => ({ data: rows, error: null })),
           };
           return builder;
         },
@@ -361,9 +363,15 @@ describe('Tavus Webhook Tool Calls', () => {
 
     (supabase.createClient as unknown as jest.Mock).mockImplementation(() => {
       const mock: any = {
-        from: (table: string) => ({
-          select: () => ({ eq: () => ({ single: () => ({ data: null, error: 'not found' }) }) }),
-        }),
+        from: (table: string) => {
+          const builder: any = {
+            select: () => builder,
+            eq: () => builder,
+            single: () => ({ data: null, error: 'not found' }),
+            insert: jest.fn((rows: any) => ({ data: rows, error: null })),
+          };
+          return builder;
+        },
         channel: jest.fn(() => ({ send: jest.fn(), subscribe: jest.fn() })),
       };
       return mock;
@@ -411,8 +419,10 @@ describe('Tavus Webhook Tool Calls', () => {
               if (table === 'demo_videos' && builder._sel === 'storage_url') {
                 return { data: null, error: 'not found' };
               }
+              if (table === 'processed_webhook_events') return { data: null, error: 'not found' };
               return { data: null, error: 'noop' };
             }),
+            insert: jest.fn((rows: any) => ({ data: rows, error: null })),
           };
           return builder;
         },
@@ -470,8 +480,12 @@ describe('Tavus Webhook Tool Calls', () => {
           if (builder._table === 'demo_videos' && builder._sel === 'storage_url') {
             return { data: { storage_url: 'videos/path.mp4' }, error: null };
           }
+          if (builder._table === 'processed_webhook_events') {
+            return { data: null, error: 'not found' };
+          }
           return { data: null, error: 'noop' };
         }),
+        insert: jest.fn((rows: any) => ({ data: rows, error: null })),
       };
       const mock: any = {
         from: (table: string) => {

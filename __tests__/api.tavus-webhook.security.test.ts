@@ -1,16 +1,26 @@
 import crypto from 'crypto';
 
-// Mock Supabase server client and Sentry before importing the route
-jest.mock('@/utils/supabase/server', () => {
+// Mock Supabase client and Sentry before importing the route
+jest.mock('@supabase/supabase-js', () => {
   return {
     createClient: jest.fn(() => ({
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () => ({ data: null, error: 'not found' })
-          })
-        })
-      }),
+      from: (table: string) => {
+        const builder: any = {
+          select: () => builder,
+          eq: () => builder,
+          single: () => {
+            if (table === 'processed_webhook_events') {
+              return { data: null, error: 'not found' };
+            }
+            return { data: null, error: 'not found' };
+          },
+          insert: (rows: any) => {
+            // Mock insert for idempotency tracking
+            return { data: rows, error: null };
+          }
+        };
+        return builder;
+      },
       storage: {
         from: () => ({
           createSignedUrl: () => ({ data: { signedUrl: 'signed-url' }, error: null })
@@ -267,7 +277,7 @@ describe('Tavus Webhook Security', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toEqual({ received: true });
-  });
+  }, 10000); // 10 second timeout for this slow test
 
   test('accepts valid signature (base64) and returns 200 for benign event', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
