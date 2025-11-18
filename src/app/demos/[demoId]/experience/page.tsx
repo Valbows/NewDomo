@@ -9,97 +9,9 @@ import { InlineVideoPlayer } from './components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from './components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { getErrorMessage, logError } from '@/lib/errors';
-
-// Helper function to extract conversation ID from Tavus Daily URL
-function extractConversationIdFromUrl(url: string): string | null {
-  try {
-    // Tavus URLs are in format: https://tavus.daily.co/{conversation_id}
-    const match = url.match(/tavus\.daily\.co\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-// Custom styles for PiP video layout
-const pipStyles = `
-  .pip-video-layout {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-  
-  .pip-video-layout [class*="mainVideoContainer"] {
-    flex: 1;
-    min-height: 0;
-    position: relative;
-  }
-  
-  .pip-video-layout [class*="selfViewContainer"] {
-    position: relative !important;
-    bottom: auto !important;
-    right: auto !important;
-    left: auto !important;
-    z-index: 1;
-    margin-top: 8px;
-    align-self: center;
-  }
-  
-  .pip-video-layout [class*="previewVideoContainer"] {
-    width: 80px !important;
-    height: 60px !important;
-    max-height: 60px !important;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-  }
-  
-  .pip-video-layout [class*="previewVideo"] {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-  }
-`;
-
-// Validate that a URL points to a Daily room (required by our CVI join logic)
-const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
-
-interface Demo {
-  id: string;
-  name: string;
-  user_id: string;
-  tavus_conversation_id: string | null;
-  metadata: {
-    agentName?: string;
-    agentPersonality?: string;
-    agentGreeting?: string;
-    tavusAgentId?: string;
-    tavusShareableLink?: string;
-    tavusPersonaId?: string;
-    agentCreatedAt?: string;
-    ctaTitle?: string;
-    ctaMessage?: string;
-    ctaButtonText?: string;
-    ctaButtonUrl?: string;
-  } | null;
-  // Admin-level CTA fields (new)
-  cta_title?: string;
-  cta_message?: string;
-  cta_button_text?: string;
-  cta_button_url?: string;
-  // Legacy CTA fields
-  cta_text?: string;
-  cta_link?: string;
-}
-
-// CTA override payload shape from Realtime broadcasts
-type CtaOverrides = {
-  cta_title?: string | null;
-  cta_message?: string | null;
-  cta_button_text?: string | null;
-  cta_button_url?: string | null;
-};
+import { extractConversationIdFromUrl, isDailyRoomUrl } from './utils/helpers';
+import { pipStyles } from './styles/pipStyles';
+import type { Demo, CtaOverrides } from './types';
 
 export default function DemoExperiencePage() {
   const params = useParams();
@@ -587,10 +499,21 @@ export default function DemoExperiencePage() {
     }
 
     if (toolName === 'next_video') {
+      // Only advance to next video if a video is currently playing
+      if (!currentVideoTitle) {
+        console.warn('⚠️  next_video called but no video is currently playing - ignoring');
+        return;
+      }
+
       if (Array.isArray(videoTitles) && videoTitles.length > 0) {
-        const idx = currentVideoTitle ? videoTitles.indexOf(currentVideoTitle) : -1;
-        const nextIdx = idx >= 0 ? (idx + 1) % videoTitles.length : 0;
+        const idx = videoTitles.indexOf(currentVideoTitle);
+        if (idx === -1) {
+          console.warn('⚠️  Current video not found in videoTitles - cannot advance');
+          return;
+        }
+        const nextIdx = (idx + 1) % videoTitles.length;
         const nextTitle = videoTitles[nextIdx];
+        console.log(`⏭️  Advancing from "${currentVideoTitle}" to "${nextTitle}"`);
         await playByTitle(nextTitle);
       } else {
         console.warn('next_video called but no videoTitles available');

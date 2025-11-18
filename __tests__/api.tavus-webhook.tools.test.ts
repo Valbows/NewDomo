@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
-// Mock Supabase server client and Sentry before importing the route
-jest.mock('@/utils/supabase/server', () => {
+// Mock Supabase client and Sentry before importing the route
+jest.mock('@supabase/supabase-js', () => {
   // Track processed events for idempotency simulation
   const processedEvents = new Set<string>();
 
@@ -88,9 +88,10 @@ describe('Tavus Webhook Tool Calls', () => {
 
   test('fetch_video: finds demo/video, signs URL, broadcasts play_video', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
     const payloadObj = {
+      id: 'evt_test_1',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_1',
       data: {
@@ -116,7 +117,7 @@ describe('Tavus Webhook Tool Calls', () => {
     expect(json).toEqual({ received: true });
 
     // Inspect Supabase channel broadcast
-    const createClientMock = supabaseServer.createClient as unknown as jest.Mock;
+    const createClientMock = supabase.createClient as unknown as jest.Mock;
     const supabaseInstance = createClientMock.mock.results[0].value;
     const channelMock = supabaseInstance.channel as jest.Mock;
     expect(channelMock).toHaveBeenCalledWith('demo-demo_abc');
@@ -130,9 +131,10 @@ describe('Tavus Webhook Tool Calls', () => {
 
   test('show_trial_cta: finds demo and broadcasts CTA event', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
     const payloadObj = {
+      id: 'evt_test_2',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_2',
       data: {
@@ -157,7 +159,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ received: true });
 
-    const createClientMock = supabaseServer.createClient as unknown as jest.Mock;
+    const createClientMock = supabase.createClient as unknown as jest.Mock;
     const supabaseInstance = createClientMock.mock.results[0].value;
     const channelMock = supabaseInstance.channel as jest.Mock;
     expect(channelMock).toHaveBeenCalledWith('demo-demo_abc');
@@ -176,9 +178,10 @@ describe('Tavus Webhook Tool Calls', () => {
 
   test('idempotency: duplicate show_trial_cta only broadcasts once', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
     const payloadObj = {
+      id: 'evt_test_3',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_idem',
       data: {
@@ -203,7 +206,7 @@ describe('Tavus Webhook Tool Calls', () => {
     expect(res2.status).toBe(200);
     await res2.json();
 
-    const createClientMock = supabaseServer.createClient as unknown as jest.Mock;
+    const createClientMock = supabase.createClient as unknown as jest.Mock;
     const supabaseInstance = createClientMock.mock.results[0].value;
     const channelMock = supabaseInstance.channel as jest.Mock;
     const channelObj = channelMock.mock.results[0].value;
@@ -224,9 +227,10 @@ describe('Tavus Webhook Tool Calls', () => {
 
   test('play_video alias behaves like fetch_video (signs and broadcasts)', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
     const payloadObj = {
+      id: 'evt_test_4',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_3',
       data: {
@@ -251,7 +255,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ received: true });
 
-    const createClientMock = supabaseServer.createClient as unknown as jest.Mock;
+    const createClientMock = supabase.createClient as unknown as jest.Mock;
     const supabaseInstance = createClientMock.mock.results[0].value;
     const channelMock = supabaseInstance.channel as jest.Mock;
     expect(channelMock).toHaveBeenCalledWith('demo-demo_abc');
@@ -265,9 +269,10 @@ describe('Tavus Webhook Tool Calls', () => {
 
   test('fetch_video with missing/invalid title returns 200 with validation message', async () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
     const payloadObj = {
+      id: 'evt_test_5',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_4',
       data: {
@@ -292,7 +297,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ message: 'Invalid or missing video title.' });
 
-    const createClientMock = supabaseServer.createClient as unknown as jest.Mock;
+    const createClientMock = supabase.createClient as unknown as jest.Mock;
     const supabaseInstance = createClientMock.mock.results[0].value;
     // Ensure we did not broadcast anything
     expect((supabaseInstance.channel as jest.Mock).mock.calls.length).toBe(0);
@@ -301,10 +306,10 @@ describe('Tavus Webhook Tool Calls', () => {
   test('fetch_video: demo not found returns 200 with message and no broadcast', async () => {
     jest.resetModules();
     process.env.TAVUS_WEBHOOK_SECRET = secret;
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
     // Override createClient to return a mock that fails demo lookup
-    (supabaseServer.createClient as unknown as jest.Mock).mockImplementation(() => {
+    (supabase.createClient as unknown as jest.Mock).mockImplementation(() => {
       const mock: any = {
         from: (table: string) => {
           const builder: any = {
@@ -327,6 +332,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
+      id: 'evt_test_6',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_X',
       data: { name: 'fetch_video', args: { title: 'Any Title' } },
@@ -344,16 +350,16 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ message: 'Demo not found for conversation.' });
 
-    const supabaseInstance = (supabaseServer.createClient as any).mock.results.at(-1).value;
+    const supabaseInstance = (supabase.createClient as any).mock.results.at(-1).value;
     expect((supabaseInstance.channel as jest.Mock).mock.calls.length).toBe(0);
   });
 
   test('show_trial_cta: demo not found returns 200 with message and no broadcast', async () => {
     jest.resetModules();
     process.env.TAVUS_WEBHOOK_SECRET = secret;
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
-    (supabaseServer.createClient as unknown as jest.Mock).mockImplementation(() => {
+    (supabase.createClient as unknown as jest.Mock).mockImplementation(() => {
       const mock: any = {
         from: (table: string) => ({
           select: () => ({ eq: () => ({ single: () => ({ data: null, error: 'not found' }) }) }),
@@ -366,6 +372,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
+      id: 'evt_test_7',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_Y',
       data: { name: 'show_trial_cta', args: {} },
@@ -383,16 +390,16 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ message: 'Demo not found for conversation.' });
 
-    const supabaseInstance = (supabaseServer.createClient as any).mock.results.at(-1).value;
+    const supabaseInstance = (supabase.createClient as any).mock.results.at(-1).value;
     expect((supabaseInstance.channel as jest.Mock).mock.calls.length).toBe(0);
   });
 
   test('fetch_video: video not found returns 200 with message and no broadcast', async () => {
     jest.resetModules();
     process.env.TAVUS_WEBHOOK_SECRET = secret;
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
-    (supabaseServer.createClient as unknown as jest.Mock).mockImplementation(() => {
+    (supabase.createClient as unknown as jest.Mock).mockImplementation(() => {
       const mock: any = {
         from: (table: string) => {
           const builder: any = {
@@ -418,6 +425,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
+      id: 'evt_test_8',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_Z',
       data: { name: 'fetch_video', args: { title: 'Missing Title' } },
@@ -435,16 +443,16 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ message: 'Video not found.' });
 
-    const supabaseInstance = (supabaseServer.createClient as any).mock.results.at(-1).value;
+    const supabaseInstance = (supabase.createClient as any).mock.results.at(-1).value;
     expect((supabaseInstance.channel as jest.Mock).mock.calls.length).toBe(0);
   });
 
   test('fetch_video: signed URL creation error returns 200 with message and no broadcast', async () => {
     jest.resetModules();
     process.env.TAVUS_WEBHOOK_SECRET = secret;
-    const supabaseServer = await import('@/utils/supabase/server');
+    const supabase = await import('@supabase/supabase-js');
 
-    (supabaseServer.createClient as unknown as jest.Mock).mockImplementation(() => {
+    (supabase.createClient as unknown as jest.Mock).mockImplementation(() => {
       const builder: any = {
         _table: '',
         _sel: '',
@@ -483,6 +491,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const { handlePOST } = await import('../src/app/api/tavus-webhook/handler');
 
     const payloadObj = {
+      id: 'evt_test_9',
       event_type: 'conversation.toolcall',
       conversation_id: 'conv_W',
       data: { name: 'fetch_video', args: { title: 'Any Title' } },
@@ -500,7 +509,7 @@ describe('Tavus Webhook Tool Calls', () => {
     const json = await res.json();
     expect(json).toEqual({ message: 'Could not generate video URL.' });
 
-    const supabaseInstance = (supabaseServer.createClient as any).mock.results.at(-1).value;
+    const supabaseInstance = (supabase.createClient as any).mock.results.at(-1).value;
     expect((supabaseInstance.channel as jest.Mock).mock.calls.length).toBe(0);
   });
 });

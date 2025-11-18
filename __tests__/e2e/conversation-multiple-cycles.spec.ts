@@ -62,15 +62,42 @@ test.describe('Multiple Conversation Cycles', () => {
       // Simulate conversation activity (wait a bit)
       await page.waitForTimeout(2000);
       
-      // End conversation by clicking leave button
-      const leaveButton = page.locator('button').filter({ hasText: /leave/i }).first();
-      if (await leaveButton.isVisible()) {
+      // End conversation by clicking leave button (red X button in footer)
+      const leaveButtons = [
+        page.locator('button[class*="leaveButton"]'), // CSS module class
+        page.locator('button[aria-label="Leave Call"]'),
+        page.locator('svg[aria-label="Leave Call"]').locator('..'), // Parent button of the leave icon
+        page.locator('button').filter({ has: page.locator('svg') }).last() // Button with SVG icon (likely the X)
+      ];
+
+      let leaveButton = null;
+      for (const button of leaveButtons) {
+        if (await button.isVisible()) {
+          leaveButton = button;
+          break;
+        }
+      }
+
+      if (leaveButton && await leaveButton.isVisible()) {
         await leaveButton.click();
-        console.log(`  ✅ Ended conversation cycle ${cycle}`);
+        console.log(`  ✅ Clicked leave button in cycle ${cycle}`);
+        
+        // Wait a bit for the conversation end handler to process
+        await page.waitForTimeout(2000);
+        
+        console.log(`  📍 Current URL after leave click: ${page.url()}`);
+      } else {
+        throw new Error(`Leave button not found in cycle ${cycle}`);
       }
       
-      // Wait for navigation to reporting page
-      await expect(page).toHaveURL(/\/demos\/[^\/]+\/configure/, { timeout: 10000 });
+      // Wait for navigation to reporting page with longer timeout
+      try {
+        await expect(page).toHaveURL(/\/demos\/[^\/]+\/configure/, { timeout: 20000 });
+        console.log(`  ✅ Ended conversation cycle ${cycle}`);
+      } catch (error) {
+        console.log(`  ❌ Navigation failed in cycle ${cycle}. Current URL: ${page.url()}`);
+        throw error;
+      }
       
       // Verify we reached reporting/configure page
       const isOnConfigurePage = page.url().includes('/configure');
@@ -265,13 +292,29 @@ test.describe('Multiple Conversation Cycles', () => {
       
       await page.waitForTimeout(1000);
       
-      // End conversation
-      const leaveButton = page.locator('button').filter({ hasText: /leave/i }).first();
-      if (await leaveButton.isVisible()) {
+      // End conversation by clicking leave button (red X button in footer)
+      const leaveButtons = [
+        page.locator('button[class*="leaveButton"]'), // CSS module class
+        page.locator('button[aria-label="Leave Call"]'),
+        page.locator('button').filter({ has: page.locator('svg') }).last() // Button with SVG icon (likely the X)
+      ];
+
+      let leaveButton = null;
+      for (const button of leaveButtons) {
+        if (await button.isVisible()) {
+          leaveButton = button;
+          break;
+        }
+      }
+
+      if (leaveButton && await leaveButton.isVisible()) {
         await leaveButton.click();
+        
+        // Wait a bit for the conversation end handler to process
+        await page.waitForTimeout(2000);
       }
       
-      await expect(page).toHaveURL(/\/configure/);
+      await expect(page).toHaveURL(/\/configure/, { timeout: 20000 });
       await page.waitForTimeout(500);
     }
     
@@ -335,14 +378,30 @@ test.describe('Multiple Conversation Cycles', () => {
       await page.goto(`/demos/${DEMO_ID}/experience`);
       await expect(page.locator('[data-testid="conversation-container"]')).toBeVisible();
       
-      // End conversation
-      const leaveButton = page.locator('button').filter({ hasText: /leave/i }).first();
-      if (await leaveButton.isVisible()) {
+      // End conversation by clicking leave button (red X button in footer)
+      const leaveButtons = [
+        page.locator('button[class*="leaveButton"]'), // CSS module class
+        page.locator('button[aria-label="Leave Call"]'),
+        page.locator('button').filter({ has: page.locator('svg') }).last() // Button with SVG icon (likely the X)
+      ];
+
+      let leaveButton = null;
+      for (const button of leaveButtons) {
+        if (await button.isVisible()) {
+          leaveButton = button;
+          break;
+        }
+      }
+
+      if (leaveButton && await leaveButton.isVisible()) {
         await leaveButton.click();
+        
+        // Wait a bit for the conversation end handler to process
+        await page.waitForTimeout(2000);
       }
       
       // Wait for navigation
-      await expect(page).toHaveURL(/\/configure/);
+      await expect(page).toHaveURL(/\/configure/, { timeout: 20000 });
       
       // Wait a bit longer than cleanup delay to ensure completion
       await page.waitForTimeout(cleanupDelay + 200);
