@@ -13,6 +13,7 @@
     "start:production": "env-cmd -f .env.production next start",
     "lint": "next lint",
     "test": "jest",
+    "test:all": "jest && playwright test",
     "e2e": "playwright test",
     "e2e:ci": "playwright test --reporter=github,html",
     "e2e:real": "playwright test -c playwright.real.config.ts",

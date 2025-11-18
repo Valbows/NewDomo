@@ -5,6 +5,19 @@ jest.mock('uuid', () => ({
   v4: () => 'test-uuid-123',
 }));
 
+// Create mock functions for Supabase
+const mockGetUser = jest.fn();
+const mockStorageUpload = jest.fn();
+const mockCreateSignedUrl = jest.fn();
+const mockStorageRemove = jest.fn();
+const mockStorageFrom = jest.fn();
+const mockSingle = jest.fn();
+const mockSelect = jest.fn();
+const mockInsert = jest.fn();
+const mockEq = jest.fn();
+const mockDelete = jest.fn();
+const mockFrom = jest.fn();
+
 // Mock Supabase
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -12,31 +25,39 @@ jest.mock('@/lib/supabase', () => ({
       getUser: jest.fn(),
     },
     storage: {
-      from: jest.fn(() => ({
-        upload: jest.fn(),
-        createSignedUrl: jest.fn(),
-        remove: jest.fn(),
-      })),
+      from: jest.fn(),
     },
-    from: jest.fn(() => ({
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(),
-        })),
-      })),
-      delete: jest.fn(() => ({
-        eq: jest.fn(),
-      })),
-    })),
+    from: jest.fn(),
   },
 }));
 
-// Import after mocking
-const { supabase: mockSupabase } = require('@/lib/supabase');
+// Get reference to mocked supabase
+const { supabase } = require('@/lib/supabase');
 
 describe('Configure Video Handlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Setup mock chains
+    mockSingle.mockResolvedValue({ data: null, error: null });
+    mockSelect.mockReturnValue({ single: mockSingle });
+    mockInsert.mockReturnValue({ select: mockSelect });
+    mockEq.mockResolvedValue({ data: null, error: null });
+    mockDelete.mockReturnValue({ eq: mockEq });
+    mockFrom.mockReturnValue({
+      insert: mockInsert,
+      delete: mockDelete,
+    });
+    mockStorageFrom.mockReturnValue({
+      upload: mockStorageUpload,
+      createSignedUrl: mockCreateSignedUrl,
+      remove: mockStorageRemove,
+    });
+
+    // Wire up the mocks
+    (supabase.auth.getUser as jest.Mock).mockImplementation(mockGetUser);
+    (supabase.storage.from as jest.Mock).mockImplementation(mockStorageFrom);
+    (supabase.from as jest.Mock).mockImplementation(mockFrom);
   });
 
   describe('handleVideoUpload', () => {
@@ -66,21 +87,17 @@ describe('Configure Video Handlers', () => {
       const setSelectedVideoFile = jest.fn();
       const setVideoTitle = jest.fn();
 
-      mockSupabase.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user1' } },
         error: null,
       });
 
-      const mockStorage = mockSupabase.storage.from('demo-videos');
-      (mockStorage.upload as jest.Mock).mockResolvedValue({
+      mockStorageUpload.mockResolvedValue({
         data: { path: 'demo1/test-uuid-123.mp4' },
         error: null,
       });
 
-      const mockFrom = mockSupabase.from('demo_videos');
-      const mockInsert = (mockFrom.insert as jest.Mock)();
-      const mockSelect = (mockInsert.select as jest.Mock)();
-      (mockSelect.single as jest.Mock).mockResolvedValue({
+      mockSingle.mockResolvedValue({
         data: {
           id: 'video1',
           demo_id: 'demo1',
@@ -131,8 +148,7 @@ describe('Configure Video Handlers', () => {
       const setPreviewVideoUrl = jest.fn();
       const setError = jest.fn();
 
-      const mockStorage = mockSupabase.storage.from('demo-videos');
-      (mockStorage.createSignedUrl as jest.Mock).mockResolvedValue({
+      mockCreateSignedUrl.mockResolvedValue({
         data: { signedUrl: 'https://signed-url.example/video.mp4' },
         error: null,
       });
@@ -152,8 +168,7 @@ describe('Configure Video Handlers', () => {
       const setPreviewVideoUrl = jest.fn();
       const setError = jest.fn();
 
-      const mockStorage = mockSupabase.storage.from('demo-videos');
-      (mockStorage.createSignedUrl as jest.Mock).mockResolvedValue({
+      mockCreateSignedUrl.mockResolvedValue({
         data: null,
         error: new Error('Failed to create signed URL'),
       });
@@ -174,15 +189,12 @@ describe('Configure Video Handlers', () => {
       const setDemoVideos = jest.fn();
       const setError = jest.fn();
 
-      const mockStorage = mockSupabase.storage.from('demo-videos');
-      (mockStorage.remove as jest.Mock).mockResolvedValue({
+      mockStorageRemove.mockResolvedValue({
         data: null,
         error: null,
       });
 
-      const mockFrom = mockSupabase.from('demo_videos');
-      const mockDelete = (mockFrom.delete as jest.Mock)();
-      (mockDelete.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         data: null,
         error: null,
       });
@@ -200,8 +212,7 @@ describe('Configure Video Handlers', () => {
       const setDemoVideos = jest.fn();
       const setError = jest.fn();
 
-      const mockStorage = mockSupabase.storage.from('demo-videos');
-      (mockStorage.remove as jest.Mock).mockResolvedValue({
+      mockStorageRemove.mockResolvedValue({
         data: null,
         error: new Error('Storage error'),
       });

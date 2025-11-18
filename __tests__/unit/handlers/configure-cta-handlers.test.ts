@@ -1,25 +1,32 @@
 import { handleSaveCTA, handleSaveAdminCTAUrl } from '@/app/demos/[demoId]/configure/handlers/ctaHandlers';
 
+// Create mock Supabase with inline functions
+const mockEq = jest.fn();
+const mockUpdate = jest.fn();
+const mockFrom = jest.fn();
+
 // Mock Supabase
 jest.mock('@/lib/supabase', () => ({
   supabase: {
-    from: jest.fn(() => ({
-      update: jest.fn(() => ({
-        eq: jest.fn(),
-      })),
-    })),
+    from: jest.fn(),
   },
 }));
+
+// Get reference to mocked supabase after mocking
+const { supabase } = require('@/lib/supabase');
 
 // Mock alert
 global.alert = jest.fn();
 
-// Import after mocking
-const { supabase: mockSupabase } = require('@/lib/supabase');
-
 describe('Configure CTA Handlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Setup mock chain
+    mockEq.mockResolvedValue({ error: null });
+    mockUpdate.mockReturnValue({ eq: mockEq });
+    mockFrom.mockReturnValue({ update: mockUpdate });
+    (supabase.from as jest.Mock).mockImplementation(mockFrom);
   });
 
   describe('handleSaveCTA', () => {
@@ -33,9 +40,7 @@ describe('Configure CTA Handlers', () => {
       };
       const setDemo = jest.fn();
 
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: null,
       });
 
@@ -48,7 +53,8 @@ describe('Configure CTA Handlers', () => {
         setDemo
       );
 
-      expect(mockFrom.update).toHaveBeenCalledWith({
+      expect(mockFrom).toHaveBeenCalledWith('demos');
+      expect(mockUpdate).toHaveBeenCalledWith({
         metadata: {
           agentName: 'Test Agent',
           ctaTitle: 'Try Our Product',
@@ -56,6 +62,7 @@ describe('Configure CTA Handlers', () => {
           ctaButtonText: 'Start Free Trial',
         },
       });
+      expect(mockEq).toHaveBeenCalledWith('id', 'demo1');
 
       expect(setDemo).toHaveBeenCalledWith({
         ...demo,
@@ -71,9 +78,7 @@ describe('Configure CTA Handlers', () => {
     });
 
     it('should handle save error', async () => {
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: new Error('Database error'),
       });
 
@@ -92,9 +97,7 @@ describe('Configure CTA Handlers', () => {
     it('should work with null demo', async () => {
       const setDemo = jest.fn();
 
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: null,
       });
 
@@ -107,7 +110,7 @@ describe('Configure CTA Handlers', () => {
         setDemo
       );
 
-      expect(mockFrom.update).toHaveBeenCalledWith({
+      expect(mockUpdate).toHaveBeenCalledWith({
         metadata: {
           ctaTitle: 'Title',
           ctaMessage: 'Message',
@@ -128,9 +131,7 @@ describe('Configure CTA Handlers', () => {
       };
       const setDemo = jest.fn();
 
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: null,
       });
 
@@ -141,7 +142,7 @@ describe('Configure CTA Handlers', () => {
         setDemo
       );
 
-      expect(mockFrom.update).toHaveBeenCalledWith({
+      expect(mockUpdate).toHaveBeenCalledWith({
         cta_button_url: 'https://new-url.com',
       });
 
@@ -158,9 +159,7 @@ describe('Configure CTA Handlers', () => {
       };
       const setDemo = jest.fn();
 
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: null,
       });
 
@@ -171,7 +170,7 @@ describe('Configure CTA Handlers', () => {
         setDemo
       );
 
-      expect(mockFrom.update).toHaveBeenCalledWith({
+      expect(mockUpdate).toHaveBeenCalledWith({
         cta_button_url: null,
       });
 
@@ -182,9 +181,7 @@ describe('Configure CTA Handlers', () => {
     });
 
     it('should handle save error and rethrow', async () => {
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: new Error('Database error'),
       });
 
@@ -203,9 +200,7 @@ describe('Configure CTA Handlers', () => {
     it('should work with null demo', async () => {
       const setDemo = jest.fn();
 
-      const mockFrom = mockSupabase.from('demos');
-      const mockUpdate = (mockFrom.update as jest.Mock)();
-      (mockUpdate.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: null,
       });
 

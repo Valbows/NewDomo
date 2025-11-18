@@ -4,28 +4,41 @@ import {
   handleKnowledgeDocUpload,
 } from '@/app/demos/[demoId]/configure/handlers/knowledgeHandlers';
 
+// Create mock functions for Supabase
+const mockSingle = jest.fn();
+const mockSelect = jest.fn();
+const mockInsert = jest.fn();
+const mockEq = jest.fn();
+const mockDelete = jest.fn();
+const mockFrom = jest.fn();
+
 // Mock Supabase
 jest.mock('@/lib/supabase', () => ({
   supabase: {
-    from: jest.fn(() => ({
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(),
-        })),
-      })),
-      delete: jest.fn(() => ({
-        eq: jest.fn(),
-      })),
-    })),
+    from: jest.fn(),
   },
 }));
 
-// Import after mocking
-const { supabase: mockSupabase } = require('@/lib/supabase');
+// Get reference to mocked supabase
+const { supabase } = require('@/lib/supabase');
 
 describe('Configure Knowledge Handlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Setup mock chains
+    mockSingle.mockResolvedValue({ data: null, error: null });
+    mockSelect.mockReturnValue({ single: mockSingle });
+    mockInsert.mockReturnValue({ select: mockSelect });
+    mockEq.mockResolvedValue({ error: null });
+    mockDelete.mockReturnValue({ eq: mockEq });
+    mockFrom.mockReturnValue({
+      insert: mockInsert,
+      delete: mockDelete,
+    });
+
+    // Wire up the mock
+    (supabase.from as jest.Mock).mockImplementation(mockFrom);
   });
 
   describe('handleAddQAPair', () => {
@@ -62,10 +75,7 @@ describe('Configure Knowledge Handlers', () => {
       const setNewAnswer = jest.fn();
       const setError = jest.fn();
 
-      const mockFrom = mockSupabase.from('knowledge_chunks');
-      const mockInsert = (mockFrom.insert as jest.Mock)();
-      const mockSelect = (mockInsert.select as jest.Mock)();
-      (mockSelect.single as jest.Mock).mockResolvedValue({
+      mockSingle.mockResolvedValue({
         data: {
           id: 'chunk1',
           demo_id: 'demo1',
@@ -100,10 +110,7 @@ describe('Configure Knowledge Handlers', () => {
       const setKnowledgeChunks = jest.fn();
       const setError = jest.fn();
 
-      const mockFrom = mockSupabase.from('knowledge_chunks');
-      const mockInsert = (mockFrom.insert as jest.Mock)();
-      const mockSelect = (mockInsert.select as jest.Mock)();
-      (mockSelect.single as jest.Mock).mockResolvedValue({
+      mockSingle.mockResolvedValue({
         data: null,
         error: new Error('Database error'),
       });
@@ -133,9 +140,7 @@ describe('Configure Knowledge Handlers', () => {
       const setKnowledgeChunks = jest.fn();
       const setError = jest.fn();
 
-      const mockFrom = mockSupabase.from('knowledge_chunks');
-      const mockDelete = (mockFrom.delete as jest.Mock)();
-      (mockDelete.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: null,
       });
 
@@ -154,9 +159,7 @@ describe('Configure Knowledge Handlers', () => {
       const setKnowledgeChunks = jest.fn();
       const setError = jest.fn();
 
-      const mockFrom = mockSupabase.from('knowledge_chunks');
-      const mockDelete = (mockFrom.delete as jest.Mock)();
-      (mockDelete.eq as jest.Mock).mockResolvedValue({
+      mockEq.mockResolvedValue({
         error: new Error('Delete failed'),
       });
 
@@ -194,10 +197,7 @@ describe('Configure Knowledge Handlers', () => {
       const setKnowledgeDoc = jest.fn();
       const setError = jest.fn();
 
-      const mockFrom = mockSupabase.from('knowledge_chunks');
-      const mockInsert = (mockFrom.insert as jest.Mock)();
-      const mockSelect = (mockInsert.select as jest.Mock)();
-      (mockSelect.single as jest.Mock).mockResolvedValue({
+      mockSingle.mockResolvedValue({
         data: {
           id: 'chunk1',
           demo_id: 'demo1',

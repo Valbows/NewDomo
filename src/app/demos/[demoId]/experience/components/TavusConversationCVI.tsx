@@ -101,7 +101,41 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
         }
         if (!shouldForward(parsed.toolName, args)) return;
         console.log(`🔧 Forwarding parsed tool call: ${parsed.toolName}`, args);
+
+        // Forward to client-side handler
         onToolCall(parsed.toolName, args);
+
+        // ALSO forward fetch_video to webhook for database tracking
+        if (parsed.toolName === 'fetch_video') {
+          console.log('📡 Forwarding fetch_video to webhook for tracking...');
+          try {
+            fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                conversation_id: data.conversation_id,
+                event_type: 'conversation.tool_call',
+                properties: {
+                  name: 'fetch_video',
+                  arguments: JSON.stringify(args)
+                }
+              }),
+            }).then(response => {
+              if (response.ok) {
+                console.log('✅ fetch_video forwarded to webhook successfully');
+              } else {
+                console.error('❌ Failed to forward fetch_video to webhook:', response.status);
+              }
+            }).catch(error => {
+              console.error('❌ Error forwarding fetch_video to webhook:', error);
+            });
+          } catch (error) {
+            console.error('❌ Error forwarding fetch_video:', error);
+          }
+        }
+
         return;
       }
 
@@ -129,7 +163,39 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             }
             if (!shouldForward(toolName, coercedArgs || {})) return;
             console.log('🔧 Forwarding legacy tool call (coerced):', toolName, coercedArgs || {});
+
+            // Forward to client-side handler
             onToolCall(toolName, coercedArgs || {});
+
+            // ALSO forward to webhook for database tracking
+            console.log('📡 Forwarding legacy fetch_video to webhook for tracking...');
+            try {
+              fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  conversation_id: data.conversation_id,
+                  event_type: 'conversation.tool_call',
+                  properties: {
+                    name: 'fetch_video',
+                    arguments: JSON.stringify(coercedArgs || {})
+                  }
+                }),
+              }).then(response => {
+                if (response.ok) {
+                  console.log('✅ Legacy fetch_video forwarded to webhook successfully');
+                } else {
+                  console.error('❌ Failed to forward legacy fetch_video to webhook:', response.status);
+                }
+              }).catch(error => {
+                console.error('❌ Error forwarding legacy fetch_video to webhook:', error);
+              });
+            } catch (error) {
+              console.error('❌ Error forwarding legacy fetch_video:', error);
+            }
+
             return;
           }
           if (!shouldForward(toolName, rawArgs || {})) return;
@@ -160,7 +226,40 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
               }
               if (!shouldForward(name, args)) return;
               console.log('🔧 Forwarding transcript tool call:', name, args);
+
+              // Forward to client-side handler
               onToolCall(name, args);
+
+              // ALSO forward fetch_video to webhook for database tracking
+              if (name === 'fetch_video') {
+                console.log('📡 Forwarding transcript fetch_video to webhook for tracking...');
+                try {
+                  fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      conversation_id: data.conversation_id,
+                      event_type: 'conversation.tool_call',
+                      properties: {
+                        name: 'fetch_video',
+                        arguments: JSON.stringify(args)
+                      }
+                    }),
+                  }).then(response => {
+                    if (response.ok) {
+                      console.log('✅ Transcript fetch_video forwarded to webhook successfully');
+                    } else {
+                      console.error('❌ Failed to forward transcript fetch_video to webhook:', response.status);
+                    }
+                  }).catch(error => {
+                    console.error('❌ Error forwarding transcript fetch_video to webhook:', error);
+                  });
+                } catch (error) {
+                  console.error('❌ Error forwarding transcript fetch_video:', error);
+                }
+              }
             } catch (error) {
               console.error('Error parsing tool call arguments:', error);
             }
