@@ -12,6 +12,9 @@ import { getErrorMessage, logError } from '@/lib/errors';
 import { extractConversationIdFromUrl, isDailyRoomUrl } from './utils/helpers';
 import { pipStyles } from './styles/pipStyles';
 import type { Demo, CtaOverrides } from './types';
+import { handleRealTimeToolCall } from './handlers/toolCallHandlers';
+import { handleVideoEnd, handleVideoClose } from './handlers/videoHandlers';
+import { handleConversationEnd } from './handlers/conversationHandlers';
 
 export default function DemoExperiencePage() {
   const params = useParams();
@@ -279,346 +282,53 @@ export default function DemoExperiencePage() {
   }, [demoId]);
 
   // Handle real-time tool calls from Daily.co
-  const handleRealTimeToolCall = async (toolName: string, args: any) => {
-    console.log('Real-time tool call received:', toolName, args);
-
-    const playByTitle = async (videoTitle: string) => {
-      if (!videoTitle || typeof videoTitle !== 'string' || !videoTitle.trim()) {
-        logError('Missing or invalid video title in fetch/next_video tool call', 'ToolCall Validation');
-        return;
-      }
-      // Normalize incoming title (trim and remove a single leading/trailing quote)
-      const normalizedTitle = videoTitle.trim().replace(/^["']|["']$/g, '');
-      console.log('Processing real-time video request:', normalizedTitle);
-
-      // Ensure CTA banner is hidden while a video is starting and clear prior alerts
-      setShowCTA(false);
-      if (alert) setAlert(null);
-
-      try {
-        if (isE2E) {
-          // Deterministic mapping of titles to distinct sample URLs for E2E assertions
-          const samples = [
-            // Proxy through our Next.js API to avoid cross-origin/codec quirks in headless tests
-            '/api/e2e-video?i=0',
-            '/api/e2e-video?i=1',
-          ];
-
-          let idx = -1;
-          if (Array.isArray(videoTitles) && videoTitles.length > 0) {
-            idx = videoTitles.indexOf(normalizedTitle);
-          }
-          // Fallback: map unknown titles to first sample
-          const sampleUrl = samples[(idx >= 0 ? idx : 0) % samples.length];
-          // New video source: reset any saved paused position
-          pausedPositionRef.current = 0;
-          setPlayingVideoUrl(sampleUrl);
-          setUiState(UIState.VIDEO_PLAYING);
-          setCurrentVideoTitle(normalizedTitle);
-          setCurrentVideoIndex(idx >= 0 ? idx : null);
-          return;
-        }
-        // Guard: ensure we have a demo id available for queries even if state hasn't settled yet
-        const demoKey = demo?.id ?? demoId;
-        if (!demoKey) {
-          console.warn('⚠️ Demo id unavailable at tool call time; delaying fetch_video', { demo, demoId, title: normalizedTitle });
-          setAlert({ type: 'info', message: 'Preparing demo… please try again in a moment.' });
-          return;
-        }
-        // First attempt: exact title match
-        const { data: videoExact, error: videoExactError } = await supabase
-          .from('demo_videos')
-          .select('storage_url')
-          .eq('demo_id', demoKey)
-          .eq('title', normalizedTitle)
-          .single();
-
-        let storagePath: string | null = null;
-        if (!videoExactError && videoExact) {
-          storagePath = videoExact.storage_url as string;
-        } else {
-          console.warn('Exact title match not found, attempting case-insensitive lookup for:', normalizedTitle);
-          // Fallback: case-insensitive exact match (no wildcards)
-          const { data: videosILike, error: ilikeError } = await supabase
-            .from('demo_videos')
-            .select('storage_url')
-            .eq('demo_id', demoKey)
-            .ilike('title', normalizedTitle)
-            .limit(1);
-
-          if (!ilikeError && Array.isArray(videosILike) && videosILike.length > 0) {
-            storagePath = (videosILike[0] as any).storage_url as string;
-          }
-        }
-
-        if (!storagePath) {
-          logError(videoExactError || `Video not found: ${normalizedTitle}`, 'Video lookup');
-          setAlert({ type: 'error', message: `Could not find a video titled "${normalizedTitle}".` });
-          return;
-        }
-
-        // If storagePath is already a full URL, don't try to sign it
-        if (/^https?:\/\//i.test(storagePath)) {
-          console.log('Using direct video URL (no signing needed):', storagePath);
-          // New video source: reset any saved paused position
-          pausedPositionRef.current = 0;
-          setPlayingVideoUrl(storagePath);
-          setUiState(UIState.VIDEO_PLAYING);
-          setCurrentVideoTitle(normalizedTitle);
-          if (Array.isArray(videoTitles) && videoTitles.length > 0) {
-            const idx = videoTitles.indexOf(normalizedTitle);
-            setCurrentVideoIndex(idx >= 0 ? idx : null);
-          }
-          return;
-        }
-
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-          .from('demo-videos')
-          .createSignedUrl(storagePath, 3600);
-
-        if (signedUrlError || !signedUrlData) {
-          logError(signedUrlError || 'Unknown error creating signed URL', 'Error creating signed URL');
-          setAlert({ type: 'error', message: 'There was a problem preparing the video for playback. Please try again.' });
-          return;
-        }
-
-        console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
-        
-        // Track video viewing for Domo Score - use current conversation ID
-        const currentConversationId = conversationUrl ? extractConversationIdFromUrl(conversationUrl) : demo?.tavus_conversation_id;
-        if (currentConversationId && demo?.id) {
-          try {
-            await fetch('/api/track-video-view', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                conversation_id: currentConversationId,
-                demo_id: demo.id,
-                video_title: normalizedTitle
-              })
-            });
-            console.log('✅ Video view tracked successfully:', normalizedTitle);
-          } catch (error) {
-            console.warn('⚠️ Failed to track video view:', error);
-          }
-        }
-        
-        // New video source: reset any saved paused position
-        pausedPositionRef.current = 0;
-        setPlayingVideoUrl(signedUrlData.signedUrl);
-        setUiState(UIState.VIDEO_PLAYING);
-        setCurrentVideoTitle(normalizedTitle);
-        if (Array.isArray(videoTitles) && videoTitles.length > 0) {
-          const idx = videoTitles.indexOf(normalizedTitle);
-          setCurrentVideoIndex(idx >= 0 ? idx : null);
-        }
-      } catch (error: unknown) {
-        logError(error, 'Real-time tool call error');
-        setAlert({ type: 'error', message: 'Unexpected error while loading the video.' });
-      }
-    };
-
-    if (toolName === 'fetch_video') {
-      // Quiescence window: ignore fetch shortly after a close to prevent immediate reopen
-      if (Date.now() < suppressFetchUntilRef.current) {
-        const reason = suppressReasonRef.current || 'suppression window';
-        console.warn(`🛑 Suppressing fetch_video due to recent ${reason}`);
-        return;
-      }
-      // If agent re-requests the same title while a video is already loaded, avoid resetting the src.
-      try {
-        const requestedTitleRaw = args?.title || args?.video_title || args?.video_name;
-        if (requestedTitleRaw && typeof requestedTitleRaw === 'string') {
-          const normalizedTitle = requestedTitleRaw.trim().replace(/^["']|["']$/g, '');
-          if (
-            currentVideoTitle &&
-            playingVideoUrl &&
-            normalizedTitle.toLowerCase() === currentVideoTitle.toLowerCase()
-          ) {
-            console.log('♻️ fetch_video for current title detected; resuming without reload');
-            // Seek back to paused position if we have one, then play
-            const t = pausedPositionRef.current || 0;
-            if (t > 0) {
-              console.log(`⏩ Resuming same video at ${t.toFixed(2)}s (fetch_video short-circuit)`);
-            }
-            if (t > 0 && videoPlayerRef.current?.seekTo) {
-              videoPlayerRef.current.seekTo(t);
-            }
-            await videoPlayerRef.current?.play();
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('fetch_video same-title resume check failed:', e);
-      }
-      await playByTitle(args?.title || args?.video_title || args?.video_name);
-      return;
-    }
-
-    if (toolName === 'pause_video') {
-      if (uiState === UIState.VIDEO_PLAYING) {
-        // Record the current playback position before pausing
-        try {
-          const t = videoPlayerRef.current?.getCurrentTime?.() ?? 0;
-          pausedPositionRef.current = t;
-          console.log(`⏸️ Saved paused position at ${t.toFixed(2)}s`);
-        } catch {}
-        videoPlayerRef.current?.pause();
-        // Prevent immediate re-fetch/play attempts triggered by the agent
-        suppressFetchUntilRef.current = Date.now() + 1500;
-        suppressReasonRef.current = 'pause';
-      }
-      return;
-    }
-
-    if (toolName === 'play_video') {
-      if (uiState === UIState.VIDEO_PLAYING) {
-        // Restore to the paused position if available before resuming
-        try {
-          const t = pausedPositionRef.current || 0;
-          if (t > 0) {
-            console.log(`▶️ Resuming video at ${t.toFixed(2)}s`);
-          }
-          if (t > 0 && videoPlayerRef.current?.seekTo) {
-            videoPlayerRef.current.seekTo(t);
-          }
-        } catch {}
-        await videoPlayerRef.current?.play();
-        // Suppress redundant fetch_video immediately after resume to avoid src reset
-        suppressFetchUntilRef.current = Date.now() + 1500;
-        suppressReasonRef.current = 'resume';
-      }
-      return;
-    }
-
-    if (toolName === 'close_video') {
-      handleVideoClose();
-      return;
-    }
-
-    if (toolName === 'next_video') {
-      // Only advance to next video if a video is currently playing
-      if (!currentVideoTitle) {
-        console.warn('⚠️  next_video called but no video is currently playing - ignoring');
-        return;
-      }
-
-      if (Array.isArray(videoTitles) && videoTitles.length > 0) {
-        const idx = videoTitles.indexOf(currentVideoTitle);
-        if (idx === -1) {
-          console.warn('⚠️  Current video not found in videoTitles - cannot advance');
-          return;
-        }
-        const nextIdx = (idx + 1) % videoTitles.length;
-        const nextTitle = videoTitles[nextIdx];
-        console.log(`⏭️  Advancing from "${currentVideoTitle}" to "${nextTitle}"`);
-        await playByTitle(nextTitle);
-      } else {
-        console.warn('next_video called but no videoTitles available');
-      }
-      return;
-    }
-
-    if (toolName === 'show_trial_cta') {
-      setShowCTA(true);
-      return;
-    }
+  const handleToolCall = async (toolName: string, args: any) => {
+    await handleRealTimeToolCall({
+      toolName,
+      args,
+      uiState,
+      currentVideoTitle,
+      playingVideoUrl,
+      videoTitles,
+      isE2E,
+      demo,
+      demoId,
+      pausedPositionRef,
+      suppressFetchUntilRef,
+      suppressReasonRef,
+      videoPlayerRef,
+      setShowCTA,
+      setAlert,
+      setPlayingVideoUrl,
+      setUiState,
+      setCurrentVideoTitle,
+      setCurrentVideoIndex,
+      alert,
+    });
   };
 
-  const handleConversationEnd = async () => {
-    console.log('Conversation ended');
-    
-    // End the Tavus conversation via API if we have a conversation ID
-    if (demo?.tavus_conversation_id) {
-      try {
-        console.log('🔚 Ending Tavus conversation:', {
-          conversationId: demo.tavus_conversation_id,
-          demoId: demo.id,
-          demoData: demo
-        });
-        const response = await fetch('/api/end-conversation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            conversationId: demo.tavus_conversation_id,
-            demoId: demo.id,
-          }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ Tavus conversation ended successfully:', result);
-          
-          // Automatically sync conversation data after ending
-          try {
-            console.log('🔄 Syncing conversation data...');
-            const syncResponse = await fetch(`/api/sync-tavus-conversations?demoId=${demo.id}`, {
-              method: 'GET',
-            });
-            
-            if (syncResponse.ok) {
-              const syncResult = await syncResponse.json();
-              console.log('✅ Conversation data synced successfully:', syncResult);
-            } else {
-              console.warn('⚠️ Failed to sync conversation data, but continuing...');
-            }
-          } catch (syncError) {
-            console.warn('⚠️ Error syncing conversation data:', syncError);
-            // Don't block the flow for sync errors
-          }
-          
-          // Small delay to ensure sync completes before redirect
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          const error = await response.json().catch(() => ({}));
-          console.warn('⚠️ Failed to end Tavus conversation:', {
-            status: response.status,
-            error: error,
-            sentData: {
-              conversationId: demo.tavus_conversation_id,
-              demoId: demo.id
-            }
-          });
-          // Don't block the UI flow for this error
-        }
-      } catch (error) {
-        console.warn('⚠️ Error ending Tavus conversation:', error);
-        // Don't block the UI flow for this error
-      }
-    }
-    
-    setUiState(UIState.IDLE);
-    // Redirect to the reporting page (configure page with reporting tab)
-    router.push(`/demos/${demoId}/configure?tab=reporting`);
+  // Wrapper for conversation end
+  const onConversationEnd = async () => {
+    await handleConversationEnd(demo, setUiState, router, demoId);
   };
 
-  const handleVideoEnd = () => {
-    console.log('Video ended, returning agent to full screen and showing CTA');
-    pausedPositionRef.current = 0;
-    setPlayingVideoUrl(null);
-    setUiState(UIState.CONVERSATION);
-    setShowCTA(true);
+  // Wrapper for video end
+  const onVideoEnd = () => {
+    handleVideoEnd(pausedPositionRef, setPlayingVideoUrl, setUiState, setShowCTA);
   };
 
-  const handleVideoClose = () => {
-    console.log('❎ Video closed by user; clearing paused position and returning to conversation');
-    pausedPositionRef.current = 0;
-    setPlayingVideoUrl(null);
-    setUiState(UIState.CONVERSATION);
-    // Show CTA after video ends
-    setShowCTA(true);
-    // Prevent immediate re-open by ignoring fetch_video for a short window
-    suppressFetchUntilRef.current = Date.now() + 1500;
-    suppressReasonRef.current = 'close';
-    // Small delay to ensure smooth transition
-    setTimeout(() => {
-      console.log('Video closed, agent returned to full screen');
-    }, 300);
+  // Wrapper for video close
+  const onVideoClose = () => {
+    handleVideoClose(
+      pausedPositionRef,
+      setPlayingVideoUrl,
+      setUiState,
+      setShowCTA,
+      suppressFetchUntilRef,
+      suppressReasonRef
+    );
   };
+
 
   // Derive CTA values with fallbacks to admin-level columns
   const ctaTitle = ctaOverrides?.cta_title || demo?.cta_title || demo?.metadata?.ctaTitle || 'Ready to Get Started?';
@@ -723,8 +433,8 @@ export default function DemoExperiencePage() {
                   <div className={uiState === UIState.VIDEO_PLAYING ? 'pip-video-layout' : ''}>
                     <TavusConversationCVI
                       conversationUrl={conversationUrl}
-                      onLeave={handleConversationEnd}
-                      onToolCall={handleRealTimeToolCall}
+                      onLeave={onConversationEnd}
+                      onToolCall={handleToolCall}
                       debugVideoTitles={videoTitles}
                     />
                   </div>
@@ -744,7 +454,7 @@ export default function DemoExperiencePage() {
                 <h2 className="text-lg font-semibold">Demo Video</h2>
                 <button
                   data-testid="button-close-video"
-                  onClick={handleVideoClose}
+                  onClick={onVideoClose}
                   className="text-white hover:text-gray-300 p-2"
                   title="Close video"
                 >
@@ -758,8 +468,8 @@ export default function DemoExperiencePage() {
                   <InlineVideoPlayer
                     ref={videoPlayerRef}
                     videoUrl={playingVideoUrl}
-                    onClose={handleVideoClose}
-                    onVideoEnd={handleVideoEnd}
+                    onClose={onVideoClose}
+                    onVideoEnd={onVideoEnd}
                   />
                 </div>
               </div>
