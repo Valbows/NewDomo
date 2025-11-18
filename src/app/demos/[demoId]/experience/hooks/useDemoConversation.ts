@@ -94,24 +94,13 @@ export function useDemoConversation(demoId: string) {
           setVideoTitles(videos.map(v => v.title));
         }
 
-        // Check if we have an existing conversation
-        const existingConvId = processedDemoData.tavus_conversation_id;
-        const shareableLink = processedDemoData.metadata?.tavusShareableLink;
-
-        if (!forceNew && existingConvId && shareableLink) {
-          console.log('Using existing conversation:', existingConvId);
-          setConversationUrl(shareableLink);
-          setUiState(UIState.CONVERSATION);
-          setLoading(false);
-          return;
-        }
-
-        // Start new conversation
-        console.log('Starting new conversation...');
-        const response = await fetch('/api/create-agent-and-start-conversation', {
+        // Start or reuse conversation
+        // The API will handle validation and reuse existing conversation if valid
+        console.log('Starting/validating conversation...');
+        const response = await fetch('/api/start-conversation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ demoId }),
+          body: JSON.stringify({ demoId, forceNew }),
         });
 
         if (!response.ok) {
@@ -121,24 +110,24 @@ export function useDemoConversation(demoId: string) {
 
         const data = await response.json();
 
-        if (data.conversationUrl) {
-          const conversationId = isDailyRoomUrl(data.conversationUrl)
-            ? extractConversationIdFromUrl(data.conversationUrl)
-            : data.conversationId;
+        if (data.conversation_url) {
+          const conversationId = isDailyRoomUrl(data.conversation_url)
+            ? extractConversationIdFromUrl(data.conversation_url)
+            : data.conversation_id;
 
-          // Update demo with new conversation data
+          // Update demo with new conversation data (in case API created a new one)
           await supabase
             .from('demos')
             .update({
               tavus_conversation_id: conversationId,
               metadata: {
                 ...processedDemoData.metadata,
-                tavusShareableLink: data.conversationUrl,
+                tavusShareableLink: data.conversation_url,
               },
             })
             .eq('id', demoId);
 
-          setConversationUrl(data.conversationUrl);
+          setConversationUrl(data.conversation_url);
           setUiState(UIState.CONVERSATION);
         }
 
