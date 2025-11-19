@@ -182,13 +182,21 @@ export function handleVideoClose(
   pausedPositionRef.current = 0;
   setPlayingVideoUrl(null);
   setUiState(UIState.CONVERSATION);
-  // Show CTA after video ends
-  setShowCTA(true);
   // Prevent immediate re-open by ignoring fetch_video for a short window
   suppressFetchUntilRef.current = Date.now() + 1500;
   suppressReasonRef.current = 'close';
+  // Show CTA after a brief delay to ensure video overlay has unmounted
+  // This prevents React batching issues where CTA might not render
+  setTimeout(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Video closed, showing CTA banner');
+    }
+    setShowCTA(true);
+  }, 100);
   // Small delay to ensure smooth transition
   setTimeout(() => {
-    console.log('Video closed, agent returned to full screen');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Video closed, agent returned to full screen');
+    }
   }, 300);
 }
