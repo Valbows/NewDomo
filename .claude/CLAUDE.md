@@ -44,7 +44,16 @@ if (process.env.NODE_ENV !== 'production') {
 
 1. **Always confirm current branch** before editing code
 2. **Never create new branches** unless explicitly requested
-3. When merging to `production_ready`, ensure all `console.log` removed
+3. **When merging to `production_ready`**: Claude Code MUST automatically remove all `console.log` statements (keep `console.error`/`console.warn` and NODE_ENV-wrapped logs)
+
+### Claude Code Merge Checklist for Production
+When user requests merge to `production_ready`, Claude Code will:
+1. Checkout `production_ready` branch
+2. Merge from source branch
+3. **Automatically find and remove all bare `console.log` statements**
+4. Keep: `console.error`, `console.warn`, and `if (process.env.NODE_ENV !== 'production')` wrapped logs
+5. Commit with message noting console.log cleanup
+6. Push to remote
 
 ## Code Quality Rules
 
