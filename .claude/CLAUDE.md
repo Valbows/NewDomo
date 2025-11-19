@@ -77,6 +77,24 @@ When user requests merge to `production_ready`, Claude Code will:
 
 ## Code Quality Rules
 
+### Folder Organization
+Keep root folder clean with only standard files:
+
+**Allowed in root:**
+- `README.md` (only documentation file allowed)
+- Configuration files (`.eslintrc`, `package.json`, `tsconfig.json`, etc.)
+- Standard folders (`src/`, `public/`, `node_modules/`, etc.)
+
+**Move to proper folders:**
+- All documentation → `docs/`
+- All scripts → `scripts/`
+- Test files → `__tests__/` or alongside source files
+
+**Never create in root:**
+- `*.md` files (except README.md)
+- Standalone script files
+- Temporary/debug files
+
 ### File Size Limits
 - **Maximum 500 lines per file** - Refactor if exceeded
 - Split large files into smaller, focused modules
