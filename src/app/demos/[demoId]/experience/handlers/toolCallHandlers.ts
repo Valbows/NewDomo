@@ -179,9 +179,6 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
   }
 
   if (toolName === 'show_trial_cta') {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🎯 show_trial_cta called, displaying CTA banner');
-    }
     setShowCTA(true);
     return;
   }

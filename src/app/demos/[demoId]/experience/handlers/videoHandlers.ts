@@ -177,15 +177,6 @@ export function handleVideoClose(
   // Show CTA after a brief delay to ensure video overlay has unmounted
   // This prevents React batching issues where CTA might not render
   setTimeout(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Video closed, showing CTA banner');
-    }
     setShowCTA(true);
   }, 100);
-  // Small delay to ensure smooth transition
-  setTimeout(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Video closed, agent returned to full screen');
-    }
-  }, 300);
 }
