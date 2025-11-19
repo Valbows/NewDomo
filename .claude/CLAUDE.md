@@ -5,8 +5,14 @@
 | Branch | Environment | Console Logging |
 |--------|-------------|-----------------|
 | `refactor_claude_code` | Development | Allowed freely |
-| `production_ready` | Production | Must be removed or disabled |
-| `staging` (future) | Staging | Minimal logging only |
+| `staging` | Staging/Testing | NODE_ENV wrapped only |
+| `production_ready` | Production | Must be removed completely |
+
+### Three-Branch Workflow
+```
+refactor_claude_code → staging → production_ready
+     (dev)              (test)       (live)
+```
 
 ## Logging Rules
 
@@ -14,9 +20,14 @@
 - `console.log`, `console.debug`, `console.info` allowed for debugging
 - No restrictions on logging
 
+### Staging (`staging`)
+- **Remove verbose debug logs** (emoji spam, temporary traces)
+- **Keep NODE_ENV wrapped logs** for diagnostics
+- `console.error` and `console.warn` acceptable
+
 ### Production (`production_ready`)
-- **Remove all `console.log` statements** when merging/pushing to this branch
-- `console.error` and `console.warn` acceptable for error handling
+- **Remove ALL `console.log` statements** including NODE_ENV wrapped
+- Only `console.error` and `console.warn` allowed
 
 ### Hybrid Safety Net (NODE_ENV)
 For critical diagnostic logs that must work in both branches, use:
@@ -44,14 +55,23 @@ if (process.env.NODE_ENV !== 'production') {
 
 1. **Always confirm current branch** before editing code
 2. **Never create new branches** unless explicitly requested
-3. **When merging to `production_ready`**: Claude Code MUST automatically remove all `console.log` statements (keep `console.error`/`console.warn` and NODE_ENV-wrapped logs)
+3. **Follow three-branch flow**: `refactor_claude_code` → `staging` → `production_ready`
+
+### Claude Code Merge Checklist for Staging
+When user requests merge to `staging`, Claude Code will:
+1. Checkout `staging` branch
+2. Merge from `refactor_claude_code`
+3. **Remove verbose/emoji debug logs** (bare console.logs)
+4. **Keep**: `console.error`, `console.warn`, NODE_ENV-wrapped logs
+5. Commit with message noting cleanup
+6. Push to remote
 
 ### Claude Code Merge Checklist for Production
 When user requests merge to `production_ready`, Claude Code will:
 1. Checkout `production_ready` branch
-2. Merge from source branch
-3. **Automatically find and remove all bare `console.log` statements**
-4. Keep: `console.error`, `console.warn`, and `if (process.env.NODE_ENV !== 'production')` wrapped logs
+2. Merge from `staging`
+3. **Remove ALL console.log statements** (including NODE_ENV wrapped)
+4. **Keep only**: `console.error`, `console.warn`
 5. Commit with message noting console.log cleanup
 6. Push to remote
 
