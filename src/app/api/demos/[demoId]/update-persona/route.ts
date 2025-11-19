@@ -37,7 +37,6 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error updating demo persona:', error);
       return NextResponse.json(
         { error: 'Failed to update demo persona' },
         { status: 500 }
@@ -48,7 +47,6 @@ export async function POST(
       return NextResponse.json({ error: 'Demo not found' }, { status: 404 });
     }
 
-    console.log(`✅ Updated demo ${params.demoId} with persona ${tavus_persona_id}`);
 
     return NextResponse.json({
       success: true,
@@ -57,7 +55,6 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error updating demo persona:', error);
     return NextResponse.json(
       { error: 'Failed to update demo persona' },
       { status: 500 }

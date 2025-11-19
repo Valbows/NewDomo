@@ -105,8 +105,6 @@ export default function DemoExperiencePage() {
   };
 
   const handleCTAClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    console.log('🔗 CTA Button clicked - Redirecting to configured URL');
-    console.log('🎯 CTA URL resolved:', ctaButtonUrl);
 
     const currentConversationId = conversationUrl
       ? extractConversationIdFromUrl(conversationUrl)
@@ -114,13 +112,6 @@ export default function DemoExperiencePage() {
 
     if (currentConversationId && demo?.id) {
       try {
-        console.log('🎯 Tracking CTA click with data:', {
-          conversation_id: currentConversationId,
-          demo_id: demo.id,
-          cta_url: ctaButtonUrl,
-          source: conversationUrl ? 'current_url' : 'demo_metadata'
-        });
-
         const response = await fetch('/api/track-cta-click', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -132,19 +123,11 @@ export default function DemoExperiencePage() {
         });
 
         if (response.ok) {
-          console.log('✅ CTA click tracked successfully');
         } else {
           const errorData = await response.json();
-          console.warn('⚠️ CTA tracking failed with response:', errorData);
         }
       } catch (error) {
-        console.warn('⚠️ Failed to track CTA click:', error);
       }
-    } else {
-      console.warn('⚠️ Missing demo data for CTA tracking:', {
-        tavus_conversation_id: demo?.tavus_conversation_id,
-        demo_id: demo?.id
-      });
     }
   };
 

@@ -106,11 +106,6 @@ export async function ingestAnalyticsForEvent(supabase: any, conversationId: str
 
   if (updateError) {
     // Non-fatal: keep webhook 200, but log for diagnosis
-    console.warn('Ingest: failed to update demo metadata', {
-      demoId: demo.id,
-      conversationId,
-      error: updateError?.message || updateError,
-    });
   }
 }
 

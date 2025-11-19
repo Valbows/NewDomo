@@ -75,7 +75,6 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
       }
       resetForm();
     } catch (error) {
-      console.error('Failed to save objective:', error);
     }
   };
 
@@ -84,7 +83,6 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
       try {
         await deleteObjective(id);
       } catch (error) {
-        console.error('Failed to delete objective:', error);
       }
     }
   };
@@ -93,7 +91,6 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
     try {
       await activateObjective(id);
     } catch (error) {
-      console.error('Failed to activate objective:', error);
     }
   };
 

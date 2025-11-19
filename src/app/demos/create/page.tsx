@@ -62,7 +62,6 @@ const CreateDemoPage = () => {
       router.push(`/demos/${newDemo.id}/configure`);
 
     } catch (err: any) {
-      console.error('Error creating demo:', err);
       setError(err.message || 'An unexpected error occurred.');
       setLoading(false);
     }

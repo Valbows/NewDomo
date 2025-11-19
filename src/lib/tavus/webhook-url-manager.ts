@@ -13,7 +13,6 @@ export async function updateWebhookUrlsForAllObjectives(newWebhookUrl?: string):
   const webhookUrl = newWebhookUrl || getWebhookUrl();
   const objectivesManager = createObjectivesManager();
   
-  console.log(`🔄 Updating webhook URLs to: ${webhookUrl}`);
   
   try {
     // Get all objectives
@@ -29,7 +28,6 @@ export async function updateWebhookUrlsForAllObjectives(newWebhookUrl?: string):
         );
         
         if (needsUpdate && objective.uuid) {
-          console.log(`📝 Updating objectives: ${objective.name || objective.uuid}`);
           
           // Update objectives with new webhook URL
           const updatedObjectives = objective.data.map((obj: any) => {
@@ -49,14 +47,11 @@ export async function updateWebhookUrlsForAllObjectives(newWebhookUrl?: string):
             objectives: updatedObjectives
           });
           
-          console.log(`✅ Updated objectives: ${objective.uuid}`);
         }
       }
     }
     
-    console.log('🎉 All webhook URLs updated successfully');
   } catch (error) {
-    console.error('❌ Error updating webhook URLs:', error);
     throw error;
   }
 }
@@ -98,7 +93,6 @@ export async function validateWebhookUrl(url?: string): Promise<boolean> {
     
     return response.status === 200 || response.status === 405; // 405 is OK (method not allowed for HEAD)
   } catch (error) {
-    console.warn(`⚠️ Webhook URL validation failed: ${error}`);
     return false;
   }
 }

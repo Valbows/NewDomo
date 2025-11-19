@@ -28,7 +28,7 @@ export function useVideoPlayer() {
     if (videoPlayerRef.current) {
       suppressReasonRef.current = 'resume';
       suppressFetchUntilRef.current = Date.now() + 1000;
-      videoPlayerRef.current.resume();
+      videoPlayerRef.current.play();
     }
   };
 

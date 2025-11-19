@@ -46,7 +46,6 @@ async function handleGET(req: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🔍 Checking persona configuration: ${targetPersonaId}`);
 
     // Fetch persona details from Tavus
     const personaResponse = await fetch(
@@ -70,13 +69,6 @@ async function handleGET(req: NextRequest) {
     }
 
     const personaData = await personaResponse.json();
-
-    console.log(`📊 Persona data:`, {
-      persona_id: personaData.persona_id,
-      name: personaData.name,
-      perception_model: personaData.perception_model || 'not set',
-      default_replica_id: personaData.default_replica_id || 'not set'
-    });
 
     // Analyze the configuration
     const analysis = {
@@ -104,7 +96,6 @@ async function handleGET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking persona config:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
@@ -147,7 +138,6 @@ async function handlePOST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🔄 Updating persona ${personaId}:`, updatePayload);
 
     // Update persona via Tavus API
     const updateResponse = await fetch(
@@ -173,7 +163,6 @@ async function handlePOST(req: NextRequest) {
 
     const updatedPersona = await updateResponse.json();
 
-    console.log(`✅ Persona updated successfully`);
 
     return NextResponse.json({
       success: true,
@@ -183,7 +172,6 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating persona config:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });

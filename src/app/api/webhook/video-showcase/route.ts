@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
-  console.log('🎬 Video Showcase Webhook received');
 
   try {
     const body = await request.json();
-    console.log('📊 Video Showcase Webhook payload:', JSON.stringify(body, null, 2));
 
     // Extract data from webhook payload
     const event = body;
@@ -14,7 +12,6 @@ export async function POST(request: NextRequest) {
     const eventType = event?.event_type || 'conversation.objective.completed';
 
     if (!conversationId) {
-      console.error('❌ Missing conversation_id in webhook payload');
       return NextResponse.json(
         { error: 'Missing conversation_id' },
         { status: 400 }
@@ -33,12 +30,9 @@ export async function POST(request: NextRequest) {
       event?.output_variables || 
       {};
 
-    console.log(`🎯 Processing objective completion: ${objectiveName}`);
-    console.log(`📊 Output variables:`, JSON.stringify(outputVariables, null, 2));
 
     // Validate this is a video showcase objective
     if (objectiveName !== 'demo_video_showcase') {
-      console.log(`⚠️ Ignoring non-video-showcase objective: ${objectiveName}`);
       return NextResponse.json({ 
         message: 'Not a video showcase objective', 
         objective: objectiveName 
@@ -58,10 +52,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`🎬 Video data extracted:`, {
-      shown: videosShownArray
-    });
-
     // Store in database (only videos_shown column after schema update)
     const { data, error } = await supabase
       .from('video_showcase_data')
@@ -76,14 +66,12 @@ export async function POST(request: NextRequest) {
       .select();
 
     if (error) {
-      console.error('❌ Database error:', error);
       return NextResponse.json(
         { error: 'Database error', details: error.message },
         { status: 500 }
       );
     }
 
-    console.log('✅ Video showcase data stored successfully:', data);
 
     return NextResponse.json({
       success: true,
@@ -97,7 +85,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Video Showcase Webhook error:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

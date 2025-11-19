@@ -76,7 +76,6 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
       }
       
       const data = await response.json();
-      console.log('Fix results:', data);
       
       // Refresh status after fixing
       await checkStatus();

@@ -91,7 +91,6 @@ async function handleGET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking raven config:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
@@ -244,7 +243,6 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fixing raven config:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });

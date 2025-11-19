@@ -35,7 +35,6 @@ export default function TestVideoPage() {
       }
     } catch (error) {
       addTestResult(`❌ Fetch error: ${error}`);
-      console.error('Video fetch test error:', error);
     }
   };
 

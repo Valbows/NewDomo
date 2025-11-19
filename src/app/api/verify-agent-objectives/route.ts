@@ -10,9 +10,6 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const demoId = url.searchParams.get('demoId') || 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
 
-    console.log('🔍 VERIFYING AGENT OBJECTIVES INTEGRATION');
-    console.log('='.repeat(60));
-    console.log(`Demo ID: ${demoId}`);
 
     const supabase = createClient();
 
@@ -47,7 +44,6 @@ export async function GET(request: NextRequest) {
           personaInfo = await personaResponse.json();
         }
       } catch (error) {
-        console.log('Could not fetch persona info from Tavus');
       }
     }
 
@@ -105,15 +101,8 @@ export async function GET(request: NextRequest) {
       (verification.integration.hasActiveCustomObjectives ? 
         verification.integration.customObjectivesMatchPersona : true);
 
-    console.log('📊 Verification Results:');
-    console.log(`   Demo: ${verification.integration.hasDemo ? '✅' : '❌'}`);
-    console.log(`   Persona: ${verification.integration.hasPersona ? '✅' : '❌'}`);
-    console.log(`   System Prompt: ${verification.integration.systemPromptConfigured ? '✅' : '❌'}`);
-    console.log(`   Guardrails: ${verification.integration.guardrailsConfigured ? '✅' : '❌'}`);
-    console.log(`   Custom Objectives: ${verification.integration.hasActiveCustomObjectives ? '✅' : '📋 Using defaults'}`);
     
     if (verification.integration.hasActiveCustomObjectives) {
-      console.log(`   Objectives Match: ${verification.integration.customObjectivesMatchPersona ? '✅' : '❌'}`);
     }
 
     return NextResponse.json({
@@ -137,7 +126,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Verification failed:', error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

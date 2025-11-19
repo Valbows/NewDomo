@@ -49,11 +49,6 @@ export class ObjectivesManager {
       data: template.objectives,
     };
 
-    console.log(
-      "📤 Creating objectives with payload:",
-      JSON.stringify(requestBody, null, 2)
-    );
-
     const response = await fetch(`${this.baseUrl}/objectives/`, {
       method: "POST",
       headers: {
@@ -65,16 +60,12 @@ export class ObjectivesManager {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("❌ Tavus API Error Response:", error);
       throw new Error(
         `Failed to create objectives: ${response.status} ${error}`
       );
     }
 
     const result = await response.json();
-    console.log(
-      `✅ Created objectives: ${template.name} (${result.objectives_id})`
-    );
     return {
       ...result,
       uuid: result.objectives_id, // Normalize the ID field
@@ -145,9 +136,6 @@ export class ObjectivesManager {
     }
 
     const result = await response.json();
-    console.log(
-      `✅ Updated objectives: ${template.name} (${result.objectives_id})`
-    );
     return result;
   }
 
@@ -169,7 +157,6 @@ export class ObjectivesManager {
       );
     }
 
-    console.log(`✅ Deleted objectives: ${objectivesId}`);
   }
 
   /**
@@ -199,7 +186,6 @@ export class ObjectivesManager {
       const existing = await this.findObjectivesByName(template.name);
 
       if (existing) {
-        console.log(`📋 Found existing objectives: ${existing.uuid}`);
         return existing.uuid!;
       }
 
@@ -207,7 +193,6 @@ export class ObjectivesManager {
       const created = await this.createObjectives(template);
       return created.uuid!;
     } catch (error) {
-      console.error("Error ensuring objectives:", error);
       throw error;
     }
   }

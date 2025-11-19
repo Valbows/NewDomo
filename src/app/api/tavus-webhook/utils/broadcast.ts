@@ -14,7 +14,6 @@ export async function broadcastToDemo(
       const subscribeResult = channel.subscribe((status: string) => {
         if (status === 'SUBSCRIBED' && !settled) {
           settled = true;
-          console.log(`Server Realtime: SUBSCRIBED to ${channelName}`);
           resolve();
         }
       });
@@ -35,7 +34,6 @@ export async function broadcastToDemo(
       }, 2000);
     });
   } catch (subErr) {
-    console.warn(`Webhook: ${eventName} subscribe failed (non-fatal):`, subErr);
     // Continue anyway to support test environments
   }
 
@@ -45,9 +43,7 @@ export async function broadcastToDemo(
       event: eventName,
       payload,
     });
-    console.log(`Broadcasted ${eventName} event for demo ${demoId}`);
   } catch (sendErr) {
-    console.warn(`Webhook: ${eventName} broadcast failed (non-fatal):`, sendErr);
   } finally {
     try {
       await supabase.removeChannel(channel);

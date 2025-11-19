@@ -34,15 +34,6 @@ export function useConversationSync({
       }
 
       const result = await response.json();
-      console.log("Sync result:", result);
-      console.log(
-        `📊 Synced conversations with data:`,
-        result.results?.map((r: any) => ({
-          conversation_id: r.conversation_id,
-          has_transcript: r.has_transcript,
-          has_perception: r.has_perception,
-        }))
-      );
 
       // Call the onSyncComplete callback to refresh data
       if (onSyncComplete) {
@@ -54,11 +45,7 @@ export function useConversationSync({
       const hasTranscript = result.results?.some((r: any) => r.has_transcript) || false;
       const hasPerception = result.results?.some((r: any) => r.has_perception) || false;
 
-      console.log(
-        `✅ Sync completed: ${syncedCount} conversations, transcript: ${hasTranscript}, perception: ${hasPerception}`
-      );
     } catch (err) {
-      console.error("Failed to sync conversations:", err);
       setSyncError("Failed to sync conversations from Domo");
     } finally {
       setSyncing(false);

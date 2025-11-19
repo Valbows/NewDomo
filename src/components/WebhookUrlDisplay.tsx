@@ -33,7 +33,6 @@ export default function WebhookUrlDisplay({ className = '' }: WebhookUrlDisplayP
       }
     } catch (err) {
       setError('Failed to fetch webhook URL');
-      console.error('Error fetching webhook URL:', err);
     } finally {
       setLoading(false);
     }
@@ -49,7 +48,6 @@ export default function WebhookUrlDisplay({ className = '' }: WebhookUrlDisplayP
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
     }
   };
 

@@ -34,7 +34,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       try {
         await el.play();
       } catch (e) {
-        console.warn('InlineVideoPlayer.play() failed:', e);
       }
       // For E2E, reflect requested state even if underlying playback fails
       setPaused(false);
@@ -46,7 +45,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       try {
         el.pause();
       } catch (e) {
-        console.warn('InlineVideoPlayer.pause() failed:', e);
       }
       setPaused(true);
     },
@@ -64,7 +62,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       try {
         el.currentTime = Math.max(0, time || 0);
       } catch (e) {
-        console.warn('InlineVideoPlayer.seekTo() failed:', e);
       }
     },
   }), []);
@@ -88,7 +85,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       // Setting src attribute is also handled by React prop, but load() ensures fetch begins
       videoElement.load();
     } catch (e) {
-      console.warn('InlineVideoPlayer: load() failed to initiate', e);
     }
 
     const handleCanPlay = async () => {
@@ -96,10 +92,8 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       if (shouldAutoplayRef.current) {
         try {
           await videoElement.play();
-          console.log('Video started playing:', videoUrl);
           setPaused(false);
         } catch (error) {
-          console.error('Video autoplay failed:', error);
         }
       } else {
         try { videoElement.pause(); } catch {}
@@ -121,7 +115,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     };
 
     const handleEnded = () => {
-      console.log('Video ended');
       if (onVideoEnd) {
         onVideoEnd();
       }
@@ -129,7 +122,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     };
 
     const handleError = (error: Event) => {
-      console.error('Video error:', error);
       const videoElement = error.target as HTMLVideoElement;
       if (videoElement && videoElement.error) {
         const errorDetails = {
@@ -139,7 +131,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
           readyState: videoElement.readyState,
           src: videoElement.src
         };
-        console.error('Video error details:', errorDetails);
         setHasError(true);
         setErrorMessage(`Video loading failed (Code: ${videoElement.error.code}): ${videoElement.error.message}`);
       } else {

@@ -69,7 +69,6 @@ async function handleGET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking perception status:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
@@ -132,13 +131,11 @@ async function handlePOST(req: NextRequest) {
       });
     }
 
-    console.log(`🔄 Updating ${targetPersonaIds.length} personas to use raven-0 perception model`);
 
     // Update all personas to use raven-0
     const results = await ensureAllPersonasHaveRaven(targetPersonaIds);
     const summary = summarizePerceptionStatus(results);
 
-    console.log(`✅ Perception update completed:`, summary);
 
     return NextResponse.json({
       message: 'Perception model update completed',
@@ -147,7 +144,6 @@ async function handlePOST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating perception models:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });

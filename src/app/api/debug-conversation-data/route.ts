@@ -15,7 +15,6 @@ async function handleGET(req: NextRequest) {
     const demoId = url.searchParams.get('demoId');
     const conversationId = url.searchParams.get('conversationId') || 'cd9c38355945c4ec';
 
-    console.log(`🔍 Debug conversation data for demo: ${demoId}, conversation: ${conversationId}`);
 
     // Get all conversation details for this user
     const { data: allConversations, error: allError } = await supabase
@@ -24,9 +23,7 @@ async function handleGET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (allError) {
-      console.error('Error fetching all conversations:', allError);
     } else {
-      console.log(`📊 Found ${allConversations?.length || 0} total conversation records`);
     }
 
     // Get specific conversation if provided
@@ -39,10 +36,8 @@ async function handleGET(req: NextRequest) {
         .single();
 
       if (convError) {
-        console.log('❌ Specific conversation not found:', convError.message);
       } else {
         specificConversation = conv;
-        console.log('✅ Found specific conversation:', conv?.id);
       }
     }
 
@@ -56,10 +51,8 @@ async function handleGET(req: NextRequest) {
         .order('completed_at', { ascending: false });
 
       if (demoError) {
-        console.error('Error fetching demo conversations:', demoError);
       } else {
         demoConversations = demoConv;
-        console.log(`📋 Found ${demoConv?.length || 0} conversations for demo ${demoId}`);
       }
     }
 
@@ -124,7 +117,6 @@ async function handleGET(req: NextRequest) {
     return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
-    console.error('Debug error:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });

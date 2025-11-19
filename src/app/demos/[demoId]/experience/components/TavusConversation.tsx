@@ -20,9 +20,7 @@ if (typeof window !== 'undefined') {
   
   if (isFirstLoad) {
     (window as any).__DOMO_MODULE_LOADED__ = true;
-    console.log('🌐 First module load - initializing window state');
   } else {
-    console.log('🔄 Module reloaded - preserving existing window state');
   }
   
   // Initialize all window flags if they don't exist (only on first load)
@@ -44,13 +42,6 @@ if (typeof window !== 'undefined') {
   
   // Only log state on first load to avoid spam
   if (isFirstLoad) {
-    console.log('🌐 Window state initialized:', {
-      hasInstance: !!(window as any).__DOMO_DAILY_CALL_INSTANCE__,
-      hasContainer: !!(window as any).__DOMO_IFRAME_CONTAINER__,
-      isInitialized: (window as any).__DOMO_COMPONENT_INITIALIZED__,
-      conversationUrl: (window as any).__DOMO_CONVERSATION_URL__,
-      isMounting: (window as any).__DOMO_MOUNTING_FLAG__
-    });
   }
 }
 
@@ -74,14 +65,8 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
       const existingUrl = (window as any).__DOMO_CONVERSATION_URL__;
       const existingInstance = (window as any).__DOMO_DAILY_CALL_INSTANCE__;
       
-      console.log(`🔍 [${componentId.current}] Mount #${mountCount} - Initialization check:`, {
-        isAlreadyInitialized,
-        urlMatches: existingUrl === conversationUrl,
-        hasInstance: !!existingInstance
-      });
       
       if (isAlreadyInitialized && existingUrl === conversationUrl && existingInstance) {
-        console.log(`🚫🚫 [${componentId.current}] Mount #${mountCount} - SKIP INITIALIZATION - Already done`);
         // Set state immediately
         setDailyCall(existingInstance);
         setIsInitialized(true);
@@ -93,22 +78,18 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
   });
 
   useEffect(() => {
-    console.log(`🕒 [TavusConversation] useEffect at ${new Date().toISOString()}. URL=${conversationUrl}, mountFlag=${(typeof window !== 'undefined' ? (window as any).__DOMO_MOUNTING_FLAG__ : 'undefined')}, initPromise=${(typeof window !== 'undefined' ? !!(window as any).__DOMO_INIT_PROMISE__ : 'undefined')}, dailyInstance=${(typeof window !== 'undefined' ? !!(window as any).__DOMO_DAILY_CALL_INSTANCE__ : 'undefined')}, iframeMounted=${(typeof window !== 'undefined' ? !!(window as any).__DAILY_IFRAME_MOUNTED__ : 'undefined')}`);
     // ULTRA-AGGRESSIVE CHECK: Use global promise to prevent multiple initializations
     if (typeof window !== 'undefined') {
       // Check if there's already a global initialization in progress
       if ((window as any).__DOMO_INIT_PROMISE__) {
-        console.log(`🛑 [${componentId.current}] GLOBAL INIT IN PROGRESS - Waiting for completion`);
         (window as any).__DOMO_INIT_PROMISE__.then((result: any) => {
           if (result && result.call) {
-            console.log(`🛑 [${componentId.current}] Using completed global initialization`);
             setDailyCall(result.call);
             setIsInitialized(true);
             setIsConnected(true);
           }
         });
         return () => {
-          console.log(`🧹 [${componentId.current}] Component cleanup (global init wait)`);
         };
       }
       
@@ -118,21 +99,17 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
       const windowInstance = (window as any).__DOMO_DAILY_CALL_INSTANCE__;
       
       if (isWindowInitialized && windowUrl === conversationUrl && windowInstance) {
-        console.log(`🛑 [${componentId.current}] AGGRESSIVE SKIP - Window already initialized`);
         setDailyCall(windowInstance);
         setIsInitialized(true);
         setIsConnected(true);
         return () => {
-          console.log(`🧹 [${componentId.current}] Component cleanup (aggressive skip)`);
         };
       }
     }
     
     // FIRST CHECK: If we should skip initialization, do nothing
     if (shouldSkipInitialization) {
-      console.log(`⏭️ [${componentId.current}] Skipping useEffect - already initialized`);
       return () => {
-        console.log(`🧹 [${componentId.current}] Component cleanup (skipped initialization)`);
         setIsInitialized(false);
       };
     }
@@ -144,12 +121,10 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
       const existingInstance = (window as any).__DOMO_DAILY_CALL_INSTANCE__;
       
       if (isAlreadyInitialized && existingUrl === conversationUrl && existingInstance) {
-        console.log(`🌍 [${componentId.current}] Using existing window instance`);
         setDailyCall(existingInstance);
         setIsInitialized(true);
         setIsConnected(true);
         return () => {
-          console.log(`🧹 [${componentId.current}] Component cleanup (window instance preserved)`);
           setIsInitialized(false);
         };
       }
@@ -157,7 +132,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
     
     // BROWSER-LEVEL CHECK: If there's already a browser instance, use it and STOP
     if (typeof window !== 'undefined' && (window as any).__DOMO_DAILY_CALL_INSTANCE__) {
-      console.log(`🌍 [${componentId.current}] Browser-level Daily.co instance found, using it`);
       const existingCall = (window as any).__DOMO_DAILY_CALL_INSTANCE__;
       
       // Update window state
@@ -169,7 +143,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
       setIsConnected(true);
       initializationRef.current = true;
       return () => {
-        console.log(`🧹 [${componentId.current}] Component cleanup (browser instance preserved)`);
         setIsInitialized(false);
       };
     }
@@ -178,13 +151,11 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
     
     // FINAL CHECK: If mounting flag is set, wait
     if (typeof window !== 'undefined' && (window as any).__DOMO_MOUNTING_FLAG__) {
-      console.log(`⏳ [${componentId.current}] Waiting - another component is mounting`);
       return;
     }
     
     // Prevent duplicate initialization using ref
     if (initializationRef.current) {
-      console.log(`⚠️ [${componentId.current}] Preventing duplicate initialization`);
       return;
     }
     
@@ -192,12 +163,10 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
     if (typeof window !== 'undefined') {
       const existingInstance = (window as any).__DOMO_DAILY_CALL_INSTANCE__;
       if (existingInstance) {
-        console.log(`🚫 [${componentId.current}] Found existing Daily.co instance in window, reusing`);
         setDailyCall(existingInstance);
         setIsInitialized(true);
         setIsConnected(true);
         return () => {
-          console.log(`🧹 [${componentId.current}] Component cleanup (window instance preserved)`);
           setIsInitialized(false);
         };
       }
@@ -205,13 +174,11 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
     
     // Prevent React StrictMode double mounting
     if (typeof window !== 'undefined' && (window as any).__DOMO_MOUNTING_FLAG__) {
-      console.log(`⚠️ [${componentId.current}] Global mounting in progress, skipping`);
       return;
     }
     
     // Check if singleton already has a call for this conversation
     if (dailyCallSingleton.isCallInitialized() && dailyCallSingleton.getConversationUrl() === conversationUrl) {
-      console.log(`♻️ [${componentId.current}] Reusing existing Daily.co call from singleton`);
       const existingCall = dailyCallSingleton.getDailyCall();
       
       // Store in window
@@ -225,7 +192,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
       setIsInitialized(true);
       setIsConnected(true);
       return () => {
-        console.log(`🧹 [${componentId.current}] Component cleanup (preserving window instance)`);
         setIsInitialized(false);
       };
     }
@@ -235,7 +201,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
     if (typeof window !== 'undefined') {
       (window as any).__DOMO_MOUNTING_FLAG__ = true;
     }
-    console.log(`🚀 [${componentId.current}] Starting Daily.co initialization`);
     
     // Create global initialization promise to prevent concurrent inits
     const initPromise = dailyCallSingleton.initialize(conversationUrl, onToolCall, componentId.current);
@@ -247,7 +212,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
     initPromise
       .then((call) => {
         if (call) {
-          console.log(`✅ [${componentId.current}] Daily.co call initialized via singleton`);
           
           // Store ONLY in window (no module variables)
           if (typeof window !== 'undefined') {
@@ -278,7 +242,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
 
     // Cleanup function
     return () => {
-      console.log(`🧹 [${componentId.current}] TavusConversation component unmounting`);
       // DON'T reset initializationRef if we have a browser-level instance
       if (!(typeof window !== 'undefined' && (window as any).__DOMO_DAILY_CALL_INSTANCE__)) {
         initializationRef.current = false;
@@ -301,10 +264,8 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
   
   // Cleanup when conversation URL changes
   useEffect(() => {
-    console.log(`🕒 [TavusConversation] useEffect at ${new Date().toISOString()}. URL=${conversationUrl}, mountFlag=${(typeof window !== 'undefined' ? (window as any).__DOMO_MOUNTING_FLAG__ : 'undefined')}, initPromise=${(typeof window !== 'undefined' ? !!(window as any).__DOMO_INIT_PROMISE__ : 'undefined')}, dailyInstance=${(typeof window !== 'undefined' ? !!(window as any).__DOMO_DAILY_CALL_INSTANCE__ : 'undefined')}, iframeMounted=${(typeof window !== 'undefined' ? !!(window as any).__DAILY_IFRAME_MOUNTED__ : 'undefined')}`);
     return () => {
       if (dailyCallSingleton.getConversationUrl() !== conversationUrl) {
-        console.log(`🧹 [${componentId.current}] Cleaning up Daily.co call due to URL change`);
         dailyCallSingleton.cleanup();
       }
     };
@@ -312,9 +273,7 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
   
   // Global cleanup on window unload
   useEffect(() => {
-    console.log(`🕒 [TavusConversation] useEffect at ${new Date().toISOString()}. URL=${conversationUrl}, mountFlag=${(typeof window !== 'undefined' ? (window as any).__DOMO_MOUNTING_FLAG__ : 'undefined')}, initPromise=${(typeof window !== 'undefined' ? !!(window as any).__DOMO_INIT_PROMISE__ : 'undefined')}, dailyInstance=${(typeof window !== 'undefined' ? !!(window as any).__DOMO_DAILY_CALL_INSTANCE__ : 'undefined')}, iframeMounted=${(typeof window !== 'undefined' ? !!(window as any).__DAILY_IFRAME_MOUNTED__ : 'undefined')}`);
     const handleUnload = () => {
-      console.log('🧹 Global cleanup on window unload');
       dailyCallSingleton.cleanup();
     };
     
@@ -351,12 +310,10 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
             <p className="text-blue-800 text-xs font-medium">🔍 Listening for real-time tool calls...</p>
             <button
               onClick={() => {
-                console.log('Manual tool call test triggered');
                 const title = window.prompt('Enter exact video title to fetch:');
                 if (title && title.trim()) {
                   onToolCall('fetch_video', { title: title.trim() });
                 } else {
-                  console.log('Manual tool call cancelled: no title provided');
                 }
               }}
               className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
@@ -365,7 +322,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
             </button>
             <button
               onClick={() => {
-                console.log('🔥 FORCE RESET - Clearing ALL global state');
                 
                 // Reset ALL window flags
                 
@@ -380,7 +336,6 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
                 // Cleanup singleton
                 dailyCallSingleton.cleanup();
                 
-                console.log('✅ ALL global state cleared - ready for fresh initialization');
               }}
               className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
             >

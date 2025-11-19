@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Database error:', error);
       return NextResponse.json(
         { error: 'Database error', details: error.message },
         { status: 500 }
@@ -36,7 +35,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('API error:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

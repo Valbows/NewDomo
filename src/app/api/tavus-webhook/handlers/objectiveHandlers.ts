@@ -30,12 +30,10 @@ export async function handleProductInterestDiscovery(
       });
 
     if (insertError) {
-      console.error('Failed to store product interest data:', insertError);
-    } else {
-      console.log('✅ Successfully stored product interest data');
+      // Silent fail - non-critical data collection
     }
   } catch (error) {
-    console.error('Error processing product interest discovery:', error);
+    // Silent fail - non-critical data collection
   }
 }
 
@@ -46,15 +44,6 @@ export async function handleContactInfoCollection(
   outputVariables: any,
   event: any
 ): Promise<void> {
-  console.log('🔍 Processing qualification data insertion...');
-  console.log('📊 Data to insert:', {
-    conversation_id: conversationId,
-    first_name: outputVariables.first_name,
-    last_name: outputVariables.last_name,
-    email: outputVariables.email,
-    position: outputVariables.position,
-    objective_name: objectiveName
-  });
 
   try {
     const { error: insertError } = await supabase
@@ -72,12 +61,10 @@ export async function handleContactInfoCollection(
       });
 
     if (insertError) {
-      console.error('❌ Failed to store qualification data:', insertError);
-    } else {
-      console.log('✅ Successfully stored qualification data');
+      // Silent fail - non-critical data collection
     }
   } catch (error) {
-    console.error('❌ Error processing contact information collection:', error);
+    // Silent fail - non-critical data collection
   }
 }
 
@@ -87,7 +74,6 @@ export async function handleVideoShowcaseObjective(
   outputVariables: any,
   event: any
 ): Promise<void> {
-  console.log('🎬 Processing video showcase data insertion...');
   try {
     // Normalize arrays
     const shown = outputVariables?.videos_shown;
@@ -127,9 +113,7 @@ export async function handleVideoShowcaseObjective(
         .eq('id', existingShowcase.id);
 
       if (updateErr) {
-        console.error('❌ Failed to update video_showcase_data:', updateErr);
-      } else {
-        console.log('✅ Successfully updated video_showcase_data for objective');
+        // Silent fail - non-critical tracking
       }
     } else {
       const { error: insertErr } = await supabase
@@ -137,12 +121,10 @@ export async function handleVideoShowcaseObjective(
         .insert(payload);
 
       if (insertErr) {
-        console.error('❌ Failed to insert video_showcase_data:', insertErr);
-      } else {
-        console.log('✅ Successfully inserted video_showcase_data for objective');
+        // Silent fail - non-critical tracking
       }
     }
   } catch (error) {
-    console.error('❌ Error processing video showcase objective:', error);
+    // Silent fail - non-critical tracking
   }
 }

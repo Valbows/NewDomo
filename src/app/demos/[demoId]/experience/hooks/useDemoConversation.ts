@@ -72,11 +72,9 @@ export function useDemoConversation(demoId: string) {
         // Parse metadata if it's a string
         let processedDemoData = { ...demoData };
         if (typeof processedDemoData.metadata === 'string') {
-          console.log('⚠️ Metadata is a string, parsing...');
           try {
             processedDemoData.metadata = JSON.parse(processedDemoData.metadata);
           } catch (err) {
-            console.error('Failed to parse metadata:', err);
             processedDemoData.metadata = {};
           }
         }
@@ -96,7 +94,6 @@ export function useDemoConversation(demoId: string) {
 
         // Start or reuse conversation
         // The API will handle validation and reuse existing conversation if valid
-        console.log('Starting/validating conversation...');
         const response = await fetch('/api/start-conversation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -133,7 +130,6 @@ export function useDemoConversation(demoId: string) {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error in fetchDemoAndStartConversation:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
         setLoading(false);
       }

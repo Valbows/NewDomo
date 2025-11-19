@@ -27,15 +27,9 @@ export async function handlePOST(req: NextRequest) {
 
     const event = JSON.parse(rawBody);
 
-    console.log('=== TAVUS WEBHOOK EVENT RECEIVED ===');
-    console.log('Event Type:', event.event_type);
-    console.log('Conversation ID:', event.conversation_id);
-    console.log('Full Event:', JSON.stringify(event, null, 2));
-    console.log('=====================================');
 
     const conversation_id = event.conversation_id;
     const { toolName, toolArgs } = parseToolCallFromEvent(event);
-    console.log('Parsed tool call from event:', toolName, toolArgs);
 
     // Idempotency guard for tool-call events only (prevents duplicate broadcasts)
     if (toolName) {
@@ -125,16 +119,6 @@ async function handleObjectiveCompletion(
   const objectiveName = event?.properties?.objective_name || event?.data?.objective_name || event?.objective_name;
   const outputVariables = event?.properties?.output_variables || event?.data?.output_variables || event?.output_variables || {};
 
-  console.log(`🎯 Processing objective completion: ${objectiveName}`);
-  console.log(`📊 Output variables:`, JSON.stringify(outputVariables, null, 2));
-  console.log(`📋 Event structure:`, JSON.stringify({
-    event_type: event.event_type,
-    has_properties: !!event.properties,
-    has_data: !!event.data,
-    properties_keys: event.properties ? Object.keys(event.properties) : [],
-    data_keys: event.data ? Object.keys(event.data) : []
-  }, null, 2));
-
   if (objectiveName === 'product_interest_discovery') {
     await handleProductInterestDiscovery(supabase, conversationId, objectiveName, outputVariables, event);
   } else if (objectiveName === 'contact_information_collection' || objectiveName === 'greeting_and_qualification') {
@@ -165,6 +149,5 @@ async function broadcastAnalyticsUpdate(
       });
     }
   } catch (broadcastErr) {
-    console.warn('Webhook: analytics_updated broadcast failed (non-fatal):', broadcastErr);
   }
 }

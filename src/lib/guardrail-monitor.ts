@@ -22,12 +22,6 @@ export class GuardrailMonitor {
     
     this.violations.push(fullViolation);
     
-    // Log to console with emoji for easy spotting
-    console.warn(`🚨 GUARDRAIL VIOLATION: ${violation.type}`, {
-      message: violation.message,
-      context: violation.context,
-      timestamp: fullViolation.timestamp
-    });
     
     // In production, you might want to send to monitoring service
     // this.sendToMonitoring(fullViolation);

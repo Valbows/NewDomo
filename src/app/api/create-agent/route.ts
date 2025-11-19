@@ -47,7 +47,6 @@ async function handlePOST(req: NextRequest) {
       .eq('demo_id', demoId);
 
     if (knowledgeError) {
-      console.warn('Could not fetch knowledge base:', knowledgeError);
     }
 
     // Fetch available videos for this demo
@@ -58,7 +57,6 @@ async function handlePOST(req: NextRequest) {
       .eq('processing_status', 'completed');
 
     if (videosError) {
-      console.warn('Could not fetch demo videos:', videosError);
     }
 
     // Build knowledge base context
@@ -122,7 +120,6 @@ async function handlePOST(req: NextRequest) {
       
       if (activeCustomObjective && activeCustomObjective.objectives.length > 0) {
         // Use custom objectives with detailed prompts
-        console.log(`Using custom objectives for demo ${demoId}: ${activeCustomObjective.name}`);
         objectivesSection = `\n\n## DEMO OBJECTIVES (${activeCustomObjective.name})\n`;
         objectivesSection += `${activeCustomObjective.description ? activeCustomObjective.description + '\n\n' : ''}`;
         objectivesSection += 'Follow these structured objectives throughout the conversation:\n\n';
@@ -143,14 +140,12 @@ async function handlePOST(req: NextRequest) {
           : [];
         
         if (objectivesList.length > 0) {
-          console.log(`Using simple objectives from demo metadata for demo ${demoId}`);
           objectivesSection = `\n\n## DEMO OBJECTIVES\nFollow these objectives throughout the conversation. Weave them naturally into dialog and video choices.\n${objectivesList
             .map((o, i) => `- (${i + 1}) ${o.trim()}`)
             .join('\n')}\n`;
         }
       }
     } catch (error) {
-      console.error('Error loading custom objectives, falling back to demo metadata:', error);
       // Fall back to demo metadata objectives
       const objectivesList: string[] = Array.isArray(demo.metadata?.objectives)
         ? (demo.metadata!.objectives as string[]).filter((s) => typeof s === 'string' && s.trim()).slice(0, 5)
@@ -168,18 +163,11 @@ async function handlePOST(req: NextRequest) {
 
     const enhancedSystemPrompt = baseSystemPrompt + identitySection + objectivesSection + languageSection + knowledgeContext + videosContext;
 
-    console.log('Enhanced system prompt length:', enhancedSystemPrompt.length);
-    console.log('Knowledge chunks:', knowledgeChunks?.length || 0);
-    console.log('Available videos:', demoVideos?.length || 0);
-    console.log('🧠 Perception analysis: raven-0 enabled by default');
     
     // Log guardrails section for verification
     const guardrailsSection = enhancedSystemPrompt.match(/## GUARDRAILS \(Critical\)([\s\S]*?)(?=##|$)/);
     if (guardrailsSection) {
-      console.log('✅ Guardrails section found in system prompt');
-      console.log('Guardrails length:', guardrailsSection[0].length);
     } else {
-      console.warn('⚠️  Guardrails section NOT found in system prompt');
     }
 
     const allowedTitles = (demoVideos || []).map(v => v.title).filter(Boolean);
@@ -190,14 +178,8 @@ async function handlePOST(req: NextRequest) {
     const hasCustomObjectives = !!activeCustomObjective;
     const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true' || hasCustomObjectives;
     
-    console.log('🔧 Tool enablement debug:');
-    console.log(`   TAVUS_TOOLS_ENABLED: ${process.env.TAVUS_TOOLS_ENABLED}`);
-    console.log(`   activeCustomObjective: ${!!activeCustomObjective}`);
-    console.log(`   hasCustomObjectives: ${hasCustomObjectives}`);
-    console.log(`   tavusToolsEnabled: ${tavusToolsEnabled}`);
     
     if (hasCustomObjectives && process.env.TAVUS_TOOLS_ENABLED !== 'true') {
-      console.log('🔧 Force-enabling tools for custom objectives (overriding TAVUS_TOOLS_ENABLED)');
     }
     let tools: any[] = [];
     if (tavusToolsEnabled) {
@@ -297,12 +279,10 @@ async function handlePOST(req: NextRequest) {
     }
     // Debug: log tool enablement and included tool names
     try {
-      console.log('Tavus tools enabled:', tavusToolsEnabled, 'Tool names:', tools.map((t: any) => t?.function?.name).filter(Boolean));
     } catch {}
 
     // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
     const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
-    console.log('Using Tavus LLM model:', tavusLlmModel);
     
     /* Disabled tools - causing validation error:
     const tools = [

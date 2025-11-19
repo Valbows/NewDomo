@@ -40,7 +40,6 @@ export function ObjectivesBuilder({ onObjectivesCreated }: ObjectivesBuilderProp
       const result = await manager.createObjectives(template);
       onObjectivesCreated(result.uuid!);
     } catch (error) {
-      console.error('Failed to create objectives:', error);
     } finally {
       setIsCreating(false);
     }
@@ -60,7 +59,6 @@ export function ObjectivesBuilder({ onObjectivesCreated }: ObjectivesBuilderProp
       const result = await manager.createObjectives(template);
       onObjectivesCreated(result.uuid!);
     } catch (error) {
-      console.error('Failed to create custom objectives:', error);
     } finally {
       setIsCreating(false);
     }

@@ -17,7 +17,6 @@ export async function getObjectivesForDemo(demoId: string): Promise<string | nul
     const activeCustomObjective = await getActiveCustomObjective(demoId);
     
     if (activeCustomObjective && activeCustomObjective.tavus_objectives_id) {
-      console.log(`Using custom objectives for demo ${demoId}: ${activeCustomObjective.name}`);
       return activeCustomObjective.tavus_objectives_id;
     }
 
@@ -29,14 +28,11 @@ export async function getObjectivesForDemo(demoId: string): Promise<string | nul
       const defaultObjectives = await objectivesManager.ensureObjectives(
         OBJECTIVES_TEMPLATES.PRODUCT_DEMO
       );
-      console.log(`Using default product demo objectives for demo ${demoId}`);
       return defaultObjectives;
     } catch (error) {
-      console.error('Failed to get default objectives:', error);
       return null;
     }
   } catch (error) {
-    console.error('Error getting objectives for demo:', error);
     return null;
   }
 }
@@ -84,7 +80,6 @@ export async function syncCustomObjectiveWithTavus(customObjectiveId: string): P
 
     return tavusObjectivesId;
   } catch (error) {
-    console.error('Error syncing custom objective with Tavus:', error);
     return null;
   }
 }
@@ -141,7 +136,6 @@ export async function getDemoObjectivesStatus(demoId: string) {
       isOverridingDefaults: !!(activeCustomObjective && activeCustomObjective.tavus_objectives_id),
     };
   } catch (error) {
-    console.error('Error getting demo objectives status:', error);
     return {
       hasCustomObjectives: false,
       activeObjective: null,
@@ -186,10 +180,8 @@ export async function validateObjectivesOverride(demoId: string) {
       }
     };
 
-    console.log('🔍 Objectives Override Validation:', result);
     return result;
   } catch (error) {
-    console.error('Error validating objectives override:', error);
     return {
       demoId,
       timestamp: new Date().toISOString(),

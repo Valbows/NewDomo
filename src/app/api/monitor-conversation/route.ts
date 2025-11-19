@@ -32,12 +32,10 @@ async function handlePOST(req: NextRequest) {
     }
 
     const conversationData = await conversationResponse.json();
-    console.log('Conversation status:', conversationData.status);
 
     // Just verify conversation is active - don't auto-trigger videos
     // The webhook handler will handle actual video requests
     if (conversationData.status === 'active') {
-      console.log('Conversation is active and ready for tool calls');
       
       return NextResponse.json({ 
         success: true, 

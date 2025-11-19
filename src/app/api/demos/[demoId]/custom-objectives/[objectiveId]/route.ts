@@ -31,7 +31,6 @@ export async function GET(
 
     return NextResponse.json({ objective });
   } catch (error) {
-    console.error('Error fetching custom objective:', error);
     return NextResponse.json(
       { error: 'Failed to fetch custom objective' },
       { status: 500 }
@@ -73,7 +72,6 @@ export async function PUT(
           }
         );
       } catch (tavusError) {
-        console.error('Failed to update objectives in Tavus:', tavusError);
         // Continue with local update even if Tavus fails
       }
     }
@@ -93,7 +91,6 @@ export async function PUT(
 
     return NextResponse.json({ objective: updatedObjective });
   } catch (error) {
-    console.error('Error updating custom objective:', error);
     return NextResponse.json(
       { error: 'Failed to update custom objective' },
       { status: 500 }
@@ -125,7 +122,6 @@ export async function DELETE(
         const objectivesManager = createObjectivesManager();
         await objectivesManager.deleteObjectives(objective.tavus_objectives_id);
       } catch (tavusError) {
-        console.error('Failed to delete objectives from Tavus:', tavusError);
         // Continue with local deletion even if Tavus fails
       }
     }
@@ -135,7 +131,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting custom objective:', error);
     return NextResponse.json(
       { error: 'Failed to delete custom objective' },
       { status: 500 }

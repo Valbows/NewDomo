@@ -78,7 +78,6 @@ export function useConversationData({
 
       setConversationDetails(sortedData);
     } catch (err) {
-      console.error("Failed to fetch conversation details:", err);
       setError("Failed to load conversation details");
     } finally {
       setLoading(false);
@@ -103,7 +102,6 @@ export function useConversationData({
 
       setContactInfo(contactMap);
     } catch (err) {
-      console.error("Failed to fetch contact information:", err);
     }
   }, []);
 
@@ -125,7 +123,6 @@ export function useConversationData({
 
       setProductInterestData(interestMap);
     } catch (err) {
-      console.error("Failed to fetch product interest data:", err);
     }
   }, []);
 
@@ -147,7 +144,6 @@ export function useConversationData({
 
       setVideoShowcaseData(showcaseMap);
     } catch (err) {
-      console.error("Failed to fetch video showcase data:", err);
     }
   }, []);
 
@@ -169,7 +165,6 @@ export function useConversationData({
 
       setCtaTrackingData(ctaMap);
     } catch (err) {
-      console.error("Failed to fetch CTA tracking data:", err);
     }
   }, []);
 

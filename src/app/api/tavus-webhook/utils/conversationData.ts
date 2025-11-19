@@ -15,7 +15,6 @@ export async function storeDetailedConversationData(
       .single();
 
     if (demoError || !demo) {
-      console.warn(`No demo found for conversation ${conversationId}`);
       return;
     }
 
@@ -55,13 +54,9 @@ export async function storeDetailedConversationData(
 
     // Only update if we have transcript or perception data
     if (!transcript && !perceptionAnalysis) {
-      console.log('No transcript or perception data in webhook event');
       return;
     }
 
-    console.log(`📊 Storing detailed conversation data for ${conversationId}:`);
-    console.log(`- Transcript entries: ${transcript ? (Array.isArray(transcript) ? transcript.length : 'present') : 'none'}`);
-    console.log(`- Perception data: ${perceptionAnalysis ? 'present' : 'none'}`);
 
     // Upsert the conversation details
     const { error: upsertError } = await supabase
@@ -78,12 +73,9 @@ export async function storeDetailedConversationData(
       });
 
     if (upsertError) {
-      console.error('Failed to store detailed conversation data:', upsertError);
     } else {
-      console.log('✅ Successfully stored detailed conversation data');
     }
 
   } catch (error) {
-    console.error('Error storing detailed conversation data:', error);
   }
 }

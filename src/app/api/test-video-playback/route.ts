@@ -13,7 +13,6 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing demoId or videoTitle' }, { status: 400 });
     }
 
-    console.log(`Testing video playback for demo ${demoId}, video: ${videoTitle}`);
 
     // Find the video in the demo
     const { data: video, error: videoError } = await supabase
@@ -31,7 +30,6 @@ async function handlePOST(req: NextRequest) {
         .from('demo_videos')
         .select('title')
         .eq('demo_id', demoId);
-      console.log('Available videos in demo:', availableVideos?.map(v => v.title));
       
       return NextResponse.json({ 
         error: 'Video not found',
@@ -39,7 +37,6 @@ async function handlePOST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    console.log(`Found video storage path: ${video.storage_url}`);
 
     // Generate a signed URL for the video
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -51,7 +48,6 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: 'Could not generate video URL.' }, { status: 500 });
     }
 
-    console.log(`Generated signed URL: ${signedUrlData.signedUrl}`);
 
     // Broadcast the signed video URL to the frontend via Supabase Realtime
     const channel = supabase.channel(`demo-${demoId}`);
@@ -61,7 +57,6 @@ async function handlePOST(req: NextRequest) {
       payload: { url: signedUrlData.signedUrl },
     });
 
-    console.log(`Broadcasted play_video event for demo ${demoId}`);
 
     return NextResponse.json({ 
       success: true, 

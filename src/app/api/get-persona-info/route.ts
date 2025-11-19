@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
           tavusPersona = await response.json();
         }
       } catch (error) {
-        console.log('Could not fetch Tavus persona info');
       }
     }
 
@@ -86,7 +85,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error getting persona info:', error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

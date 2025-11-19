@@ -49,13 +49,11 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
     alert,
   } = params;
 
-  console.log('Real-time tool call received:', toolName, args);
 
   if (toolName === 'fetch_video') {
     // Quiescence window: ignore fetch shortly after a close to prevent immediate reopen
     if (Date.now() < suppressFetchUntilRef.current) {
       const reason = suppressReasonRef.current || 'suppression window';
-      console.warn(`🛑 Suppressing fetch_video due to recent ${reason}`);
       return;
     }
 
@@ -69,11 +67,9 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
           playingVideoUrl &&
           normalizedTitle.toLowerCase() === currentVideoTitle.toLowerCase()
         ) {
-          console.log('♻️ fetch_video for current title detected; resuming without reload');
           // Seek back to paused position if we have one, then play
           const t = pausedPositionRef.current || 0;
           if (t > 0) {
-            console.log(`⏩ Resuming same video at ${t.toFixed(2)}s (fetch_video short-circuit)`);
           }
           if (t > 0 && videoPlayerRef.current?.seekTo) {
             videoPlayerRef.current.seekTo(t);
@@ -83,7 +79,6 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
         }
       }
     } catch (e) {
-      console.warn('fetch_video same-title resume check failed:', e);
     }
 
     await playVideoByTitle({
@@ -110,7 +105,6 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
       try {
         const t = videoPlayerRef.current?.getCurrentTime?.() ?? 0;
         pausedPositionRef.current = t;
-        console.log(`⏸️ Saved paused position at ${t.toFixed(2)}s`);
       } catch {}
       videoPlayerRef.current?.pause();
       // Prevent immediate re-fetch/play attempts triggered by the agent
@@ -126,7 +120,6 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
       try {
         const t = pausedPositionRef.current || 0;
         if (t > 0) {
-          console.log(`▶️ Resuming video at ${t.toFixed(2)}s`);
         }
         if (t > 0 && videoPlayerRef.current?.seekTo) {
           videoPlayerRef.current.seekTo(t);
@@ -155,19 +148,16 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
   if (toolName === 'next_video') {
     // Only advance to next video if a video is currently playing
     if (!currentVideoTitle) {
-      console.warn('⚠️  next_video called but no video is currently playing - ignoring');
       return;
     }
 
     if (Array.isArray(videoTitles) && videoTitles.length > 0) {
       const idx = videoTitles.indexOf(currentVideoTitle);
       if (idx === -1) {
-        console.warn('⚠️  Current video not found in videoTitles - cannot advance');
         return;
       }
       const nextIdx = (idx + 1) % videoTitles.length;
       const nextTitle = videoTitles[nextIdx];
-      console.log(`⏭️  Advancing from "${currentVideoTitle}" to "${nextTitle}"`);
       await playVideoByTitle({
         videoTitle: nextTitle,
         isE2E,
@@ -184,7 +174,6 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
         alert,
       });
     } else {
-      console.warn('next_video called but no videoTitles available');
     }
     return;
   }

@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`🧪 Testing objectives override for demo: ${demoId}`);
 
     // Run the validation
     const validation = await validateObjectivesOverride(demoId);
@@ -41,12 +40,10 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    console.log('🧪 Test Results:', response.summary);
 
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('❌ Error testing objectives override:', error);
     
     return NextResponse.json(
       {

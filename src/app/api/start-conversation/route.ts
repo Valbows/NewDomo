@@ -70,19 +70,15 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
               conversation_url: existingUrl,
             });
           } else {
-            console.warn('Existing Daily URL appears stale or missing. Creating a new conversation:', existingUrl);
           }
         }
       } catch (e) {
-        console.warn('Failed to parse demo metadata while checking for existing conversation URL:', e);
       }
     } else {
-      console.log('forceNew=true: will create a new conversation even if an existing URL is present.');
     }
 
     // If another request is already starting a conversation for this demo, wait and then reuse the result
     if (!forceNew && startLocks.has(demoId)) {
-      console.log('Conversation start already in progress for demo', demoId, '— waiting');
       try {
         await startLocks.get(demoId);
       } catch (_) {
@@ -126,19 +122,14 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           const persona = await personaResp.json();
           finalReplicaId = (persona?.default_replica_id || '').trim();
           if (finalReplicaId) {
-            console.log('Using persona default_replica_id for conversation:', finalReplicaId);
           } else {
-            console.warn('Persona has no default_replica_id; a replica_id must be provided via TAVUS_REPLICA_ID.');
           }
         } else {
           const t = await personaResp.text();
-          console.warn('Failed to fetch persona for default_replica_id; status:', personaResp.status, t);
         }
       } catch (e) {
-        console.warn('Error fetching persona default_replica_id:', e);
       }
     } else {
-      console.log('Using replica_id from env for conversation:', finalReplicaId);
     }
 
     // Per Tavus docs, conversations accept callback_url for webhooks
@@ -151,12 +142,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // 1. If persona was created with custom objectives, those are already baked in
     // 2. If persona uses default objectives, those are also baked in
     // 3. Tavus personas have their objectives set at creation time
-    console.log('\n🎭 CONVERSATION PERSONA SELECTION');
-    console.log('='.repeat(40));
-    console.log(`Demo ID: ${demoId}`);
-    console.log(`Persona ID from DB: ${demo.tavus_persona_id}`);
-    console.log(`Using persona with its configured objectives (no override)`);
-    console.log('='.repeat(40));
 
     const conversationPayload: any = {
       persona_id: demo.tavus_persona_id,
@@ -225,7 +210,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
 
       const conversationData = await conversationResponse.json();
       
-      console.log('Conversation data received:', conversationData);
 
       // Get current demo metadata
       const { data: currentDemo, error: fetchError } = await supabase
@@ -263,7 +247,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // Execute under in-memory lock
     let result: any;
     if (startLocks.has(demoId)) {
-      console.log('Conversation start already in progress for demo', demoId, '— waiting');
       try {
         await startLocks.get(demoId);
       } catch (_) {}

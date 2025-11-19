@@ -117,7 +117,6 @@ async function handlePOST(req: NextRequest) {
       }
     } catch (embeddingErr) {
       // Fall back: insert without vectors if embedding step fails
-      console.error('Embedding generation failed; inserting without vectors:', embeddingErr);
       if (rowsBase.length > 0) {
         await supabase.from('knowledge_chunks').insert(rowsBase);
       }

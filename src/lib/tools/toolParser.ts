@@ -379,9 +379,7 @@ export function parseToolCallFromEvent(event: any): ToolParseResult {
       try {
         // Helps surface why voice parsing didn't trigger in dev
         if (process.env.NODE_ENV !== "production") {
-          console.warn(
-            "[toolParser] Text fallback disabled. Set NEXT_PUBLIC_TAVUS_TOOLCALL_TEXT_FALLBACK=true (or NEXT_PUBLIC_E2E_TEST_MODE=true) to parse tool calls from assistant speech."
-          );
+          // Text fallback disabled
         }
       } catch {}
       return { toolName, toolArgs };

@@ -33,13 +33,11 @@ function DemosPage() {
           .order('created_at', { ascending: false });
 
         if (demosError) {
-          console.error('Error fetching demos:', demosError);
           setError('Error loading demos. Please try again.');
         } else {
           setDemos(demosData || []);
         }
       } catch (err) {
-        console.error('Error:', err);
         setError('Error loading demos. Please try again.');
       } finally {
         setLoading(false);

@@ -23,7 +23,6 @@ export default function GlobalError({
     // This will be picked up by Sentry via the ErrorBoundary as well
     // but we keep it here as a fallback
     // eslint-disable-next-line no-console
-    console.error('GlobalError captured:', error);
   }, [error]);
 
   // Fallback component if Sentry is not available

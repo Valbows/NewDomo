@@ -45,7 +45,6 @@ export async function POST(
 
     return NextResponse.json({ success: true, message: 'Objective activated successfully' });
   } catch (error) {
-    console.error('Error activating custom objective:', error);
     return NextResponse.json(
       { error: 'Failed to activate custom objective' },
       { status: 500 }

@@ -63,8 +63,6 @@ async function handleGET(req: NextRequest) {
     // Send this event to your webhook handler
     const webhookUrl = `${url.origin}/api/tavus-webhook?t=${process.env.TAVUS_WEBHOOK_TOKEN || 'your_webhook_token'}`;
     
-    console.log(`🧪 Sending test completion event to webhook: ${webhookUrl}`);
-    console.log(`📊 Mock event data:`, JSON.stringify(mockEvent, null, 2));
     
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -97,7 +95,6 @@ async function handleGET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Test completion error:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });

@@ -67,7 +67,6 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
   }
 
   const persona = await response.json();
-  console.log(`✅ Created persona ${persona.persona_id} with guardrails ${guardrailsId}`);
   
   return persona;
 }
@@ -110,7 +109,6 @@ export async function addGuardrailsToPersona(personaId: string, guardrailsId?: s
   }
 
   const persona = await response.json();
-  console.log(`✅ Added guardrails ${guardrailsId} to persona ${personaId}`);
   
   return persona;
 }

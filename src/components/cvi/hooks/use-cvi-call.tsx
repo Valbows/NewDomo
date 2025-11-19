@@ -16,17 +16,14 @@ export const useCVICall = (): {
 		({ url }: { url: string }) => {
 			if (!daily) return;
 			if (!isDailyRoomUrl(url)) {
-				console.warn(' CVI join aborted: not a Daily room URL', { url });
 				return;
 			}
 			const d: any = daily as any;
 			// Skip if we are already joining the same URL or already joined that URL
 			if (d.__CVI_JOINING__) {
-				console.log(' CVI join skipped: already joining');
 				return;
 			}
 			if (d.__CVI_JOIN_URL__ === url && (d.__CVI_JOINED__ === true)) {
-				console.log(' CVI join skipped: already joined this URL');
 				return;
 			}
 			// Mark as joining and record target url
@@ -46,11 +43,9 @@ export const useCVICall = (): {
 					},
 				})
 				.then(() => {
-					console.log(' CVI joined call');
 					d.__CVI_JOINED__ = true;
 				})
 				.catch((e: unknown) => {
-					console.warn(' CVI join error', e);
 					// Reset join url on failure to allow retry
 					d.__CVI_JOIN_URL__ = undefined;
 				})
@@ -65,7 +60,6 @@ export const useCVICall = (): {
 		if (!daily) return;
 		const d: any = daily as any;
 		if (d.__CVI_JOINED__ !== true && !d.__CVI_JOINING__) {
-			console.log(' CVI leave skipped: not joined');
 			return;
 		}
 		// Clear flags before leaving

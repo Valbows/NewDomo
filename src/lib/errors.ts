@@ -32,9 +32,7 @@ export function normalizeError(error: unknown): Error {
 export function logError(error: unknown, context?: string) {
   const message = getErrorMessage(error);
   if (context) {
-    console.error(`${context}: ${message}`, error);
   } else {
-    console.error(message, error);
   }
 
   // Forward to Sentry in production only. This is safe even if Sentry isn't initialized.

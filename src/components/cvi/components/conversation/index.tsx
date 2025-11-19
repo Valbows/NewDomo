@@ -108,7 +108,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	// Debug meeting state
 	useEffect(() => {
-		if (debugDaily) console.log('🎯 CVI Meeting State:', meetingState);
 		try {
 			Sentry.addBreadcrumb({
 				category: 'daily',
@@ -122,11 +121,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	// Granular Daily event logging for diagnosis
 	useDailyEvent('joined-meeting', (ev) => {
 		if (debugDaily) {
-			console.info('✅ Daily joined-meeting', {
-				localSessionId: localId,
-				event: ev,
-				url: conversationUrl,
-			});
 		}
 		try {
 			Sentry.addBreadcrumb({
@@ -139,7 +133,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	});
 
 	useDailyEvent('left-meeting', (ev) => {
-		if (debugDaily) console.info('👋 Daily left-meeting', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'left-meeting' });
 		} catch {}
@@ -147,11 +140,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	useDailyEvent('participant-joined', (ev) => {
 		if (debugDaily) {
-			console.log('👤 participant-joined', {
-				id: ev?.participant?.session_id,
-				name: ev?.participant?.user_name,
-				user_id: ev?.participant?.user_id,
-			});
 		}
 		try {
 			Sentry.addBreadcrumb({
@@ -165,11 +153,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	useDailyEvent('participant-left', (ev) => {
 		if (debugDaily) {
-			console.log('🚪 participant-left', {
-				id: ev?.participant?.session_id,
-				name: ev?.participant?.user_name,
-				user_id: ev?.participant?.user_id,
-			});
 		}
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'participant-left', data: { id: ev?.participant?.session_id } });
@@ -177,28 +160,24 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	});
 
 	useDailyEvent('camera-error', (ev) => {
-		if (debugDaily) console.error('📷 camera-error', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'error', message: 'camera-error' });
 		} catch {}
 	});
 
 	useDailyEvent('error', (ev) => {
-		if (debugDaily) console.error('🛑 daily error event', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'error', message: 'daily-error-event' });
 		} catch {}
 	});
 
 	useDailyEvent('active-speaker-change', (ev) => {
-		if (debugDaily) console.log('🗣️ active-speaker-change', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'debug', message: 'active-speaker-change' });
 		} catch {}
 	});
 
 	useDailyEvent('network-quality-change', (ev) => {
-		if (debugDaily) console.log('📶 network-quality-change', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'debug', message: 'network-quality-change' });
 		} catch {}
@@ -206,17 +185,14 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	useDailyEvent('app-message', (ev) => {
 		try {
-			if (debugDaily) console.log('💬 app-message', typeof ev?.data === 'string' ? ev?.data : ev);
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'app-message' });
 		} catch (e) {
-			if (debugDaily) console.log('💬 app-message (unserializable)');
 		}
 	});
 
 	// Log mic access issues detected via devices hook (covers versions where 'mic-error' typed event may be missing)
 	useEffect(() => {
 		if (hasMicError) {
-			if (debugDaily) console.error('🎙️ Microphone error detected via devices hook (hasMicError=true)');
 			try {
 				Sentry.addBreadcrumb({ category: 'daily', level: 'error', message: 'mic-error-detected' });
 			} catch {}
@@ -225,7 +201,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	useEffect(() => {
 		if (meetingState === 'error') {
-			if (debugDaily) console.warn('Daily meeting entered error state; not leaving automatically. Showing retry UI.');
 			try {
 				Sentry.addBreadcrumb({ category: 'daily', level: 'warning', message: 'meeting-state-error' });
 			} catch {}
@@ -236,10 +211,8 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	useEffect(() => {
 		if (!conversationUrl) return;
 		if (isE2E || conversationUrl === 'about:blank') {
-			if (debugDaily) console.log('🧪 E2E mode: Skipping Daily join');
 			return;
 		}
-		if (debugDaily) console.log('🎥 CVI: Joining call with URL:', conversationUrl);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'join-call', data: { url: conversationUrl } });
 		} catch {}
@@ -261,7 +234,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	const retryJoin = useCallback(() => {
 		if (isE2E || conversationUrl === 'about:blank') return;
 		try {
-			if (debugDaily) console.log('🔁 Retrying join');
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'retry-join' });
 		} catch {}
 		try {

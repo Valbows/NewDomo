@@ -42,7 +42,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
 
   // Normalize incoming title (trim and remove a single leading/trailing quote)
   const normalizedTitle = videoTitle.trim().replace(/^["']|["']$/g, '');
-  console.log('Processing real-time video request:', normalizedTitle);
 
   // Ensure CTA banner is hidden while a video is starting and clear prior alerts
   setShowCTA(false);
@@ -75,11 +74,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
     // Guard: ensure we have a demo id available for queries even if state hasn't settled yet
     const demoKey = demo?.id ?? demoId;
     if (!demoKey) {
-      console.warn('⚠️ Demo id unavailable at tool call time; delaying fetch_video', {
-        demo,
-        demoId,
-        title: normalizedTitle,
-      });
       setAlert({ type: 'info', message: 'Preparing demo… please try again in a moment.' });
       return;
     }
@@ -96,7 +90,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
     if (!videoExactError && videoExact) {
       storagePath = videoExact.storage_url as string;
     } else {
-      console.warn('Exact title match not found, attempting case-insensitive lookup for:', normalizedTitle);
       // Fallback: case-insensitive exact match (no wildcards)
       const { data: videosILike, error: ilikeError } = await supabase
         .from('demo_videos')
@@ -118,7 +111,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
 
     // If storagePath is already a full URL, don't try to sign it
     if (/^https?:\/\//i.test(storagePath)) {
-      console.log('Using direct video URL (no signing needed):', storagePath);
       // New video source: reset any saved paused position
       pausedPositionRef.current = 0;
       setPlayingVideoUrl(storagePath);
@@ -141,7 +133,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
       return;
     }
 
-    console.log('Signed URL created:', signedUrlData.signedUrl);
     // New video source: reset any saved paused position
     pausedPositionRef.current = 0;
     setPlayingVideoUrl(signedUrlData.signedUrl);
@@ -163,7 +154,6 @@ export function handleVideoEnd(
   setUiState: (state: UIState) => void,
   setShowCTA: (show: boolean) => void
 ) {
-  console.log('Video ended, returning agent to full screen and showing CTA');
   pausedPositionRef.current = 0;
   setPlayingVideoUrl(null);
   setUiState(UIState.CONVERSATION);
@@ -178,7 +168,6 @@ export function handleVideoClose(
   suppressFetchUntilRef: React.MutableRefObject<number>,
   suppressReasonRef: React.MutableRefObject<'close' | 'pause' | 'resume' | null>
 ) {
-  console.log('❎ Video closed by user; clearing paused position and returning to conversation');
   pausedPositionRef.current = 0;
   setPlayingVideoUrl(null);
   setUiState(UIState.CONVERSATION);
@@ -189,6 +178,5 @@ export function handleVideoClose(
   suppressReasonRef.current = 'close';
   // Small delay to ensure smooth transition
   setTimeout(() => {
-    console.log('Video closed, agent returned to full screen');
   }, 300);
 }

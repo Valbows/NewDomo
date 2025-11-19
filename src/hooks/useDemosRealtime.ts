@@ -45,7 +45,6 @@ export function useDemosRealtime(
       if (error) throw error;
       setDemos((data as unknown as Demo[]) || []);
     } catch (err: any) {
-      console.warn('useDemosRealtime: failed to load demos:', err?.message || err);
       setError('Failed to load demos.');
     } finally {
       setLoading(false);

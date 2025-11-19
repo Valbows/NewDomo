@@ -19,7 +19,6 @@ export async function checkAndRecordIdempotency(
       .single();
 
     if (existing?.event_id) {
-      console.log('Idempotency: duplicate tool-call event detected, skipping processing:', eventId);
       return true; // Is duplicate
     }
 
@@ -30,7 +29,6 @@ export async function checkAndRecordIdempotency(
     return false; // Not a duplicate
   } catch (idemErr) {
     // Do not fail the webhook if idempotency table is missing or other non-critical errors occur
-    console.warn('Idempotency check/insert failed (non-fatal):', idemErr);
     return false; // Assume not duplicate on error
   }
 }

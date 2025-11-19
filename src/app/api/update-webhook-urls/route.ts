@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { newWebhookUrl } = body;
     
-    console.log('🔄 Updating webhook URLs for all objectives...');
     
     await updateWebhookUrlsForAllObjectives(newWebhookUrl);
     
@@ -42,7 +41,6 @@ export async function POST(request: NextRequest) {
       status
     });
   } catch (error) {
-    console.error('❌ Error updating webhook URLs:', error);
     
     return NextResponse.json({
       success: false,

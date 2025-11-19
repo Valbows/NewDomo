@@ -26,7 +26,6 @@ export async function GET(
     const objectives = await getCustomObjectives(params.demoId);
     return NextResponse.json({ objectives });
   } catch (error) {
-    console.error('Error fetching custom objectives:', error);
     return NextResponse.json(
       { error: 'Failed to fetch custom objectives' },
       { status: 500 }
@@ -92,18 +91,15 @@ export async function POST(
         .eq('id', customObjective.id);
 
       if (updateError) {
-        console.error('Failed to update Tavus objectives ID:', updateError);
       }
 
       customObjective.tavus_objectives_id = tavusResult.uuid;
     } catch (tavusError) {
-      console.error('Failed to create objectives in Tavus:', tavusError);
       // Continue without Tavus integration - user can retry later
     }
 
     return NextResponse.json({ objective: customObjective });
   } catch (error) {
-    console.error('Error creating custom objective:', error);
     return NextResponse.json(
       { error: 'Failed to create custom objective' },
       { status: 500 }

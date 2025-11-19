@@ -18,7 +18,6 @@ async function handlePOST(req: NextRequest) {
   );
 
   try {
-    console.log('Creating test demo with videos...');
 
     // Create a test demo
     const testDemoId = '12345678-1234-1234-1234-123456789012';
@@ -32,7 +31,6 @@ async function handlePOST(req: NextRequest) {
       .single();
 
     if (existingDemo) {
-      console.log('Test demo already exists, ensuring videos exist');
 
       // Check if videos already exist for this demo
       const { data: existingVideos, error: existingVideosError } = await supabase
@@ -49,7 +47,6 @@ async function handlePOST(req: NextRequest) {
       }
 
       if (!existingVideos || existingVideos.length === 0) {
-        console.log('No videos found for existing demo. Inserting default test videos...');
         const testVideosWhenDemoExists = [
           { demo_id: testDemoId, title: 'First Video',  storage_url: 'test-videos/first-video.mp4',  order_index: 1, duration_seconds: 120 },
           { demo_id: testDemoId, title: 'Second Video', storage_url: 'test-videos/second-video.mp4', order_index: 2, duration_seconds: 180 },
@@ -108,7 +105,6 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: getErrorMessage(demoError, 'Failed to create demo') }, { status: 500 });
     }
 
-    console.log('Demo created:', demo);
 
     // Create test videos
     const testVideos = [
@@ -152,7 +148,6 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: getErrorMessage(videosError, 'Failed to create videos') }, { status: 500 });
     }
 
-    console.log('Videos created:', videos);
 
     return NextResponse.json({ 
       success: true, 

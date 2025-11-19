@@ -6,7 +6,6 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
     const serviceKey = process.env.SUPABASE_SECRET_KEY as string;
     if (!supabaseUrl || !serviceKey) {
-      console.error('Supabase service credentials missing');
       return NextResponse.json(
         { error: 'Server not configured' },
         { status: 500 }
@@ -50,7 +49,6 @@ export async function POST(request: NextRequest) {
         .eq('id', existing.id);
 
       if (updateErr) {
-        console.error('Failed to update CTA click:', updateErr);
         return NextResponse.json(
           { error: 'Failed to track CTA click' },
           { status: 500 }
@@ -70,7 +68,6 @@ export async function POST(request: NextRequest) {
         });
 
       if (insertErr) {
-        console.error('Failed to insert CTA click:', insertErr);
         return NextResponse.json(
           { error: 'Failed to track CTA click' },
           { status: 500 }
@@ -78,11 +75,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Tracked CTA click for conversation ${conversation_id}, demo ${demo_id}`);
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Error in track-cta-click API:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

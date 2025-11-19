@@ -31,7 +31,6 @@ export async function GET() {
 
 export async function POST() {
   try {
-    console.log('🔍 Checking for ngrok URL changes...');
     
     const updated = await autoUpdateWebhookUrls();
     const { currentUrl, envUrl } = await checkNgrokUrlChanged();
@@ -46,7 +45,6 @@ export async function POST() {
         : 'No ngrok URL changes detected'
     });
   } catch (error) {
-    console.error('❌ Error in auto-update:', error);
     
     return NextResponse.json({
       success: false,

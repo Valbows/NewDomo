@@ -10,9 +10,6 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const demoId = url.searchParams.get('demoId') || 'bbd9ffac-f4b7-4df3-9b8a-a01748c9a44b';
 
-    console.log('🔍 CHECKING CURRENT PERSONA ID');
-    console.log('='.repeat(50));
-    console.log(`Demo ID: ${demoId}`);
 
     const supabase = createClient();
 
@@ -30,12 +27,9 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
-    console.log(`✅ Demo: ${demo.name}`);
-    console.log(`📋 Current Persona ID: ${demo.tavus_persona_id || 'Not set'}`);
 
     // Check environment variables
     const envPersonaId = process.env.COMPLETE_PERSONA_ID;
-    console.log(`🔧 Environment Persona ID: ${envPersonaId || 'Not set'}`);
 
     // Get persona details from Tavus if available
     let personaDetails = null;
@@ -48,14 +42,9 @@ export async function GET(request: NextRequest) {
         
         if (personaResponse.ok) {
           personaDetails = await personaResponse.json();
-          console.log(`✅ Persona Name: ${personaDetails.persona_name}`);
-          console.log(`📋 Guardrails ID: ${personaDetails.guardrails_id || 'None'}`);
-          console.log(`🎯 Objectives ID: ${personaDetails.objectives_id || 'None'}`);
         } else {
-          console.log('⚠️  Could not fetch persona details from Tavus');
         }
       } catch (error) {
-        console.log('⚠️  Error fetching persona details:', error);
       }
     }
 
@@ -90,7 +79,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error checking persona:', error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
