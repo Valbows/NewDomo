@@ -93,7 +93,7 @@ async function trackVideoShowcase(
     // Read existing record (if any)
     const { data: existingShowcase } = await supabase
       .from('video_showcase_data')
-      .select('id, requested_videos, videos_shown, objective_name')
+      .select('id, videos_shown, objective_name')
       .eq('conversation_id', conversationId)
       .single();
 
@@ -107,9 +107,7 @@ async function trackVideoShowcase(
 
     const payload = {
       conversation_id: conversationId,
-      demo_id: demoId,
       objective_name: existingShowcase?.objective_name || 'video_showcase',
-      requested_videos: (existingShowcase?.requested_videos as any) || null,
       videos_shown: updatedVideosShown,
       received_at: new Date().toISOString(),
     } as any;

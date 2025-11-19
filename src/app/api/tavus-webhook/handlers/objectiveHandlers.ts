@@ -90,32 +90,25 @@ export async function handleVideoShowcaseObjective(
   console.log('🎬 Processing video showcase data insertion...');
   try {
     // Normalize arrays
-    const req = outputVariables?.requested_videos;
     const shown = outputVariables?.videos_shown;
-    const requestedArray = Array.isArray(req) ? req : (typeof req === 'string' ? [req] : null);
     const shownArray = Array.isArray(shown) ? shown : (typeof shown === 'string' ? [shown] : null);
 
     // Read existing record (if any)
     const { data: existingShowcase } = await supabase
       .from('video_showcase_data')
-      .select('id, requested_videos, videos_shown')
+      .select('id, videos_shown')
       .eq('conversation_id', conversationId)
       .single();
 
-    const prevRequested = Array.isArray(existingShowcase?.requested_videos)
-      ? (existingShowcase!.requested_videos as string[])
-      : [];
     const prevShown = Array.isArray(existingShowcase?.videos_shown)
       ? (existingShowcase!.videos_shown as string[])
       : [];
 
-    const updatedRequested = Array.from(new Set([...(prevRequested || []), ...(requestedArray || [])].filter(Boolean)));
     const updatedShown = Array.from(new Set([...(prevShown || []), ...(shownArray || [])].filter(Boolean)));
 
     const payload = {
       conversation_id: conversationId,
       objective_name: 'demo_video_showcase',
-      requested_videos: updatedRequested.length ? updatedRequested : null,
       videos_shown: updatedShown.length ? updatedShown : null,
       event_type: event.event_type,
       raw_payload: event,
@@ -126,7 +119,6 @@ export async function handleVideoShowcaseObjective(
       const { error: updateErr } = await supabase
         .from('video_showcase_data')
         .update({
-          requested_videos: payload.requested_videos,
           videos_shown: payload.videos_shown,
           raw_payload: payload.raw_payload,
           received_at: payload.received_at,
