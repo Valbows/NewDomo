@@ -2,10 +2,13 @@ import { formatDate, formatDuration } from "@/app/demos/[demoId]/configure/compo
 
 describe("formatters", () => {
   describe("formatDate", () => {
-    it("should format valid ISO date string", () => {
+    it("should format date as 'Mon DD, YYYY' format (e.g., 'Jan 15, 2024')", () => {
       const isoDate = "2024-01-15T10:30:00Z";
       const result = formatDate(isoDate);
-      expect(result).toMatch(/Jan|1\/15|2024|10:30/i); // Flexible matching for different locales
+      // Should be in format like "Jan 15, 2024"
+      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(result).toContain("Jan");
+      expect(result).toContain("2024");
     });
 
     it("should return em dash for undefined input", () => {
@@ -24,16 +27,28 @@ describe("formatters", () => {
       expect(formatDate("invalid-date")).toBe("—");
     });
 
-    it("should handle future dates", () => {
+    it("should format future dates correctly", () => {
       const futureDate = "2099-12-31T23:59:59Z";
       const result = formatDate(futureDate);
-      expect(result).toMatch(/2099|Dec|12\/31/i);
+      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(result).toContain("Dec");
+      expect(result).toContain("2099");
     });
 
-    it("should handle past dates", () => {
+    it("should format past dates correctly", () => {
       const pastDate = "2020-03-15T14:20:00Z";
       const result = formatDate(pastDate);
-      expect(result).toMatch(/2020|Mar|3\/15/i);
+      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(result).toContain("Mar");
+      expect(result).toContain("2020");
+    });
+
+    it("should use 3-letter month abbreviation", () => {
+      // Test various months - using mid-day times to avoid timezone edge cases
+      expect(formatDate("2024-02-15T12:00:00Z")).toContain("Feb");
+      expect(formatDate("2024-06-15T12:00:00Z")).toContain("Jun");
+      expect(formatDate("2024-09-20T12:00:00Z")).toContain("Sep");
+      expect(formatDate("2024-12-25T12:00:00Z")).toContain("Dec");
     });
   });
 

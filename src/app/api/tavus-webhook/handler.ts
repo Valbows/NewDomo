@@ -135,6 +135,10 @@ async function handleObjectiveCompletion(
     data_keys: event.data ? Object.keys(event.data) : []
   }, null, 2));
 
+  // Ensure a conversation_details record exists for this conversation
+  // This is critical for the reporting page to show the conversation
+  await ensureConversationDetailsRecord(supabase, conversationId);
+
   if (objectiveName === 'product_interest_discovery') {
     await handleProductInterestDiscovery(supabase, conversationId, objectiveName, outputVariables, event);
   } else if (objectiveName === 'contact_information_collection' || objectiveName === 'greeting_and_qualification') {
@@ -144,6 +148,56 @@ async function handleObjectiveCompletion(
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function ensureConversationDetailsRecord(
+  supabase: any,
+  conversationId: string
+): Promise<void> {
+  try {
+    // Check if conversation_details record already exists
+    const { data: existingRecord } = await supabase
+      .from('conversation_details')
+      .select('id')
+      .eq('tavus_conversation_id', conversationId)
+      .single();
+
+    if (existingRecord) {
+      console.log(`✅ conversation_details record already exists for ${conversationId}`);
+      return;
+    }
+
+    // Find the demo associated with this conversation
+    const { data: demo, error: demoError } = await supabase
+      .from('demos')
+      .select('id')
+      .eq('tavus_conversation_id', conversationId)
+      .single();
+
+    if (demoError || !demo) {
+      console.warn(`⚠️ No demo found for conversation ${conversationId}, cannot create conversation_details record`);
+      return;
+    }
+
+    // Create a minimal conversation_details record
+    const { error: insertError } = await supabase
+      .from('conversation_details')
+      .insert({
+        demo_id: demo.id,
+        tavus_conversation_id: conversationId,
+        conversation_name: `Conversation ${conversationId.slice(-8)}`,
+        status: 'active',
+        started_at: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error(`❌ Failed to create conversation_details record:`, insertError);
+    } else {
+      console.log(`✅ Created conversation_details record for ${conversationId}`);
+    }
+  } catch (error) {
+    console.error(`❌ Error ensuring conversation_details record:`, error);
+  }
 }
 
 async function broadcastAnalyticsUpdate(

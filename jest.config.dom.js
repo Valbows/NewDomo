@@ -12,7 +12,7 @@ const customJestConfig = {
   moduleDirectories: ['node_modules', '<rootDir>/'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
-  testMatch: ['<rootDir>/src/__tests__/**/*.spec.tsx'],
+  testMatch: ['<rootDir>/src/__tests__/**/*.spec.tsx', '<rootDir>/__tests__/unit/**/*.spec.tsx'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

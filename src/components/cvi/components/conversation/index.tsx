@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import * as Sentry from '@sentry/nextjs';
 import {
 	DailyAudio,
@@ -106,6 +106,10 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	const localId = useLocalSessionId();
 	const debugDaily = process.env.NEXT_PUBLIC_DEBUG_DAILY === 'true';
 
+	// Guard to prevent double-calling onLeave (can happen if user clicks leave button
+	// which triggers both handleLeave and the left-meeting event)
+	const hasCalledOnLeaveRef = useRef(false);
+
 	// Debug meeting state
 	useEffect(() => {
 		if (debugDaily) console.log('🎯 CVI Meeting State:', meetingState);
@@ -143,6 +147,13 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'left-meeting' });
 		} catch {}
+		// When the meeting ends (either we left or got kicked), trigger onLeave callback
+		// This handles cases where the remote agent ends the call
+		if (!hasCalledOnLeaveRef.current) {
+			hasCalledOnLeaveRef.current = true;
+			if (debugDaily) console.info('👋 Calling onLeave from left-meeting event');
+			onLeave();
+		}
 	});
 
 	useDailyEvent('participant-joined', (ev) => {
@@ -277,7 +288,12 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'manual-leave' });
 		} catch {}
 		leaveCall();
-		onLeave();
+		// Note: onLeave will be called by the left-meeting event handler
+		// but we set the flag here in case the event doesn't fire
+		if (!hasCalledOnLeaveRef.current) {
+			hasCalledOnLeaveRef.current = true;
+			onLeave();
+		}
 	}, [leaveCall, onLeave]);
 
 	return (

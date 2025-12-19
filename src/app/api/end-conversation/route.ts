@@ -113,22 +113,82 @@ async function handlePOST(req: NextRequest) {
       if (!getResponse.ok) {
         if (getResponse.status === 404) {
           console.log('🔍 Conversation not found on Tavus, might already be ended');
-          return NextResponse.json({ 
-            success: true, 
+          // Clear stale data since conversation doesn't exist
+          if (demoId) {
+            try {
+              const { data: currentDemo } = await supabase
+                .from('demos')
+                .select('metadata')
+                .eq('id', demoId)
+                .single();
+
+              if (currentDemo) {
+                const currentMetadata = typeof currentDemo.metadata === 'string'
+                  ? JSON.parse(currentDemo.metadata)
+                  : (currentDemo.metadata || {});
+
+                const { tavusShareableLink, ...restMetadata } = currentMetadata;
+
+                await supabase
+                  .from('demos')
+                  .update({
+                    tavus_conversation_id: null,
+                    metadata: restMetadata
+                  })
+                  .eq('id', demoId);
+
+                console.log('🧹 Cleared stale conversation data (404 case)');
+              }
+            } catch (clearError) {
+              console.warn('⚠️ Failed to clear stale conversation data:', clearError);
+            }
+          }
+          return NextResponse.json({
+            success: true,
             message: 'Conversation not found (might already be ended)',
-            conversationId 
+            conversationId
           });
         }
         console.warn(`⚠️ Tavus API error: ${getResponse.status}, proceeding to attempt end anyway`);
       } else {
         const conversationData = await getResponse.json();
-        
-        // If conversation is already ended, return success
+
+        // If conversation is already ended, return success and clear stale data
         if (conversationData.status === 'ended' || conversationData.status === 'completed') {
-          return NextResponse.json({ 
-            success: true, 
+          // Clear stale data since conversation is already ended
+          if (demoId) {
+            try {
+              const { data: currentDemo } = await supabase
+                .from('demos')
+                .select('metadata')
+                .eq('id', demoId)
+                .single();
+
+              if (currentDemo) {
+                const currentMetadata = typeof currentDemo.metadata === 'string'
+                  ? JSON.parse(currentDemo.metadata)
+                  : (currentDemo.metadata || {});
+
+                const { tavusShareableLink, ...restMetadata } = currentMetadata;
+
+                await supabase
+                  .from('demos')
+                  .update({
+                    tavus_conversation_id: null,
+                    metadata: restMetadata
+                  })
+                  .eq('id', demoId);
+
+                console.log('🧹 Cleared stale conversation data (already ended case)');
+              }
+            } catch (clearError) {
+              console.warn('⚠️ Failed to clear stale conversation data:', clearError);
+            }
+          }
+          return NextResponse.json({
+            success: true,
             message: 'Conversation already ended',
-            status: conversationData.status 
+            status: conversationData.status
           });
         }
       }
@@ -169,8 +229,41 @@ async function handlePOST(req: NextRequest) {
       
       console.log(`✅ Successfully ended Tavus conversation: ${conversationId}`);
 
-      return NextResponse.json({ 
-        success: true, 
+      // Clear the stale conversation URL from the database so next visit creates a fresh conversation
+      if (demoId) {
+        try {
+          const { data: currentDemo } = await supabase
+            .from('demos')
+            .select('metadata')
+            .eq('id', demoId)
+            .single();
+
+          if (currentDemo) {
+            const currentMetadata = typeof currentDemo.metadata === 'string'
+              ? JSON.parse(currentDemo.metadata)
+              : (currentDemo.metadata || {});
+
+            // Remove the stale shareable link
+            const { tavusShareableLink, ...restMetadata } = currentMetadata;
+
+            await supabase
+              .from('demos')
+              .update({
+                tavus_conversation_id: null,
+                metadata: restMetadata
+              })
+              .eq('id', demoId);
+
+            console.log('🧹 Cleared stale conversation data from demo');
+          }
+        } catch (clearError) {
+          console.warn('⚠️ Failed to clear stale conversation data:', clearError);
+          // Don't fail the request for this
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
         message: 'Conversation ended successfully',
         conversationId,
         result: endResult

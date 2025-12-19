@@ -6,21 +6,44 @@ import { getErrorMessage, logError } from '@/lib/errors';
 // Validate that a URL points to a Daily room
 const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
 
-// Parse a Daily URL into { domain, room } or null if invalid
-function parseDailyUrl(url: string): { domain: string; room: string } | null {
-  const m = url.match(/^https?:\/\/([a-z0-9-]+)\.daily\.co\/([^\/?#]+)/i);
-  if (!m) return null;
-  return { domain: m[1], room: decodeURIComponent(m[2]) };
+// Extract conversation ID from a Daily/Tavus URL
+function extractConversationIdFromUrl(url: string): string | null {
+  const match = url.match(/tavus\.daily\.co\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : null;
 }
 
-// Check if a Daily room exists by calling gs.daily.co rooms/check endpoint
-async function dailyRoomExists(url: string): Promise<boolean> {
-  const parsed = parseDailyUrl(url);
-  if (!parsed) return false;
+// Check if a Tavus conversation is still active (not ended)
+// This is more reliable than just checking if the Daily room exists
+async function isTavusConversationActive(conversationId: string, apiKey: string): Promise<boolean> {
   try {
-    const resp = await fetch(`https://gs.daily.co/rooms/check/${parsed.domain}/${parsed.room}`);
-    return resp.ok;
-  } catch (_) {
+    const resp = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey,
+      },
+    });
+
+    if (!resp.ok) {
+      // 404 means conversation doesn't exist or was deleted
+      if (resp.status === 404) {
+        console.log(`Tavus conversation ${conversationId} not found (404)`);
+        return false;
+      }
+      console.warn(`Tavus API returned ${resp.status} when checking conversation ${conversationId}`);
+      return false;
+    }
+
+    const data = await resp.json();
+    const status = data.status;
+
+    // Active statuses that mean we can still join
+    const activeStatuses = ['active', 'starting', 'waiting'];
+    const isActive = activeStatuses.includes(status);
+
+    console.log(`Tavus conversation ${conversationId} status: ${status} (active: ${isActive})`);
+    return isActive;
+  } catch (e) {
+    console.warn(`Error checking Tavus conversation ${conversationId}:`, e);
     return false;
   }
 }
@@ -58,19 +81,42 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'This demo does not have a configured agent persona.' }, { status: 400 });
     }
 
-    // Reuse existing active conversation if a valid Daily room URL is already saved AND still exists
+    const tavusApiKey = process.env.TAVUS_API_KEY;
+    if (!tavusApiKey) {
+      return NextResponse.json({ error: 'Tavus API key is not configured.' }, { status: 500 });
+    }
+
+    // Reuse existing active conversation if a valid Daily room URL is already saved AND conversation is still active
     if (!forceNew) {
       try {
         const md = typeof (demo as any).metadata === 'string' ? JSON.parse((demo as any).metadata as string) : (demo as any).metadata;
         const existingUrl = md?.tavusShareableLink as string | undefined;
-        if (existingUrl && isDailyRoomUrl(existingUrl)) {
-          if (await dailyRoomExists(existingUrl)) {
+        const existingConvId = (demo as any).tavus_conversation_id as string | undefined;
+
+        if (existingUrl && isDailyRoomUrl(existingUrl) && existingConvId) {
+          // Check if the Tavus conversation is still active (not just if room exists)
+          if (await isTavusConversationActive(existingConvId, tavusApiKey)) {
+            console.log('Reusing existing active Tavus conversation:', existingConvId);
             return NextResponse.json({
-              conversation_id: (demo as any).tavus_conversation_id || null,
+              conversation_id: existingConvId,
               conversation_url: existingUrl,
             });
           } else {
-            console.warn('Existing Daily URL appears stale or missing. Creating a new conversation:', existingUrl);
+            console.warn('Existing Tavus conversation is ended or invalid. Creating a new conversation:', existingConvId);
+            // Clear stale data from database
+            try {
+              const { tavusShareableLink, ...restMetadata } = md || {};
+              await supabase
+                .from('demos')
+                .update({
+                  tavus_conversation_id: null,
+                  metadata: restMetadata
+                })
+                .eq('id', demoId);
+              console.log('Cleared stale conversation data from demo');
+            } catch (clearError) {
+              console.warn('Failed to clear stale conversation data:', clearError);
+            }
           }
         }
       } catch (e) {
@@ -104,11 +150,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         }
       } catch {}
       // If not found, fall through to attempt creation
-    }
-
-    const tavusApiKey = process.env.TAVUS_API_KEY;
-    if (!tavusApiKey) {
-      return NextResponse.json({ error: 'Tavus API key is not configured.' }, { status: 500 });
     }
 
     // Determine replica_id: prefer env override, else fetch persona default

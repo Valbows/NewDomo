@@ -60,20 +60,16 @@ export function useConversationData({
 
       if (error) throw error;
 
-      // Sort conversations to ensure latest are on top
+      // Sort conversations by date (most recent first)
+      // Use completed_at if available, otherwise fall back to created_at
       const sortedData = (data || []).sort((a, b) => {
-        // First try to sort by completed_at (most recent first)
-        const aCompleted = a.completed_at ? new Date(a.completed_at).getTime() : 0;
-        const bCompleted = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+        const aDate = a.completed_at || a.created_at;
+        const bDate = b.completed_at || b.created_at;
 
-        if (aCompleted !== bCompleted) {
-          return bCompleted - aCompleted; // Descending order (latest first)
-        }
+        const aTime = aDate ? new Date(aDate).getTime() : 0;
+        const bTime = bDate ? new Date(bDate).getTime() : 0;
 
-        // Fallback to created_at if completed_at is the same or null
-        const aCreated = new Date(a.created_at).getTime();
-        const bCreated = new Date(b.created_at).getTime();
-        return bCreated - aCreated; // Descending order (latest first)
+        return bTime - aTime; // Descending order (latest first)
       });
 
       setConversationDetails(sortedData);

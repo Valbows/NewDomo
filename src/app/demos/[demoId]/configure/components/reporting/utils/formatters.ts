@@ -4,7 +4,12 @@ export function formatDate(iso?: string): string {
     const date = new Date(iso);
     // Check if the date is valid
     if (isNaN(date.getTime())) return "—";
-    return date.toLocaleString();
+    // Format as "Mar 13, 2025"
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   } catch {
     return "—";
   }

@@ -55,7 +55,7 @@ export async function handleFetchVideo(
       .from('demo_videos')
       .select('title')
       .eq('demo_id', demo.id);
-    console.log('Available videos in demo:', availableVideos?.map(v => v.title));
+    console.log('Available videos in demo:', availableVideos?.map((v: { title: string }) => v.title));
 
     return NextResponse.json({ message: 'Video not found.' });
   }

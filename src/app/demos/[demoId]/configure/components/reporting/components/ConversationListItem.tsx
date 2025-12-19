@@ -117,10 +117,10 @@ export function ConversationListItem({
               {formatDuration(conversation.duration_seconds)}
             </div>
           )}
-          {conversation.completed_at && (
+          {(conversation.completed_at || conversation.created_at) && (
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
-              {formatDate(conversation.completed_at)}
+              {formatDate(conversation.completed_at || conversation.created_at)}
             </div>
           )}
           <button
