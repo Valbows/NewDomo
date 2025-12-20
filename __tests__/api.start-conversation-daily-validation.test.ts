@@ -75,11 +75,21 @@ describe('Start Conversation API - Daily Room Validation', () => {
     });
 
     let gsCheckCalled = false;
+    let tavusStatusCheckCalled = false;
     const fetchSpy = jest
       .spyOn(global, 'fetch' as any)
       .mockImplementation(async (...args: unknown[]) => {
-        const [input] = args as [RequestInfo | URL, RequestInit?];
+        const [input, options] = args as [RequestInfo | URL, RequestInit?];
         const url = typeof input === 'string' ? input : (input as URL).toString();
+
+        // Tavus conversation status check (GET request to check if conversation is active)
+        if (url === `https://tavusapi.com/v2/conversations/${validConversationId}` && (!options || options.method === 'GET')) {
+          tavusStatusCheckCalled = true;
+          return new Response(
+            JSON.stringify({ status: 'active', conversation_id: validConversationId }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          ) as any;
+        }
 
         // Daily room validation check
         if (url.startsWith('https://gs.daily.co/rooms/check/')) {
@@ -113,8 +123,11 @@ describe('Start Conversation API - Daily Room Validation', () => {
       conversation_url: validConversationUrl,
     });
 
-    // Should have validated the room
-    expect(gsCheckCalled).toBe(true);
+    // Should have checked Tavus conversation status (which is now the primary check)
+    expect(tavusStatusCheckCalled).toBe(true);
+
+    // Daily room check is skipped when Tavus reports conversation is active
+    // expect(gsCheckCalled).toBe(true); // No longer needed with Tavus status check
 
     fetchSpy.mockRestore();
   });
@@ -184,12 +197,22 @@ describe('Start Conversation API - Daily Room Validation', () => {
 
     let gsCheck404Count = 0;
     let conversationCreated = false;
+    let tavusStatusCheckCalled = false;
 
     const fetchSpy = jest
       .spyOn(global, 'fetch' as any)
       .mockImplementation(async (...args: unknown[]) => {
-        const [input] = args as [RequestInfo | URL, RequestInit?];
+        const [input, options] = args as [RequestInfo | URL, RequestInit?];
         const url = typeof input === 'string' ? input : (input as URL).toString();
+
+        // Tavus conversation status check - return "ended" for stale conversation
+        if (url === `https://tavusapi.com/v2/conversations/${staleConversationId}` && (!options || options.method === 'GET')) {
+          tavusStatusCheckCalled = true;
+          return new Response(
+            JSON.stringify({ status: 'ended', conversation_id: staleConversationId }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          ) as any;
+        }
 
         // Daily room validation check - return 404 for stale room
         if (url.startsWith('https://gs.daily.co/rooms/check/')) {
@@ -197,8 +220,8 @@ describe('Start Conversation API - Daily Room Validation', () => {
           return new Response('Not Found', { status: 404 }) as any;
         }
 
-        // Should create a new conversation
-        if (url.startsWith('https://tavusapi.com/v2/conversations')) {
+        // Should create a new conversation (POST request)
+        if (url === 'https://tavusapi.com/v2/conversations' && options?.method === 'POST') {
           conversationCreated = true;
           return new Response(
             JSON.stringify({
@@ -233,8 +256,8 @@ describe('Start Conversation API - Daily Room Validation', () => {
       conversation_url: newConversationUrl,
     });
 
-    // Should have checked stale room
-    expect(gsCheck404Count).toBeGreaterThan(0);
+    // Should have checked Tavus conversation status
+    expect(tavusStatusCheckCalled).toBe(true);
 
     // Should have created new conversation
     expect(conversationCreated).toBe(true);
