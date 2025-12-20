@@ -2,11 +2,11 @@ import { formatDate, formatDuration } from "@/app/demos/[demoId]/configure/compo
 
 describe("formatters", () => {
   describe("formatDate", () => {
-    it("should format date as 'Mon DD, YYYY' format (e.g., 'Jan 15, 2024')", () => {
+    it("should format date as 'Mon DD, YYYY H:MM AM/PM' format (e.g., 'Jan 15, 2024 10:30 AM')", () => {
       const isoDate = "2024-01-15T10:30:00Z";
       const result = formatDate(isoDate);
-      // Should be in format like "Jan 15, 2024"
-      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      // Should be in format like "Jan 15, 2024 10:30 AM" (time may vary by timezone)
+      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4} \d{1,2}:\d{2} [AP]M$/);
       expect(result).toContain("Jan");
       expect(result).toContain("2024");
     });
@@ -30,7 +30,7 @@ describe("formatters", () => {
     it("should format future dates correctly", () => {
       const futureDate = "2099-12-31T23:59:59Z";
       const result = formatDate(futureDate);
-      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4} \d{1,2}:\d{2} [AP]M$/);
       expect(result).toContain("Dec");
       expect(result).toContain("2099");
     });
@@ -38,7 +38,7 @@ describe("formatters", () => {
     it("should format past dates correctly", () => {
       const pastDate = "2020-03-15T14:20:00Z";
       const result = formatDate(pastDate);
-      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(result).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4} \d{1,2}:\d{2} [AP]M$/);
       expect(result).toContain("Mar");
       expect(result).toContain("2020");
     });
