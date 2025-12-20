@@ -4,6 +4,9 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useDaily, useMeetingState } from '@daily-co/daily-react';
 import { Conversation } from '@/components/cvi/components/conversation';
 import { parseToolCallFromEvent } from '@/lib/tools/toolParser';
+import { createClientLogger } from '@/lib/client-logger';
+
+const log = createClientLogger('TavusConversationCVI');
 
 interface TavusConversationCVIProps {
   conversationUrl: string;
@@ -31,7 +34,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
     const now = Date.now();
     const last = lastForwardRef.current;
     if (last && last.key === key && now - last.ts < 1500) {
-      console.warn('⏳ Suppressing duplicate tool call within window:', key);
+      log.warn('Suppressing duplicate tool call within window', { key });
       return false;
     }
     lastForwardRef.current = { key, ts: now };
@@ -40,37 +43,32 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
 
   // Debug Daily instance and meeting state
   useEffect(() => {
-    console.log('🔍 TavusConversationCVI Debug:');
-    console.log('  - Daily instance:', daily ? 'Available' : 'Not available');
-    console.log('  - Meeting state:', meetingState);
-    console.log('  - Conversation URL:', conversationUrl);
+    log.debug('TavusConversationCVI Debug', {
+      dailyInstance: daily ? 'Available' : 'Not available',
+      meetingState,
+      conversationUrl,
+    });
   }, [daily, meetingState, conversationUrl]);
 
   // Set up tool call event listeners as soon as Daily instance is available
   useEffect(() => {
     if (!daily) return;
 
-    console.log('🎯 Setting up tool call listeners for CVI (meetingState=', meetingState, ')');
+    log.info('Setting up tool call listeners for CVI', { meetingState });
 
     const handleAppMessage = (event: any) => {
-      console.log('=== CVI APP MESSAGE RECEIVED ===');
-      try {
-        console.log('Full event (json):', JSON.stringify(event, null, 2));
-      } catch {}
+      log.info('CVI APP MESSAGE RECEIVED', { event });
       const { data } = event || {};
-      try {
-        console.log('Event.data (json):', JSON.stringify(data, null, 2));
-      } catch {}
 
       // Unified parsing using shared helper on multiple shapes
       let parsed = parseToolCallFromEvent(data);
       if (!parsed.toolName) parsed = parseToolCallFromEvent(event);
 
-      console.log('Parsed tool call result:', parsed);
+      log.debug('Parsed tool call result', { parsed });
 
       // Handle objective completion events - forward to webhook
       if (data?.event_type === 'conversation.objective.completed') {
-        console.log('🎯 Objective completion detected, forwarding to webhook...');
+        log.info('Objective completion detected, forwarding to webhook');
         try {
           fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
             method: 'POST',
@@ -80,15 +78,15 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             body: JSON.stringify(data),
           }).then(response => {
             if (response.ok) {
-              console.log('✅ Objective completion forwarded to webhook successfully');
+              log.info('Objective completion forwarded to webhook successfully');
             } else {
-              console.error('❌ Failed to forward objective completion to webhook:', response.status);
+              log.error('Failed to forward objective completion to webhook', { status: response.status });
             }
           }).catch(error => {
-            console.error('❌ Error forwarding objective completion to webhook:', error);
+            log.error('Error forwarding objective completion to webhook', { error });
           });
         } catch (error) {
-          console.error('❌ Error forwarding objective completion:', error);
+          log.error('Error forwarding objective completion', { error });
         }
       }
 
@@ -96,18 +94,18 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
       if (parsed.toolName && SUPPORTED.has(parsed.toolName) && onToolCall) {
         const args = parsed.toolArgs ?? {};
         if (parsed.toolName === 'fetch_video' && (!args || Object.keys(args).length === 0)) {
-          console.warn('fetch_video detected but args missing/null; ignoring');
+          log.warn('fetch_video detected but args missing/null; ignoring');
           return;
         }
         if (!shouldForward(parsed.toolName, args)) return;
-        console.log(`🔧 Forwarding parsed tool call: ${parsed.toolName}`, args);
+        log.info('Forwarding parsed tool call', { toolName: parsed.toolName, args });
 
         // Forward to client-side handler
         onToolCall(parsed.toolName, args);
 
         // ALSO forward fetch_video to webhook for database tracking
         if (parsed.toolName === 'fetch_video') {
-          console.log('📡 Forwarding fetch_video to webhook for tracking...');
+          log.info('Forwarding fetch_video to webhook for tracking');
           try {
             fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
               method: 'POST',
@@ -124,15 +122,15 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
               }),
             }).then(response => {
               if (response.ok) {
-                console.log('✅ fetch_video forwarded to webhook successfully');
+                log.info('fetch_video forwarded to webhook successfully');
               } else {
-                console.error('❌ Failed to forward fetch_video to webhook:', response.status);
+                log.error('Failed to forward fetch_video to webhook', { status: response.status });
               }
             }).catch(error => {
-              console.error('❌ Error forwarding fetch_video to webhook:', error);
+              log.error('Error forwarding fetch_video to webhook', { error });
             });
           } catch (error) {
-            console.error('❌ Error forwarding fetch_video:', error);
+            log.error('Error forwarding fetch_video', { error });
           }
         }
 
@@ -146,7 +144,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
         if (toolName && SUPPORTED.has(toolName) && onToolCall) {
           if (toolName === 'fetch_video') {
             if (!rawArgs) {
-              console.warn('fetch_video legacy call missing args; ignoring');
+              log.warn('fetch_video legacy call missing args; ignoring');
               return;
             }
             // Coerce string args to { title } for compatibility
@@ -162,13 +160,13 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
               }
             }
             if (!shouldForward(toolName, coercedArgs || {})) return;
-            console.log('🔧 Forwarding legacy tool call (coerced):', toolName, coercedArgs || {});
+            log.info('Forwarding legacy tool call (coerced)', { toolName, coercedArgs });
 
             // Forward to client-side handler
             onToolCall(toolName, coercedArgs || {});
 
             // ALSO forward to webhook for database tracking
-            console.log('📡 Forwarding legacy fetch_video to webhook for tracking...');
+            log.info('Forwarding legacy fetch_video to webhook for tracking');
             try {
               fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
                 method: 'POST',
@@ -185,21 +183,21 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                 }),
               }).then(response => {
                 if (response.ok) {
-                  console.log('✅ Legacy fetch_video forwarded to webhook successfully');
+                  log.info('Legacy fetch_video forwarded to webhook successfully');
                 } else {
-                  console.error('❌ Failed to forward legacy fetch_video to webhook:', response.status);
+                  log.error('Failed to forward legacy fetch_video to webhook', { status: response.status });
                 }
               }).catch(error => {
-                console.error('❌ Error forwarding legacy fetch_video to webhook:', error);
+                log.error('Error forwarding legacy fetch_video to webhook', { error });
               });
             } catch (error) {
-              console.error('❌ Error forwarding legacy fetch_video:', error);
+              log.error('Error forwarding legacy fetch_video', { error });
             }
 
             return;
           }
           if (!shouldForward(toolName, rawArgs || {})) return;
-          console.log('🔧 Forwarding legacy tool call:', toolName, rawArgs || {});
+          log.info('Forwarding legacy tool call', { toolName, rawArgs });
           onToolCall(toolName, rawArgs || {});
           return;
         }
@@ -207,7 +205,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
 
       // Transcript-based tool calls
       if (data?.transcript) {
-        console.log('📝 Checking transcript for tool calls');
+        log.debug('Checking transcript for tool calls');
         const transcript = data.transcript;
         const toolCallMessages = transcript.filter((msg: any) =>
           msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0
@@ -221,18 +219,18 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
               const raw = toolCall.function.arguments;
               const args = raw ? JSON.parse(raw) : {};
               if (name === 'fetch_video' && (!args || Object.keys(args).length === 0)) {
-                console.warn('fetch_video transcript call missing args; ignoring');
+                log.warn('fetch_video transcript call missing args; ignoring');
                 return;
               }
               if (!shouldForward(name, args)) return;
-              console.log('🔧 Forwarding transcript tool call:', name, args);
+              log.info('Forwarding transcript tool call', { name, args });
 
               // Forward to client-side handler
               onToolCall(name, args);
 
               // ALSO forward fetch_video to webhook for database tracking
               if (name === 'fetch_video') {
-                console.log('📡 Forwarding transcript fetch_video to webhook for tracking...');
+                log.info('Forwarding transcript fetch_video to webhook for tracking');
                 try {
                   fetch('/api/tavus-webhook?t=' + encodeURIComponent(process.env.NEXT_PUBLIC_TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025'), {
                     method: 'POST',
@@ -249,19 +247,19 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                     }),
                   }).then(response => {
                     if (response.ok) {
-                      console.log('✅ Transcript fetch_video forwarded to webhook successfully');
+                      log.info('Transcript fetch_video forwarded to webhook successfully');
                     } else {
-                      console.error('❌ Failed to forward transcript fetch_video to webhook:', response.status);
+                      log.error('Failed to forward transcript fetch_video to webhook', { status: response.status });
                     }
                   }).catch(error => {
-                    console.error('❌ Error forwarding transcript fetch_video to webhook:', error);
+                    log.error('Error forwarding transcript fetch_video to webhook', { error });
                   });
                 } catch (error) {
-                  console.error('❌ Error forwarding transcript fetch_video:', error);
+                  log.error('Error forwarding transcript fetch_video', { error });
                 }
               }
             } catch (error) {
-              console.error('Error parsing tool call arguments:', error);
+              log.error('Error parsing tool call arguments', { error });
             }
           }
         }
@@ -314,10 +312,10 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                 data-testid="cvi-dev-play"
                 onClick={() => {
                   if (selectedTitle && selectedTitle.trim()) {
-                    console.log('Manual tool call test (dropdown) triggered:', selectedTitle);
+                    log.debug('Manual tool call test (dropdown) triggered', { selectedTitle });
                     onToolCall?.('fetch_video', { title: selectedTitle.trim() });
                   } else {
-                    console.log('No title selected');
+                    log.debug('No title selected');
                   }
                 }}
                 className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 shadow"
@@ -329,12 +327,12 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             <button
               data-testid="cvi-dev-button"
               onClick={() => {
-                console.log('Manual tool call test triggered');
+                log.debug('Manual tool call test triggered');
                 const title = window.prompt('Enter exact video title to fetch:');
                 if (title && title.trim()) {
                   onToolCall?.('fetch_video', { title: title.trim() });
                 } else {
-                  console.log('Manual tool call cancelled: no title provided');
+                  log.debug('Manual tool call cancelled: no title provided');
                 }
               }}
               className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 shadow"

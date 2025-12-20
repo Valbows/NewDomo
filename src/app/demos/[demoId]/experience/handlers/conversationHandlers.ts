@@ -1,5 +1,8 @@
 import { UIState } from '@/lib/tavus/UI_STATES';
 import type { Demo } from '../types';
+import { createClientLogger } from '@/lib/client-logger';
+
+const log = createClientLogger('ConversationHandlers');
 
 export async function handleConversationEnd(
   demo: Demo | null,
@@ -7,15 +10,14 @@ export async function handleConversationEnd(
   router: any,
   demoId: string
 ) {
-  console.log('Conversation ended');
+  log.info('Conversation ended');
 
   // End the Tavus conversation via API if we have a conversation ID
   if (demo?.tavus_conversation_id) {
     try {
-      console.log('🔚 Ending Tavus conversation:', {
+      log.info('Ending Tavus conversation', {
         conversationId: demo.tavus_conversation_id,
         demoId: demo.id,
-        demoData: demo,
       });
       const response = await fetch('/api/end-conversation', {
         method: 'POST',
@@ -30,23 +32,23 @@ export async function handleConversationEnd(
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Tavus conversation ended successfully:', result);
+        log.info('Tavus conversation ended successfully', { result });
 
         // Automatically sync conversation data after ending
         try {
-          console.log('🔄 Syncing conversation data...');
+          log.info('Syncing conversation data...');
           const syncResponse = await fetch(`/api/sync-tavus-conversations?demoId=${demo.id}`, {
             method: 'GET',
           });
 
           if (syncResponse.ok) {
             const syncResult = await syncResponse.json();
-            console.log('✅ Conversation data synced successfully:', syncResult);
+            log.info('Conversation data synced successfully', { syncResult });
           } else {
-            console.warn('⚠️ Failed to sync conversation data, but continuing...');
+            log.warn('Failed to sync conversation data, but continuing...');
           }
         } catch (syncError) {
-          console.warn('⚠️ Error syncing conversation data:', syncError);
+          log.warn('Error syncing conversation data', { syncError });
           // Don't block the flow for sync errors
         }
 
@@ -54,7 +56,7 @@ export async function handleConversationEnd(
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } else {
         const error = await response.json().catch(() => ({}));
-        console.warn('⚠️ Failed to end Tavus conversation:', {
+        log.warn('Failed to end Tavus conversation', {
           status: response.status,
           error: error,
           sentData: {
@@ -65,7 +67,7 @@ export async function handleConversationEnd(
         // Don't block the UI flow for this error
       }
     } catch (error) {
-      console.warn('⚠️ Error ending Tavus conversation:', error);
+      log.warn('Error ending Tavus conversation', { error });
       // Don't block the UI flow for this error
     }
   }

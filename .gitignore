@@ -41,6 +41,7 @@ supabase/.temp
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+debug.log
 
 # Temporary test files
 test-*.temp.js

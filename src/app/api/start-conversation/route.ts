@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
+import { logger } from '@/lib/debug-logger';
 
 // Validate that a URL points to a Daily room
 const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
@@ -26,10 +27,10 @@ async function isTavusConversationActive(conversationId: string, apiKey: string)
     if (!resp.ok) {
       // 404 means conversation doesn't exist or was deleted
       if (resp.status === 404) {
-        console.log(`Tavus conversation ${conversationId} not found (404)`);
+        logger.info(`Tavus conversation ${conversationId} not found (404)`);
         return false;
       }
-      console.warn(`Tavus API returned ${resp.status} when checking conversation ${conversationId}`);
+      logger.warn(`Tavus API returned ${resp.status} when checking conversation ${conversationId}`);
       return false;
     }
 
@@ -40,10 +41,10 @@ async function isTavusConversationActive(conversationId: string, apiKey: string)
     const activeStatuses = ['active', 'starting', 'waiting'];
     const isActive = activeStatuses.includes(status);
 
-    console.log(`Tavus conversation ${conversationId} status: ${status} (active: ${isActive})`);
+    logger.info(`Tavus conversation ${conversationId} status: ${status} (active: ${isActive})`);
     return isActive;
   } catch (e) {
-    console.warn(`Error checking Tavus conversation ${conversationId}:`, e);
+    logger.warn(`Error checking Tavus conversation ${conversationId}`, { error: e });
     return false;
   }
 }
