@@ -45,6 +45,52 @@ export async function handlePOST(req: NextRequest) {
       }
     }
 
+    // Handle transcription_ready and perception_analysis events specifically
+    // These can arrive after the conversation ends, so we look up by conversation_id directly
+    if (event.event_type === 'application.transcription_ready' ||
+        event.event_type === 'application.perception_analysis') {
+      console.log(`📥 Received ${event.event_type} for conversation ${conversation_id}`);
+
+      try {
+        const updateData: any = {};
+
+        if (event.event_type === 'application.transcription_ready') {
+          const transcript = event.properties?.transcript || event.data?.transcript || null;
+          if (transcript) {
+            updateData.transcript = transcript;
+            console.log(`📝 Storing transcript with ${Array.isArray(transcript) ? transcript.length : 'unknown'} entries`);
+          }
+        }
+
+        if (event.event_type === 'application.perception_analysis') {
+          const perception = event.properties?.analysis || event.data?.analysis || null;
+          if (perception) {
+            updateData.perception_analysis = perception;
+            console.log(`🧠 Storing perception analysis`);
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          // Update directly by tavus_conversation_id (doesn't need demo lookup)
+          const { error } = await supabase
+            .from('conversation_details')
+            .update(updateData)
+            .eq('tavus_conversation_id', conversation_id);
+
+          if (error) {
+            console.warn(`⚠️ Failed to update conversation_details:`, error);
+          } else {
+            console.log(`✅ Updated conversation_details with ${Object.keys(updateData).join(', ')}`);
+          }
+        }
+
+        return NextResponse.json({ received: true });
+      } catch (err) {
+        logError(err, `Error handling ${event.event_type}`);
+        return NextResponse.json({ received: true });
+      }
+    }
+
     // If there is no tool call, check if it's an objective completion or analytics event
     if (!toolName) {
       // Check if this is an objective completion event first

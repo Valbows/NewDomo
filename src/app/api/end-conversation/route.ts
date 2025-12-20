@@ -229,6 +229,63 @@ async function handlePOST(req: NextRequest) {
       
       console.log(`✅ Successfully ended Tavus conversation: ${conversationId}`);
 
+      // Fetch transcript and perception analysis from Tavus API
+      let transcript = null;
+      let perceptionAnalysis = null;
+      try {
+        console.log('🔄 Fetching transcript and perception analysis from Tavus...');
+        const verboseResponse = await fetch(
+          `https://tavusapi.com/v2/conversations/${conversationId}?verbose=true`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': tavusApiKey,
+            },
+          }
+        );
+
+        if (verboseResponse.ok) {
+          const verboseData = await verboseResponse.json();
+          const events = verboseData.events || [];
+
+          // Find perception analysis
+          const perceptionEvent = events.find((e: any) => e.event_type === 'application.perception_analysis');
+          perceptionAnalysis = perceptionEvent?.properties?.analysis || null;
+
+          // Find transcript
+          const transcriptEvent = events.find((e: any) => e.event_type === 'application.transcription_ready');
+          transcript = transcriptEvent?.properties?.transcript || null;
+
+          console.log(`📊 Fetched: transcript=${transcript ? 'YES' : 'NO'}, perception=${perceptionAnalysis ? 'YES' : 'NO'}`);
+        } else {
+          console.warn('⚠️ Failed to fetch verbose conversation data:', verboseResponse.status);
+        }
+      } catch (fetchError) {
+        console.warn('⚠️ Error fetching transcript/perception:', fetchError);
+      }
+
+      // Update conversation_details status to 'ended' with transcript and perception
+      try {
+        const { error: updateStatusError } = await supabase
+          .from('conversation_details')
+          .update({
+            status: 'ended',
+            completed_at: new Date().toISOString(),
+            ...(transcript && { transcript }),
+            ...(perceptionAnalysis && { perception_analysis: perceptionAnalysis }),
+          })
+          .eq('tavus_conversation_id', conversationId);
+
+        if (updateStatusError) {
+          console.warn('⚠️ Failed to update conversation_details status:', updateStatusError);
+        } else {
+          console.log('✅ Updated conversation_details with status, transcript, and perception');
+        }
+      } catch (statusError) {
+        console.warn('⚠️ Error updating conversation_details status:', statusError);
+      }
+
       // Clear the stale conversation URL from the database so next visit creates a fresh conversation
       if (demoId) {
         try {
