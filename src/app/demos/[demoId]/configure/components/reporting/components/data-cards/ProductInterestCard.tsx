@@ -6,17 +6,14 @@ interface ProductInterestCardProps {
 }
 
 export function ProductInterestCard({ productInterest }: ProductInterestCardProps) {
-  if (!productInterest) {
-    return (
-      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-          🎯 Reason Why They Visited Website
-        </h5>
-        <p className="text-sm text-gray-500">
-          No product interest data captured for this conversation
-        </p>
-      </div>
-    );
+  const hasMeaningfulData = !!(
+    productInterest?.primary_interest ||
+    (productInterest?.pain_points && productInterest.pain_points.length > 0)
+  );
+
+  // Don't show the card at all if no meaningful data
+  if (!hasMeaningfulData) {
+    return null;
   }
 
   return (

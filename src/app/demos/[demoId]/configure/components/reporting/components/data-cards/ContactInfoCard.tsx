@@ -6,20 +6,13 @@ interface ContactInfoCardProps {
 }
 
 export function ContactInfoCard({ contact }: ContactInfoCardProps) {
-  if (!contact) {
-    return (
-      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-          👤 Contact Information
-        </h5>
-        <p className="text-sm text-gray-500">
-          No contact information captured for this conversation
-        </p>
-      </div>
-    );
-  }
+  const fullName = contact ? `${contact.first_name || ""} ${contact.last_name || ""}`.trim() : "";
+  const hasMeaningfulData = !!(contact?.email || contact?.first_name || contact?.last_name);
 
-  const fullName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
+  // Don't show the card at all if no meaningful data
+  if (!hasMeaningfulData) {
+    return null;
+  }
 
   return (
     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

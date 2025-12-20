@@ -7,7 +7,7 @@ import {
   CtaTrackingData,
 } from "../types";
 import { formatDate, formatDuration } from "../utils/formatters";
-import { calculateDomoScore, isValidPerceptionAnalysis } from "../utils/domo-score";
+import { calculateDomoScore } from "../utils/domo-score";
 import { renderTranscript, renderPerceptionAnalysis } from "../utils/renderers";
 import { ContactInfoCard } from "./data-cards/ContactInfoCard";
 import { ProductInterestCard } from "./data-cards/ProductInterestCard";
@@ -34,7 +34,7 @@ export function ConversationListItem({
   isExpanded,
   onToggleExpand,
 }: ConversationListItemProps) {
-  const { score } = calculateDomoScore(
+  const { score, breakdown } = calculateDomoScore(
     contactInfo,
     productInterest,
     videoShowcase,
@@ -71,38 +71,34 @@ export function ConversationListItem({
             >
               {conversation.status}
             </div>
-            {contactInfo && (
+            {breakdown.contactConfirmation && (
               <div className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                 👤 Contact Info
               </div>
             )}
-            {productInterest && (
+            {breakdown.reasonForVisit && (
               <div className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                 🎯 Interest Data
               </div>
             )}
-            {videoShowcase && (
+            {breakdown.platformFeatureInterest && (
               <div className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                 🎬 Video Data
               </div>
             )}
-            {conversation.perception_analysis &&
-              isValidPerceptionAnalysis(conversation.perception_analysis) && (
-                <div className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
-                  🧠 Visual Analysis
-                </div>
-              )}
-            {ctaTracking && (
-              <div
-                className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  ctaTracking.cta_clicked_at
-                    ? "bg-green-100 text-green-800"
-                    : ctaTracking.cta_shown_at
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                🎯 CTA {ctaTracking.cta_clicked_at ? "Clicked" : "Shown"}
+            {breakdown.perceptionAnalysis && (
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                🧠 Visual Analysis
+              </div>
+            )}
+            {breakdown.ctaExecution && (
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                🎯 CTA Clicked
+              </div>
+            )}
+            {!breakdown.ctaExecution && ctaTracking?.cta_shown_at && (
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                🎯 CTA Shown
               </div>
             )}
             <div className={`px-2 py-1 text-xs font-medium rounded-full ${getScoreColor(score)}`}>

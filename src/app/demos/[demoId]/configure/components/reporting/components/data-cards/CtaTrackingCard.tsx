@@ -6,21 +6,14 @@ interface CtaTrackingCardProps {
 }
 
 export function CtaTrackingCard({ ctaTracking }: CtaTrackingCardProps) {
-  if (!ctaTracking) {
-    return (
-      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-          🎯 Execute CTA?
-        </h5>
-        <p className="text-sm text-gray-500">
-          No CTA activity recorded for this conversation
-        </p>
-      </div>
-    );
-  }
+  const ctaShown = !!ctaTracking?.cta_shown_at;
+  const ctaClicked = !!ctaTracking?.cta_clicked_at;
+  const hasMeaningfulData = ctaShown || ctaClicked;
 
-  const ctaShown = !!ctaTracking.cta_shown_at;
-  const ctaClicked = !!ctaTracking.cta_clicked_at;
+  // Don't show the card at all if no meaningful data
+  if (!hasMeaningfulData) {
+    return null;
+  }
 
   return (
     <div
