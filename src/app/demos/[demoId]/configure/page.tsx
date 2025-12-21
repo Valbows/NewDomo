@@ -13,6 +13,7 @@ import { VideoPlayer } from './components/VideoPlayer';
 import { CTASettings } from './components/CTASettings';
 import { Reporting } from './components/reporting';
 import { AdminCTAUrlEditor } from './components/AdminCTAUrlEditor';
+import { EmbedSettings } from './components/embed/EmbedSettings';
 
 // Custom hooks
 import { useDemoData } from './hooks/useDemoData';
@@ -224,6 +225,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             <Tabs.Trigger value="knowledge" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Knowledge Base</Tabs.Trigger>
             <Tabs.Trigger value="agent" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Agent Settings</Tabs.Trigger>
             <Tabs.Trigger value="cta" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Call-to-Action</Tabs.Trigger>
+            <Tabs.Trigger value="embed" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Embed</Tabs.Trigger>
             <Tabs.Trigger value="reporting" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Reporting</Tabs.Trigger>
           </Tabs.List>
           <div className="mt-6">
@@ -305,6 +307,9 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 onSaveCTA={handleSaveCTA}
               />
               </div>
+            </Tabs.Content>
+            <Tabs.Content value="embed">
+              <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
             </Tabs.Content>
             <Tabs.Content value="reporting">
               <Reporting demo={demo} />

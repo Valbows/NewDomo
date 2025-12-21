@@ -24,6 +24,10 @@ export interface Demo {
   // Legacy CTA fields
   cta_text?: string;
   cta_link?: string;
+  // Embed settings for public iFrame embedding
+  is_embeddable?: boolean;
+  embed_token?: string | null;
+  allowed_domains?: string[] | null;
 }
 
 // CTA override payload shape from Realtime broadcasts

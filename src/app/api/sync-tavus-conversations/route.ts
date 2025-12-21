@@ -199,6 +199,24 @@ async function handleGET(req: NextRequest) {
           }
         }
 
+        // Calculate duration from created_at and updated_at if not provided by Tavus
+        // Tavus API doesn't return duration/completed_at, so we calculate from timestamps
+        let durationSeconds = conversationData.duration || null;
+        let completedAt = conversationData.completed_at || null;
+
+        if (!durationSeconds && conversationData.created_at && conversationData.updated_at) {
+          const startTime = new Date(conversationData.created_at).getTime();
+          const endTime = new Date(conversationData.updated_at).getTime();
+          if (endTime > startTime) {
+            durationSeconds = Math.round((endTime - startTime) / 1000);
+          }
+        }
+
+        // Use updated_at as completed_at for ended conversations if not provided
+        if (!completedAt && conversationData.status === 'ended' && conversationData.updated_at) {
+          completedAt = conversationData.updated_at;
+        }
+
         // Prepare conversation detail record with transcript and perception data
         const conversationDetail = {
           demo_id: demo.id,
@@ -207,8 +225,8 @@ async function handleGET(req: NextRequest) {
           transcript: transcript,
           perception_analysis: perceptionAnalysis,
           started_at: conversationData.created_at ? new Date(conversationData.created_at).toISOString() : null,
-          completed_at: conversationData.completed_at ? new Date(conversationData.completed_at).toISOString() : null,
-          duration_seconds: conversationData.duration || null,
+          completed_at: completedAt ? new Date(completedAt).toISOString() : null,
+          duration_seconds: durationSeconds,
           status: conversationData.status || 'active',
         };
 

@@ -34,13 +34,16 @@ export const Reporting = ({ demo }: ReportingProps) => {
 
   // Calculate statistics
   const totalConversations = conversationDetails.length;
+  // Count both "completed" and "ended" as finished conversations
   const completedConversations = conversationDetails.filter(
-    (c) => c.status === "completed"
+    (c) => c.status === "completed" || c.status === "ended"
   ).length;
+  // Only average duration for conversations that have duration data
+  const conversationsWithDuration = conversationDetails.filter(c => c.duration_seconds != null && c.duration_seconds > 0);
   const averageDuration =
-    conversationDetails.length > 0
-      ? conversationDetails.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) /
-        conversationDetails.length
+    conversationsWithDuration.length > 0
+      ? conversationsWithDuration.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) /
+        conversationsWithDuration.length
       : 0;
 
   // Calculate average Domo Score

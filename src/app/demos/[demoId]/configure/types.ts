@@ -11,6 +11,10 @@ export interface Demo {
   cta_message?: string | null;
   cta_button_text?: string | null;
   cta_button_url?: string | null;
+  // Embed settings for public iFrame embedding
+  is_embeddable?: boolean;
+  embed_token?: string | null;
+  allowed_domains?: string[] | null;
   metadata: {
     agentName?: string;
     agentPersonality?: string;
