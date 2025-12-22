@@ -227,13 +227,39 @@ export default function EmbedPage() {
 
   // Error state
   if (error || !config) {
+    const isBusyError = error?.toLowerCase().includes('failed to start') ||
+                        error?.toLowerCase().includes('tavus') ||
+                        error?.toLowerCase().includes('limit') ||
+                        error?.toLowerCase().includes('capacity');
+
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-400 text-lg mb-4">{error || 'Demo not available'}</div>
-          <div className="text-gray-500 text-sm">
-            This demo may not be enabled for embedding or the link may be invalid.
-          </div>
+        <div className="text-center px-6">
+          {isBusyError ? (
+            <>
+              <div className="text-6xl mb-4">🙏</div>
+              <div className="text-white text-xl font-semibold mb-2">
+                Demo is Currently Busy
+              </div>
+              <div className="text-gray-400 mb-6">
+                We're chatting with other customers right now.<br />
+                Please try again in a few minutes.
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="text-red-400 text-lg mb-4">{error || 'Demo not available'}</div>
+              <div className="text-gray-500 text-sm">
+                This demo may not be enabled for embedding or the link may be invalid.
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
