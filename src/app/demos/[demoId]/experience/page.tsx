@@ -291,15 +291,49 @@ export default function DemoExperiencePage() {
             </div>
           )}
 
-          {/* Loading/Error banners */}
+          {/* Loading state */}
           {loading && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 text-gray-700 px-3 py-1 rounded shadow text-sm">
               Loading demo...
             </div>
           )}
+
+          {/* Error state - full screen friendly message */}
           {error && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-3 py-1 rounded shadow text-sm">
-              {error}
+            <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-50">
+              <div className="text-center px-6">
+                {error.toLowerCase().includes('failed to start') ||
+                 error.toLowerCase().includes('tavus') ||
+                 error.toLowerCase().includes('limit') ||
+                 error.toLowerCase().includes('capacity') ? (
+                  <>
+                    <div className="text-6xl mb-4">🙏</div>
+                    <div className="text-white text-xl font-semibold mb-2">
+                      Demo is Currently Busy
+                    </div>
+                    <div className="text-gray-400 mb-6">
+                      We're chatting with other customers right now.<br />
+                      Please try again in a few minutes.
+                    </div>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-red-400 text-lg mb-4">{error}</div>
+                    <button
+                      onClick={() => router.push(`/demos/${demoId}/configure`)}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                    >
+                      Back to Configure
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
