@@ -89,6 +89,13 @@ export async function handleVideoUpload(params: VideoUploadParams) {
       body: JSON.stringify({ demo_video_id: newVideo.id }),
     }).catch((err: unknown) => logError(err, 'Transcription request failed'));
 
+    // Start Twelve Labs video indexing in background (for AI video understanding)
+    fetch('/api/twelve-labs/index-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ demoVideoId: newVideo.id }),
+    }).catch((err: unknown) => logError(err, 'Twelve Labs indexing request failed'));
+
     setDemoVideos([...demoVideos, newVideo]);
     setProcessingStatus({ stage: 'completed', progress: 100, message: 'Video uploaded. Transcription in progress.' });
     setSelectedVideoFile(null);

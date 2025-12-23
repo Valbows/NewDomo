@@ -75,13 +75,44 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
 
     // Step 3: Build Enhanced System Prompt
     console.log('\n📝 Building Enhanced System Prompt...');
-    
+
     // Read base system prompt
     const promptPath = path.join(process.cwd(), 'src', 'lib', 'tavus', 'system_prompt.md');
     const baseSystemPrompt = fs.readFileSync(promptPath, 'utf-8');
-    
+
     // Enhanced identity section
     const identitySection = `\n\n## AGENT IDENTITY\nYou are ${agentName}, ${agentPersonality || 'a friendly and knowledgeable assistant'}.\nGreeting: "${agentGreeting || 'Hello! How can I help you with the demo today?'}"\n`;
+
+    // Step 3a: Get video context from Twelve Labs (if available)
+    console.log('\n🎬 Fetching Video Context from Twelve Labs...');
+    let videoContextSection = '';
+    try {
+      const { data: demoVideos } = await supabase
+        .from('demo_videos')
+        .select('title, metadata')
+        .eq('demo_id', demoId)
+        .order('order_index', { ascending: true });
+
+      if (demoVideos && demoVideos.length > 0) {
+        const indexedVideos = demoVideos.filter((v) => v.metadata?.twelvelabs?.generatedContext);
+
+        if (indexedVideos.length > 0) {
+          console.log(`✅ Found ${indexedVideos.length} videos with AI context`);
+          videoContextSection = `\n\n## VIDEO CONTENT AWARENESS\nYou have detailed knowledge of the following demo videos. Use this to provide accurate timestamps and descriptions when users ask about specific content.\n\n`;
+
+          for (const video of indexedVideos) {
+            const context = video.metadata.twelvelabs.generatedContext;
+            videoContextSection += `### ${video.title}\n${context}\n\n`;
+          }
+
+          videoContextSection += `**IMPORTANT**: When users ask about video content, you can now reference specific timestamps and what happens at each point. Guide users to the most relevant sections.\n`;
+        } else {
+          console.log('⚠️  Videos exist but no Twelve Labs context generated yet');
+        }
+      }
+    } catch (error) {
+      console.log('⚠️  Error fetching video context:', error);
+    }
 
     // Enhanced but concise objectives section
     let objectivesSection = '';
@@ -105,7 +136,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     const languageSection = `\n\n## LANGUAGE SUPPORT\nAutomatically detect and respond in the user's language while keeping all tool calls (fetch_video, show_trial_cta) in English with exact titles.\n`;
 
     // Build enhanced system prompt
-    const enhancedSystemPrompt = baseSystemPrompt + identitySection + objectivesSection + languageSection;
+    const enhancedSystemPrompt = baseSystemPrompt + identitySection + objectivesSection + videoContextSection + languageSection;
 
     console.log(`✅ Enhanced system prompt built (${enhancedSystemPrompt.length} characters)`);
 

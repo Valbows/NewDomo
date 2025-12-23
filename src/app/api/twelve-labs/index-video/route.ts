@@ -1,0 +1,137 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { indexVideo, buildAgentVideoContext, getIndexingStatus } from '@/lib/twelve-labs';
+
+// Use service role for server-side operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!
+);
+
+export async function POST(request: NextRequest) {
+  try {
+    const { demoVideoId } = await request.json();
+
+    if (!demoVideoId) {
+      return NextResponse.json({ error: 'demoVideoId is required' }, { status: 400 });
+    }
+
+    // Get the video record
+    const { data: video, error: fetchError } = await supabaseAdmin
+      .from('demo_videos')
+      .select('*')
+      .eq('id', demoVideoId)
+      .single();
+
+    if (fetchError || !video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    }
+
+    // Generate a signed URL for the video
+    const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
+      .from('demo-videos')
+      .createSignedUrl(video.storage_url, 3600); // 1 hour validity
+
+    if (urlError || !signedUrlData) {
+      return NextResponse.json({ error: 'Could not generate video URL' }, { status: 500 });
+    }
+
+    console.log('[TwelveLabs] Starting video indexing for:', video.title);
+
+    // Start indexing with Twelve Labs
+    const indexResult = await indexVideo(signedUrlData.signedUrl, video.title);
+
+    // Update the video record with Twelve Labs metadata
+    const { error: updateError } = await supabaseAdmin
+      .from('demo_videos')
+      .update({
+        metadata: {
+          ...video.metadata,
+          twelvelabs: {
+            indexId: indexResult.indexId,
+            videoId: indexResult.videoId,
+            taskId: indexResult.taskId,
+            status: indexResult.status,
+            indexedAt: new Date().toISOString(),
+          },
+        },
+      })
+      .eq('id', demoVideoId);
+
+    if (updateError) {
+      console.error('[TwelveLabs] Error updating video metadata:', updateError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      indexId: indexResult.indexId,
+      videoId: indexResult.videoId,
+      taskId: indexResult.taskId,
+      status: indexResult.status,
+      message: 'Video indexing started. This may take a few minutes.',
+    });
+  } catch (error: any) {
+    console.error('[TwelveLabs] Index video error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to index video' },
+      { status: 500 }
+    );
+  }
+}
+
+// Check indexing status
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const demoVideoId = searchParams.get('demoVideoId');
+
+    if (!demoVideoId) {
+      return NextResponse.json({ error: 'demoVideoId is required' }, { status: 400 });
+    }
+
+    // Get the video record
+    const { data: video, error: fetchError } = await supabaseAdmin
+      .from('demo_videos')
+      .select('metadata')
+      .eq('id', demoVideoId)
+      .single();
+
+    if (fetchError || !video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    }
+
+    const twelvelabsData = video.metadata?.twelvelabs;
+    if (!twelvelabsData?.videoId) {
+      return NextResponse.json({
+        indexed: false,
+        message: 'Video has not been indexed yet',
+      });
+    }
+
+    // Check current status from Twelve Labs
+    try {
+      const status = await getIndexingStatus(twelvelabsData.videoId);
+      return NextResponse.json({
+        indexed: true,
+        indexId: twelvelabsData.indexId,
+        videoId: twelvelabsData.videoId,
+        status,
+        indexedAt: twelvelabsData.indexedAt,
+      });
+    } catch {
+      return NextResponse.json({
+        indexed: true,
+        indexId: twelvelabsData.indexId,
+        videoId: twelvelabsData.videoId,
+        status: twelvelabsData.status || 'unknown',
+        indexedAt: twelvelabsData.indexedAt,
+      });
+    }
+  } catch (error: any) {
+    console.error('[TwelveLabs] Get status error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to get indexing status' },
+      { status: 500 }
+    );
+  }
+}

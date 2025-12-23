@@ -51,6 +51,7 @@
     "react-dom": "^18.3.1",
     "react-player": "^2.13.0",
     "tus-js-client": "^4.3.1",
+    "twelvelabs-js": "^1.1.0",
     "uuid": "^11.1.0",
     "zustand": "^4.4.0"
   },
