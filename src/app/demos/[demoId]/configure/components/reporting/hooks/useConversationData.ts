@@ -191,22 +191,26 @@ export function useConversationData({
     refreshAllData();
   }, [refreshAllData]);
 
-  // Auto-refresh data every 30 seconds to catch real-time updates
+  // Auto-refresh only for recent conversations missing perception analysis
+  // (Perception analysis comes from Tavus after conversation ends and takes time to process)
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchContactInfo();
-      fetchProductInterestData();
-      fetchVideoShowcaseData();
-      fetchCtaTrackingData();
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+      // Only poll if there are recent conversations without perception_analysis
+      const hasPendingAnalysis = conversationDetails.some((c) => {
+        if (c.status !== 'ended' || c.perception_analysis) return false;
+        const endedAt = c.completed_at ? new Date(c.completed_at).getTime() : 0;
+        return endedAt > fiveMinutesAgo;
+      });
+
+      if (hasPendingAnalysis) {
+        fetchConversationDetails();
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [
-    fetchContactInfo,
-    fetchProductInterestData,
-    fetchVideoShowcaseData,
-    fetchCtaTrackingData,
-  ]);
+  }, [conversationDetails, fetchConversationDetails]);
 
   return {
     conversationDetails,

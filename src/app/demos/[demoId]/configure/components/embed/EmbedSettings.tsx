@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, RefreshCw, ExternalLink, Code2, Globe } from 'lucide-react';
+import { Copy, Check, RefreshCw, ExternalLink, Code2, Globe, MousePointer } from 'lucide-react';
 import { Demo } from '../../types';
 import { supabase } from '@/lib/supabase';
 
@@ -13,7 +13,7 @@ interface EmbedSettingsProps {
 export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const [copied, setCopied] = useState<'token' | 'iframe' | null>(null);
+  const [copied, setCopied] = useState<'token' | 'iframe' | 'popup' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const baseUrl = typeof window !== 'undefined'
@@ -32,6 +32,16 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
   frameborder="0"
   allow="camera; microphone"
 ></iframe>`
+    : '';
+
+  const popupCode = demo?.embed_token
+    ? `<!-- Add this script to your page -->
+<script src="${baseUrl}/embed.js" data-base-url="${baseUrl}"></script>
+
+<!-- Add this to your button -->
+<button onclick="Domo.open('${demo.embed_token}')">
+  Book Demo
+</button>`
     : '';
 
   const handleToggleEmbedding = async () => {
@@ -89,8 +99,12 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
     }
   };
 
-  const handleCopy = async (type: 'token' | 'iframe') => {
-    const text = type === 'token' ? embedUrl : iframeCode;
+  const handleCopy = async (type: 'token' | 'iframe' | 'popup') => {
+    let text = '';
+    if (type === 'token') text = embedUrl || '';
+    else if (type === 'iframe') text = iframeCode;
+    else if (type === 'popup') text = popupCode;
+
     if (!text) return;
 
     try {
@@ -220,12 +234,15 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
             </p>
           </div>
 
-          {/* Embed Code */}
+          {/* iFrame Embed Code */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Code2 className="w-5 h-5 text-gray-500" />
-                <h3 className="font-medium text-gray-900">Embed Code</h3>
+                <div>
+                  <h3 className="font-medium text-gray-900">Option 1: iFrame Embed</h3>
+                  <p className="text-xs text-gray-500">For dedicated demo pages</p>
+                </div>
               </div>
               <button
                 onClick={() => handleCopy('iframe')}
@@ -250,8 +267,44 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
             </pre>
 
             <p className="mt-3 text-xs text-gray-500">
-              Paste this code into your website's HTML where you want the demo to appear.
-              Adjust the width and height as needed.
+              Embeds the demo directly in your page. Best for dedicated demo sections.
+            </p>
+          </div>
+
+          {/* Popup Button Code */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <MousePointer className="w-5 h-5 text-gray-500" />
+                <div>
+                  <h3 className="font-medium text-gray-900">Option 2: Popup Button</h3>
+                  <p className="text-xs text-gray-500">For "Book Demo" buttons</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleCopy('popup')}
+                className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+              >
+                {copied === 'popup' ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy Code
+                  </>
+                )}
+              </button>
+            </div>
+
+            <pre className="p-4 bg-gray-900 text-gray-100 rounded-md text-sm overflow-x-auto whitespace-pre-wrap">
+              <code>{popupCode}</code>
+            </pre>
+
+            <p className="mt-3 text-xs text-gray-500">
+              Opens the demo in a popup modal. Perfect for "Book Demo" or "Try Demo" buttons anywhere on your site.
             </p>
           </div>
 
