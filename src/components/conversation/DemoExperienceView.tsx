@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
 import { TavusConversationCVI } from '@/app/demos/[demoId]/experience/components/TavusConversationCVI';
 import { InlineVideoPlayer } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { BusyErrorScreen, CTABanner, ConversationEndedScreen, pipStyles } from '@/components/conversation';
+import { analytics } from '@/lib/mixpanel';
 
 export interface DemoExperienceViewProps {
   // Demo info
@@ -36,6 +37,10 @@ export interface DemoExperienceViewProps {
 
   // Optional video titles for debugging
   debugVideoTitles?: string[];
+
+  // Analytics source
+  source?: 'embed' | 'experience';
+  embedToken?: string;
 }
 
 export interface DemoExperienceViewHandle {
@@ -61,6 +66,8 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       onRetry,
       onRestart,
       debugVideoTitles = [],
+      source = 'experience',
+      embedToken,
     },
     ref
   ) {
@@ -69,6 +76,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
     const [showCTA, setShowCTA] = useState(false);
     const [conversationEnded, setConversationEnded] = useState(false);
+    const [startTime] = useState<number>(Date.now());
 
     const videoPlayerRef = useRef<InlineVideoPlayerHandle | null>(null);
 
@@ -76,6 +84,29 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     useImperativeHandle(ref, () => ({
       setShowCTA,
     }));
+
+    // Track demo started when conversation URL is available
+    useEffect(() => {
+      if (conversationUrl && demoId) {
+        analytics.demoStarted({
+          demoId,
+          demoName,
+          source,
+          embedToken,
+        });
+      }
+    }, [conversationUrl, demoId, demoName, source, embedToken]);
+
+    // Track errors
+    useEffect(() => {
+      if (error) {
+        analytics.demoError({
+          demoId,
+          error,
+          source,
+        });
+      }
+    }, [error, demoId, source]);
 
     // Handle tool calls from conversation
     const handleToolCall = useCallback(
@@ -86,48 +117,110 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           setPlayingVideoUrl(parameters.video_url);
           setUiState(UIState.VIDEO_PLAYING);
           setShowCTA(false);
+
+          // Track video played
+          analytics.videoPlayed({
+            demoId,
+            videoUrl: parameters.video_url,
+            videoTitle: parameters.video_title,
+          });
         } else if (toolName === 'show_cta') {
           setShowCTA(true);
+
+          // Track CTA shown
+          analytics.ctaShown({
+            demoId,
+            ctaTitle,
+            ctaButtonText,
+          });
         }
 
         // Also call parent handler
         onToolCall(toolCall);
       },
-      [onToolCall]
+      [onToolCall, demoId, ctaTitle, ctaButtonText]
     );
 
     // Handle conversation end
     const handleConversationEnd = useCallback(() => {
+      const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+
       setConversationEnded(true);
       setUiState(UIState.IDLE);
       setShowCTA(true);
+
+      // Track demo ended
+      analytics.demoEnded({
+        demoId,
+        demoName,
+        source,
+        durationSeconds,
+        conversationId: conversationId || undefined,
+      });
+
       onConversationEnd();
-    }, [onConversationEnd]);
+    }, [onConversationEnd, demoId, demoName, source, conversationId, startTime]);
 
     // Handle restart conversation
     const handleRestartConversation = useCallback(() => {
       setConversationEnded(false);
       setShowCTA(false);
       setUiState(UIState.IDLE);
+
+      // Track restart
+      analytics.conversationRestarted({
+        demoId,
+        source,
+      });
+
       onRestart?.();
-    }, [onRestart]);
+    }, [onRestart, demoId, source]);
 
     // Handle video end
     const handleVideoEnd = useCallback(() => {
+      // Track video ended
+      if (playingVideoUrl) {
+        analytics.videoEnded({
+          demoId,
+          videoUrl: playingVideoUrl,
+        });
+      }
+
       setPlayingVideoUrl(null);
       setUiState(UIState.CONVERSATION);
-    }, []);
+    }, [demoId, playingVideoUrl]);
 
     // Handle video close
     const handleVideoClose = useCallback(() => {
+      // Track video closed
+      if (playingVideoUrl) {
+        analytics.videoClosed({
+          demoId,
+          videoUrl: playingVideoUrl,
+        });
+      }
+
       setPlayingVideoUrl(null);
       setUiState(UIState.CONVERSATION);
-    }, []);
+    }, [demoId, playingVideoUrl]);
 
     // Handle CTA click
     const handleCTAClick = useCallback(() => {
+      // Track CTA clicked
+      analytics.ctaClicked({
+        demoId,
+        ctaTitle,
+        ctaButtonUrl,
+      });
+
       onCTAClick?.();
-    }, [onCTAClick]);
+    }, [onCTAClick, demoId, ctaTitle, ctaButtonUrl]);
+
+    // Handle CTA close
+    const handleCTAClose = useCallback(() => {
+      analytics.ctaClosed({ demoId });
+      setShowCTA(false);
+    }, [demoId]);
 
     // Loading state
     if (loading) {
@@ -287,7 +380,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               buttonText={ctaButtonText}
               buttonUrl={ctaButtonUrl}
               onButtonClick={handleCTAClick}
-              onClose={() => setShowCTA(false)}
+              onClose={handleCTAClose}
             />
           )}
         </div>

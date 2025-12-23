@@ -6,9 +6,59 @@
 
   // Configuration
   var BASE_URL = window.DOMO_BASE_URL || 'https://domo.ai';
+  var MIXPANEL_TOKEN = 'b6bca0aef2fc049b7376d9168e202cc6';
   var modal = null;
   var iframe = null;
   var isOpen = false;
+  var currentToken = null;
+
+  // Simple Mixpanel tracking (lightweight, no full SDK needed)
+  function trackEvent(event, properties) {
+    try {
+      var data = {
+        event: event,
+        properties: Object.assign({
+          token: MIXPANEL_TOKEN,
+          distinct_id: getDistinctId(),
+          time: Math.floor(Date.now() / 1000),
+          $insert_id: generateId(),
+          referrer: document.referrer || '',
+          current_url: window.location.href,
+        }, properties || {})
+      };
+
+      // Use sendBeacon for reliability, fallback to image pixel
+      var payload = btoa(JSON.stringify(data));
+      var url = 'https://api.mixpanel.com/track/?data=' + payload;
+
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url);
+      } else {
+        var img = new Image();
+        img.src = url;
+      }
+    } catch (e) {
+      // Silent fail - don't break the embed
+    }
+  }
+
+  // Get or create a distinct ID for the user
+  function getDistinctId() {
+    var key = 'domo_distinct_id';
+    var id = localStorage.getItem(key);
+    if (!id) {
+      id = 'anon_' + generateId();
+      try {
+        localStorage.setItem(key, id);
+      } catch (e) {}
+    }
+    return id;
+  }
+
+  // Generate a random ID
+  function generateId() {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
 
   // Styles for the modal
   var styles = {
@@ -165,6 +215,7 @@
       return;
     }
 
+    currentToken = token;
     createModal();
 
     // Build URL
@@ -186,6 +237,11 @@
 
     isOpen = true;
 
+    // Track popup opened
+    trackEvent('Embed Popup Opened', {
+      embedToken: token,
+    });
+
     // Callback
     if (typeof options.onOpen === 'function') {
       options.onOpen();
@@ -198,6 +254,11 @@
 
     if (!modal || !isOpen) return;
 
+    // Track popup closed
+    trackEvent('Embed Popup Closed', {
+      embedToken: currentToken,
+    });
+
     // Animate out
     modal.style.opacity = '0';
     document.getElementById('domo-modal-content').style.transform = 'scale(0.9)';
@@ -207,6 +268,7 @@
       iframe.src = 'about:blank';
       document.body.style.overflow = '';
       isOpen = false;
+      currentToken = null;
 
       // Callback
       if (typeof options.onClose === 'function') {

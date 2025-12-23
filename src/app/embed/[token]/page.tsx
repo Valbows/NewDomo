@@ -157,6 +157,8 @@ export default function EmbedPage() {
       onCTAClick={handleCTAClick}
       onRetry={() => window.location.reload()}
       onRestart={handleRestartConversation}
+      source="embed"
+      embedToken={token}
     />
   );
 }
