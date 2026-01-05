@@ -19,19 +19,20 @@
 .DS_Store
 *.pem
 
-# Local Env Files
+# Environment files - ALL ignored for security
+.env
+.env.*
 .env.local
+.env.development
 .env.development.local
-.env.test.local
-.env.production.local
-
-# Environment files (keep templates, ignore actual secrets)
-# .env.development - committed (template)
-# .env.staging - committed (template) 
-# .env.production - committed (template)
-.env.development.local
+.env.staging
 .env.staging.local
+.env.production
 .env.production.local
+.env.test.local
+
+# Exception: .env.example is tracked for documentation
+!.env.example
 
 # Supabase
 supabase/.branches

@@ -79,8 +79,12 @@ export async function getOrCreateIndex(): Promise<string> {
       index_name: DOMO_INDEX_NAME,
       models: [
         {
-          model_name: 'marengo2.7',
-          model_options: ['visual', 'conversation', 'text_in_video', 'logo'],
+          model_name: 'marengo3.0',
+          model_options: ['visual', 'audio'],
+        },
+        {
+          model_name: 'pegasus1.2',
+          model_options: ['visual', 'audio'],
         },
       ],
     });

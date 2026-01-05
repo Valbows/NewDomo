@@ -4,8 +4,12 @@ import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } f
 
 interface InlineVideoPlayerProps {
   videoUrl: string;
+  videoTitle?: string;
   onClose: () => void;
   onVideoEnd?: () => void;
+  onTimeUpdate?: (currentTime: number, isPaused: boolean) => void;
+  onPause?: (currentTime: number) => void;
+  onSeek?: (currentTime: number) => void;
 }
 
 export type InlineVideoPlayerHandle = {
@@ -17,7 +21,7 @@ export type InlineVideoPlayerHandle = {
 };
 
 export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideoPlayerProps>(function InlineVideoPlayer(
-  { videoUrl, onClose, onVideoEnd }: InlineVideoPlayerProps,
+  { videoUrl, videoTitle, onClose, onVideoEnd, onTimeUpdate, onPause, onSeek }: InlineVideoPlayerProps,
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -150,7 +154,30 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     };
 
     const handlePlay = () => setPaused(false);
-    const handlePause = () => setPaused(true);
+    const handlePause = () => {
+      setPaused(true);
+      // Notify parent of pause with current time
+      if (onPause && videoElement) {
+        onPause(videoElement.currentTime);
+      }
+    };
+
+    // Track time updates (throttled to every 2 seconds to avoid spam)
+    let lastTimeUpdate = 0;
+    const handleTimeUpdate = () => {
+      if (!videoElement) return;
+      const now = Date.now();
+      if (now - lastTimeUpdate > 2000) {
+        lastTimeUpdate = now;
+        onTimeUpdate?.(videoElement.currentTime, videoElement.paused);
+      }
+    };
+
+    // Track seeks
+    const handleSeeked = () => {
+      if (!videoElement) return;
+      onSeek?.(videoElement.currentTime);
+    };
 
     videoElement.addEventListener('canplay', handleCanPlay);
     videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -158,6 +185,8 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     videoElement.addEventListener('error', handleError);
     videoElement.addEventListener('play', handlePlay);
     videoElement.addEventListener('pause', handlePause);
+    videoElement.addEventListener('timeupdate', handleTimeUpdate);
+    videoElement.addEventListener('seeked', handleSeeked);
 
     // Clean up event listeners
     return () => {
@@ -167,8 +196,10 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       videoElement.removeEventListener('error', handleError);
       videoElement.removeEventListener('play', handlePlay);
       videoElement.removeEventListener('pause', handlePause);
+      videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+      videoElement.removeEventListener('seeked', handleSeeked);
     };
-  }, [videoUrl]);
+  }, [videoUrl, onTimeUpdate, onPause, onSeek]);
 
   return (
     <div className="space-y-4">

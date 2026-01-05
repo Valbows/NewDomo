@@ -8,6 +8,20 @@ import type { InlineVideoPlayerHandle } from '@/app/demos/[demoId]/experience/co
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { BusyErrorScreen, CTABanner, ConversationEndedScreen, pipStyles } from '@/components/conversation';
 import { analytics } from '@/lib/mixpanel';
+import {
+  formatTime,
+  parseChaptersFromContext,
+  findChapterAtTimestamp,
+  type VideoChapter
+} from '@/lib/video-context';
+
+interface CurrentVideoMetadata {
+  title: string;
+  url: string;
+  demoVideoId?: string;
+  generatedContext?: string;
+  chapters?: VideoChapter[];
+}
 
 export interface DemoExperienceViewProps {
   // Demo info
@@ -80,6 +94,10 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     const videoPlayerRef = useRef<InlineVideoPlayerHandle | null>(null);
 
+    // Video context tracking
+    const currentVideoRef = useRef<CurrentVideoMetadata | null>(null);
+    const lastSentContextRef = useRef<string>('');
+
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
       setShowCTA,
@@ -117,6 +135,22 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           setPlayingVideoUrl(parameters.video_url);
           setUiState(UIState.VIDEO_PLAYING);
           setShowCTA(false);
+
+          // Set up video context tracking
+          const videoMetadata: CurrentVideoMetadata = {
+            title: parameters.video_title || 'Demo Video',
+            url: parameters.video_url,
+            demoVideoId: parameters.demo_video_id,
+            generatedContext: parameters.generated_context,
+          };
+
+          // Parse chapters from generated context if available
+          if (videoMetadata.generatedContext) {
+            videoMetadata.chapters = parseChaptersFromContext(videoMetadata.generatedContext);
+          }
+
+          currentVideoRef.current = videoMetadata;
+          lastSentContextRef.current = ''; // Reset last sent context for new video
 
           // Track video played
           analytics.videoPlayed({
@@ -186,6 +220,10 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         });
       }
 
+      // Clear video context tracking
+      currentVideoRef.current = null;
+      lastSentContextRef.current = '';
+
       setPlayingVideoUrl(null);
       setUiState(UIState.CONVERSATION);
     }, [demoId, playingVideoUrl]);
@@ -199,6 +237,10 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           videoUrl: playingVideoUrl,
         });
       }
+
+      // Clear video context tracking
+      currentVideoRef.current = null;
+      lastSentContextRef.current = '';
 
       setPlayingVideoUrl(null);
       setUiState(UIState.CONVERSATION);
@@ -221,6 +263,101 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       analytics.ctaClosed({ demoId });
       setShowCTA(false);
     }, [demoId]);
+
+    // ====== Video Context Tracking ======
+
+    // Send video context to the API (which can forward to the agent)
+    const sendVideoContext = useCallback(async (contextMessage: string) => {
+      // Avoid duplicate messages
+      if (contextMessage === lastSentContextRef.current) return;
+      lastSentContextRef.current = contextMessage;
+
+      // Log for debugging
+      console.log('[VideoContext] Sending:', contextMessage);
+
+      // Track the video context event
+      analytics.videoContextSent({
+        demoId,
+        context: contextMessage,
+        conversationId: conversationId || undefined,
+      });
+    }, [demoId, conversationId]);
+
+    // Handle video pause - send context about where user paused
+    const handleVideoPause = useCallback((currentTime: number) => {
+      const video = currentVideoRef.current;
+      if (!video) return;
+
+      const formattedTime = formatTime(currentTime);
+      let contextMessage = `User paused "${video.title}" at ${formattedTime}`;
+
+      // Find current chapter if available
+      if (video.chapters && video.chapters.length > 0) {
+        const chapter = findChapterAtTimestamp(video.chapters, currentTime);
+        if (chapter) {
+          contextMessage += `. Currently viewing: "${chapter.title}"`;
+        }
+      }
+
+      sendVideoContext(contextMessage);
+
+      // Track pause analytics
+      analytics.videoPaused({
+        demoId,
+        videoUrl: video.url,
+        videoTitle: video.title,
+        pausedAt: currentTime,
+        formattedTime,
+      });
+    }, [demoId, sendVideoContext]);
+
+    // Handle video seek - send context about new position
+    const handleVideoSeek = useCallback((currentTime: number) => {
+      const video = currentVideoRef.current;
+      if (!video) return;
+
+      const formattedTime = formatTime(currentTime);
+      let contextMessage = `User seeked to ${formattedTime} in "${video.title}"`;
+
+      // Find current chapter if available
+      if (video.chapters && video.chapters.length > 0) {
+        const chapter = findChapterAtTimestamp(video.chapters, currentTime);
+        if (chapter) {
+          contextMessage += `. Now viewing: "${chapter.title}"`;
+        }
+      }
+
+      sendVideoContext(contextMessage);
+
+      // Track seek analytics
+      analytics.videoSeeked({
+        demoId,
+        videoUrl: video.url,
+        videoTitle: video.title,
+        seekedTo: currentTime,
+        formattedTime,
+      });
+    }, [demoId, sendVideoContext]);
+
+    // Handle periodic time updates (only when paused - user is examining content)
+    const handleVideoTimeUpdate = useCallback((currentTime: number, isPaused: boolean) => {
+      // Only send updates when paused (user is likely reading/examining)
+      if (!isPaused) return;
+
+      const video = currentVideoRef.current;
+      if (!video) return;
+
+      const formattedTime = formatTime(currentTime);
+
+      // Find current chapter if available
+      if (video.chapters && video.chapters.length > 0) {
+        const chapter = findChapterAtTimestamp(video.chapters, currentTime);
+        if (chapter) {
+          const contextMessage = `User is examining "${chapter.title}" at ${formattedTime} in "${video.title}"`;
+          sendVideoContext(contextMessage);
+        }
+      }
+    }, [sendVideoContext]);
 
     // Loading state
     if (loading) {
@@ -363,8 +500,12 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                     <InlineVideoPlayer
                       ref={videoPlayerRef}
                       videoUrl={playingVideoUrl}
+                      videoTitle={currentVideoRef.current?.title}
                       onClose={handleVideoClose}
                       onVideoEnd={handleVideoEnd}
+                      onPause={handleVideoPause}
+                      onSeek={handleVideoSeek}
+                      onTimeUpdate={handleVideoTimeUpdate}
                     />
                   </div>
                 </div>

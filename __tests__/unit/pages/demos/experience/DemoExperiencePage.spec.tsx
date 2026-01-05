@@ -100,16 +100,18 @@ jest.mock('@/components/cvi/components/cvi-provider', () => ({
 }));
 
 // Mock TavusConversationCVI
+// Note: onToolCall expects an object with { name, parameters } structure
 jest.mock('@/app/demos/[demoId]/experience/components/TavusConversationCVI', () => ({
   TavusConversationCVI: ({ onLeave, onToolCall }: any) => (
     <div data-testid="tavus-cvi">
       <button data-testid="trigger-leave" onClick={onLeave}>Leave</button>
-      <button data-testid="trigger-fetch-video" onClick={() => onToolCall('fetch_video', { title: 'Test Video' })}>Fetch Video</button>
-      <button data-testid="trigger-pause-video" onClick={() => onToolCall('pause_video', {})}>Pause Video</button>
-      <button data-testid="trigger-resume-video" onClick={() => onToolCall('resume_video', {})}>Resume Video</button>
-      <button data-testid="trigger-close-video" onClick={() => onToolCall('close_video', {})}>Close Video</button>
-      <button data-testid="trigger-next-video" onClick={() => onToolCall('next_video', {})}>Next Video</button>
-      <button data-testid="trigger-show-cta" onClick={() => onToolCall('show_trial_cta', {})}>Show CTA</button>
+      <button data-testid="trigger-fetch-video" onClick={() => onToolCall({ name: 'fetch_video', parameters: { title: 'Test Video' } })}>Fetch Video</button>
+      <button data-testid="trigger-pause-video" onClick={() => onToolCall({ name: 'pause_video', parameters: {} })}>Pause Video</button>
+      <button data-testid="trigger-resume-video" onClick={() => onToolCall({ name: 'resume_video', parameters: {} })}>Resume Video</button>
+      <button data-testid="trigger-close-video" onClick={() => onToolCall({ name: 'close_video', parameters: {} })}>Close Video</button>
+      <button data-testid="trigger-next-video" onClick={() => onToolCall({ name: 'next_video', parameters: {} })}>Next Video</button>
+      <button data-testid="trigger-show-cta" onClick={() => onToolCall({ name: 'show_cta', parameters: {} })}>Show CTA</button>
+      <button data-testid="trigger-play-video" onClick={() => onToolCall({ name: 'play_video', parameters: { video_url: 'https://example.com/video.mp4', video_title: 'Test Video' } })}>Play Video</button>
     </div>
   ),
 }));
@@ -240,11 +242,12 @@ describe('DemoExperiencePage', () => {
       });
     });
 
-    it('displays demo name in header', async () => {
+    it('displays AI Demo Assistant header', async () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Test Demo')).toBeInTheDocument();
+        // The header now shows "AI Demo Assistant" instead of the demo name
+        expect(screen.getByText('AI Demo Assistant')).toBeInTheDocument();
       });
     });
 
@@ -573,28 +576,15 @@ describe('DemoExperiencePage', () => {
 
   describe('Video Player Controls', () => {
     it('displays video overlay when video is playing', async () => {
-      // Setup video lookup to succeed
-      let callCount = 0;
-      mockSingle.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          return Promise.resolve({ data: mockDemoData, error: null });
-        }
-        return Promise.resolve({
-          data: { storage_url: 'videos/test.mp4', title: 'Test Video' },
-          error: null,
-        });
-      });
-
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
       });
 
-      // Trigger video fetch
+      // Trigger play_video tool call (not fetch_video)
       await act(async () => {
-        fireEvent.click(screen.getByTestId('trigger-fetch-video'));
+        fireEvent.click(screen.getByTestId('trigger-play-video'));
       });
 
       await waitFor(() => {
@@ -602,19 +592,7 @@ describe('DemoExperiencePage', () => {
       });
     });
 
-    it('tracks video view when video starts playing', async () => {
-      let callCount = 0;
-      mockSingle.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          return Promise.resolve({ data: mockDemoData, error: null });
-        }
-        return Promise.resolve({
-          data: { storage_url: 'videos/test.mp4', title: 'Test Video' },
-          error: null,
-        });
-      });
-
+    it('shows inline video player in overlay', async () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
@@ -622,13 +600,11 @@ describe('DemoExperiencePage', () => {
       });
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('trigger-fetch-video'));
+        fireEvent.click(screen.getByTestId('trigger-play-video'));
       });
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/track-video-view', expect.objectContaining({
-          method: 'POST',
-        }));
+        expect(screen.getByTestId('inline-video-player')).toBeInTheDocument();
       });
     });
   });
@@ -648,26 +624,15 @@ describe('DemoExperiencePage', () => {
     });
 
     it('transitions to PiP mode when video starts playing', async () => {
-      let callCount = 0;
-      mockSingle.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          return Promise.resolve({ data: mockDemoData, error: null });
-        }
-        return Promise.resolve({
-          data: { storage_url: 'videos/test.mp4', title: 'Test Video' },
-          error: null,
-        });
-      });
-
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
       });
 
+      // Use play_video tool call to trigger video and PiP mode
       await act(async () => {
-        fireEvent.click(screen.getByTestId('trigger-fetch-video'));
+        fireEvent.click(screen.getByTestId('trigger-play-video'));
       });
 
       await waitFor(() => {

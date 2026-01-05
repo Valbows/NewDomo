@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { indexVideo, buildAgentVideoContext, getIndexingStatus } from '@/lib/twelve-labs';
 
-// Use service role for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!
-);
+// Create Supabase client at runtime to avoid build errors
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +17,8 @@ export async function POST(request: NextRequest) {
     if (!demoVideoId) {
       return NextResponse.json({ error: 'demoVideoId is required' }, { status: 400 });
     }
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Get the video record
     const { data: video, error: fetchError } = await supabaseAdmin
@@ -88,6 +92,8 @@ export async function GET(request: NextRequest) {
     if (!demoVideoId) {
       return NextResponse.json({ error: 'demoVideoId is required' }, { status: 400 });
     }
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Get the video record
     const { data: video, error: fetchError } = await supabaseAdmin

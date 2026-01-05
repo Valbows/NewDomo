@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { buildAgentVideoContext, generateVideoSummary, getVideoChapters } from '@/lib/twelve-labs';
+import { buildAgentVideoContext } from '@/lib/twelve-labs';
 
-// Use service role for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!
-);
+// Create Supabase client at runtime to avoid build errors
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
+}
 
 /**
  * Generate comprehensive video context for the AI agent
@@ -25,6 +27,8 @@ export async function POST(request: NextRequest) {
     }
 
     let videos: any[] = [];
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Get video(s) to process
     if (demoVideoId) {
@@ -113,6 +117,8 @@ export async function GET(request: NextRequest) {
     if (!demoId) {
       return NextResponse.json({ error: 'demoId is required' }, { status: 400 });
     }
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     const { data: videos } = await supabaseAdmin
       .from('demo_videos')

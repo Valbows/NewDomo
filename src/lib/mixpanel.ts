@@ -98,6 +98,34 @@ export const analytics = {
     track('Video Closed', props);
   },
 
+  videoPaused: (props: {
+    demoId: string;
+    videoUrl: string;
+    videoTitle?: string;
+    pausedAt: number;
+    formattedTime: string;
+  }) => {
+    track('Video Paused', props);
+  },
+
+  videoSeeked: (props: {
+    demoId: string;
+    videoUrl: string;
+    videoTitle?: string;
+    seekedTo: number;
+    formattedTime: string;
+  }) => {
+    track('Video Seeked', props);
+  },
+
+  videoContextSent: (props: {
+    demoId: string;
+    context: string;
+    conversationId?: string;
+  }) => {
+    track('Video Context Sent', props);
+  },
+
   // CTA events
   ctaShown: (props: {
     demoId: string;

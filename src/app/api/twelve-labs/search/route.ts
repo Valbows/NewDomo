@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { searchVideo } from '@/lib/twelve-labs';
 
-// Use service role for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!
-);
+// Create Supabase client at runtime to avoid build errors
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
+}
 
 /**
  * Search within indexed videos
@@ -19,6 +21,8 @@ export async function POST(request: NextRequest) {
     if (!query) {
       return NextResponse.json({ error: 'query is required' }, { status: 400 });
     }
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     let indexId: string | undefined;
     let videoId: string | undefined;
