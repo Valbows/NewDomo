@@ -40,7 +40,6 @@ export function useRealtimeSubscription({
       .on('broadcast', { event: 'play_video' }, (payload: any) => {
         try {
           const url = payload?.payload?.url as string | undefined;
-          console.log('Realtime: play_video received', payload);
           if (url && typeof url === 'string') {
             callbacksRef.current.onPlayVideo(url);
           }
@@ -50,7 +49,6 @@ export function useRealtimeSubscription({
       })
       .on('broadcast', { event: 'show_trial_cta' }, (payload: any) => {
         try {
-          console.log('Realtime: show_trial_cta received', payload);
           const p = payload?.payload || {};
           callbacksRef.current.onShowCTA({
             cta_title: p?.cta_title ?? undefined,
@@ -64,12 +62,10 @@ export function useRealtimeSubscription({
         }
       })
       .on('broadcast', { event: 'analytics_updated' }, (payload: any) => {
-        console.log('Realtime: analytics_updated received', payload?.payload);
         callbacksRef.current.onAnalyticsUpdated?.(payload?.payload);
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`Client Realtime: SUBSCRIBED to ${channelName}`);
         }
       });
 

@@ -51,21 +51,14 @@ async function handlePOST(req: NextRequest) {
       }
 
       // Log for debugging
-      console.log('🔍 Conversation ID validation:', {
-        provided: conversationId,
-        stored: demo.tavus_conversation_id,
-        match: demo.tavus_conversation_id === conversationId
-      });
 
       // Handle conversation ID resolution
       if (!conversationId && demo.tavus_conversation_id) {
         // No conversation ID provided, use the stored one
-        console.log('🔄 Using stored conversation ID from demo');
         conversationId = demo.tavus_conversation_id;
       } else if (demo.tavus_conversation_id !== conversationId) {
         // IDs don't match, prefer the stored one if it exists
         if (demo.tavus_conversation_id) {
-          console.log('🔄 Conversation ID mismatch, using stored ID from demo');
           conversationId = demo.tavus_conversation_id;
         } else {
           console.warn('⚠️ No stored conversation ID in demo, using provided ID');
@@ -88,19 +81,14 @@ async function handlePOST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid conversation ID (null/undefined)' }, { status: 400 });
     }
 
-    console.log('🎯 Final conversation ID to end:', conversationId);
-
     const tavusApiKey = process.env.TAVUS_API_KEY;
     if (!tavusApiKey) {
       console.error('❌ Tavus API key not configured');
       return NextResponse.json({ error: 'Tavus API key not configured' }, { status: 500 });
     }
 
-    console.log('🔑 Tavus API key configured, proceeding with conversation check');
-
     // Try to end the conversation via Tavus API with robust error handling
     try {
-      console.log('🔍 Checking conversation status on Tavus...');
       const getResponse = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}`, {
         method: 'GET',
         headers: {
@@ -108,11 +96,9 @@ async function handlePOST(req: NextRequest) {
         },
       });
       
-      console.log('📡 Tavus GET response status:', getResponse.status);
 
       if (!getResponse.ok) {
         if (getResponse.status === 404) {
-          console.log('🔍 Conversation not found on Tavus, might already be ended');
           // Clear stale data since conversation doesn't exist
           if (demoId) {
             try {
@@ -137,7 +123,6 @@ async function handlePOST(req: NextRequest) {
                   })
                   .eq('id', demoId);
 
-                console.log('🧹 Cleared stale conversation data (404 case)');
               }
             } catch (clearError) {
               console.warn('⚠️ Failed to clear stale conversation data:', clearError);
@@ -179,7 +164,6 @@ async function handlePOST(req: NextRequest) {
                   })
                   .eq('id', demoId);
 
-                console.log('🧹 Cleared stale conversation data (already ended case)');
               }
             } catch (clearError) {
               console.warn('⚠️ Failed to clear stale conversation data:', clearError);
@@ -194,7 +178,6 @@ async function handlePOST(req: NextRequest) {
       }
 
       // End the conversation via Tavus API
-      console.log('🛑 Attempting to end conversation via Tavus API...');
       const endResponse = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}/end`, {
         method: 'POST',
         headers: {
@@ -203,7 +186,6 @@ async function handlePOST(req: NextRequest) {
         },
       });
       
-      console.log('📡 Tavus END response status:', endResponse.status);
 
       if (!endResponse.ok) {
         const errorText = await endResponse.text();
@@ -227,13 +209,11 @@ async function handlePOST(req: NextRequest) {
 
       const endResult = await endResponse.json();
       
-      console.log(`✅ Successfully ended Tavus conversation: ${conversationId}`);
 
       // Fetch transcript and perception analysis from Tavus API
       let transcript = null;
       let perceptionAnalysis = null;
       try {
-        console.log('🔄 Fetching transcript and perception analysis from Tavus...');
         const verboseResponse = await fetch(
           `https://tavusapi.com/v2/conversations/${conversationId}?verbose=true`,
           {
@@ -257,7 +237,6 @@ async function handlePOST(req: NextRequest) {
           const transcriptEvent = events.find((e: any) => e.event_type === 'application.transcription_ready');
           transcript = transcriptEvent?.properties?.transcript || null;
 
-          console.log(`📊 Fetched: transcript=${transcript ? 'YES' : 'NO'}, perception=${perceptionAnalysis ? 'YES' : 'NO'}`);
         } else {
           console.warn('⚠️ Failed to fetch verbose conversation data:', verboseResponse.status);
         }
@@ -280,7 +259,6 @@ async function handlePOST(req: NextRequest) {
         if (updateStatusError) {
           console.warn('⚠️ Failed to update conversation_details status:', updateStatusError);
         } else {
-          console.log('✅ Updated conversation_details with status, transcript, and perception');
         }
       } catch (statusError) {
         console.warn('⚠️ Error updating conversation_details status:', statusError);
@@ -311,7 +289,6 @@ async function handlePOST(req: NextRequest) {
               })
               .eq('id', demoId);
 
-            console.log('🧹 Cleared stale conversation data from demo');
           }
         } catch (clearError) {
           console.warn('⚠️ Failed to clear stale conversation data:', clearError);

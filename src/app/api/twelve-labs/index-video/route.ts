@@ -40,8 +40,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not generate video URL' }, { status: 500 });
     }
 
-    console.log('[TwelveLabs] Starting video indexing for:', video.title);
-
     // Start indexing with Twelve Labs
     const indexResult = await indexVideo(signedUrlData.signedUrl, video.title);
 

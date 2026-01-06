@@ -27,7 +27,6 @@ export function getWebhookUrl(): string {
   
   const webhookToken = process.env.TAVUS_WEBHOOK_TOKEN || 'domo_webhook_token_2025';
   
-  console.log(`🔗 Generated webhook URL: ${baseUrl}/api/tavus-webhook?t=${webhookToken}`);
   
   return `${baseUrl}/api/tavus-webhook?t=${webhookToken}`;
 }
@@ -57,7 +56,6 @@ export function addWebhookUrlsToObjectives(objectives: ObjectiveDefinition[]): O
     );
     
     if (needsWebhook) {
-      console.log(`🔗 Adding webhook URL to objective: ${objective.objective_name}`);
       return {
         ...objective,
         callback_url: webhookUrl
@@ -105,14 +103,12 @@ export function createContactInfoObjective(): ObjectiveDefinition {
  * This function is specifically for user-created custom objectives, not hardcoded templates
  */
 export function createEnhancedObjectivesWithWebhooks(baseObjectives: ObjectiveDefinition[]): ObjectiveDefinition[] {
-  console.log('🔗 Adding webhook URLs to custom objectives...');
   
   // Add webhook URLs to existing objectives that collect data
   const enhancedObjectives = addWebhookUrlsToObjectives(baseObjectives);
   
   // For custom objectives, we ONLY add webhook URLs to existing objectives
   // We don't add new objectives - that's up to the user to configure
-  console.log(`✅ Enhanced ${enhancedObjectives.length} custom objectives with webhook URLs`);
   
   return enhancedObjectives;
 }

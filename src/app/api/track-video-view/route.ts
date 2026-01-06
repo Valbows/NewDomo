@@ -74,7 +74,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Tracked video view for conversation ${conversation_id}: ${video_title}`);
     return NextResponse.json({ success: true });
 
   } catch (error) {

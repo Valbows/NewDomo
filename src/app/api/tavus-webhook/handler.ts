@@ -27,15 +27,8 @@ export async function handlePOST(req: NextRequest) {
 
     const event = JSON.parse(rawBody);
 
-    console.log('=== TAVUS WEBHOOK EVENT RECEIVED ===');
-    console.log('Event Type:', event.event_type);
-    console.log('Conversation ID:', event.conversation_id);
-    console.log('Full Event:', JSON.stringify(event, null, 2));
-    console.log('=====================================');
-
     const conversation_id = event.conversation_id;
     const { toolName, toolArgs } = parseToolCallFromEvent(event);
-    console.log('Parsed tool call from event:', toolName, toolArgs);
 
     // Idempotency guard for tool-call events only (prevents duplicate broadcasts)
     if (toolName) {
@@ -49,7 +42,6 @@ export async function handlePOST(req: NextRequest) {
     // These can arrive after the conversation ends, so we look up by conversation_id directly
     if (event.event_type === 'application.transcription_ready' ||
         event.event_type === 'application.perception_analysis') {
-      console.log(`📥 Received ${event.event_type} for conversation ${conversation_id}`);
 
       try {
         const updateData: any = {};
@@ -58,7 +50,6 @@ export async function handlePOST(req: NextRequest) {
           const transcript = event.properties?.transcript || event.data?.transcript || null;
           if (transcript) {
             updateData.transcript = transcript;
-            console.log(`📝 Storing transcript with ${Array.isArray(transcript) ? transcript.length : 'unknown'} entries`);
           }
         }
 
@@ -66,7 +57,6 @@ export async function handlePOST(req: NextRequest) {
           const perception = event.properties?.analysis || event.data?.analysis || null;
           if (perception) {
             updateData.perception_analysis = perception;
-            console.log(`🧠 Storing perception analysis`);
           }
         }
 
@@ -80,7 +70,6 @@ export async function handlePOST(req: NextRequest) {
           if (error) {
             console.warn(`⚠️ Failed to update conversation_details:`, error);
           } else {
-            console.log(`✅ Updated conversation_details with ${Object.keys(updateData).join(', ')}`);
           }
         }
 
@@ -171,16 +160,6 @@ async function handleObjectiveCompletion(
   const objectiveName = event?.properties?.objective_name || event?.data?.objective_name || event?.objective_name;
   const outputVariables = event?.properties?.output_variables || event?.data?.output_variables || event?.output_variables || {};
 
-  console.log(`🎯 Processing objective completion: ${objectiveName}`);
-  console.log(`📊 Output variables:`, JSON.stringify(outputVariables, null, 2));
-  console.log(`📋 Event structure:`, JSON.stringify({
-    event_type: event.event_type,
-    has_properties: !!event.properties,
-    has_data: !!event.data,
-    properties_keys: event.properties ? Object.keys(event.properties) : [],
-    data_keys: event.data ? Object.keys(event.data) : []
-  }, null, 2));
-
   // Ensure a conversation_details record exists for this conversation
   // This is critical for the reporting page to show the conversation
   await ensureConversationDetailsRecord(supabase, conversationId);
@@ -209,7 +188,6 @@ async function ensureConversationDetailsRecord(
       .single();
 
     if (existingRecord) {
-      console.log(`✅ conversation_details record already exists for ${conversationId}`);
       return;
     }
 
@@ -239,7 +217,6 @@ async function ensureConversationDetailsRecord(
     if (insertError) {
       console.error(`❌ Failed to create conversation_details record:`, insertError);
     } else {
-      console.log(`✅ Created conversation_details record for ${conversationId}`);
     }
   } catch (error) {
     console.error(`❌ Error ensuring conversation_details record:`, error);

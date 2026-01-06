@@ -48,8 +48,6 @@ export async function POST(
       return NextResponse.json({ error: 'Demo not found' }, { status: 404 });
     }
 
-    console.log(`✅ Updated demo ${params.demoId} with persona ${tavus_persona_id}`);
-
     return NextResponse.json({
       success: true,
       demo: data,

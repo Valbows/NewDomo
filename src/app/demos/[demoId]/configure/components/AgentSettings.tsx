@@ -84,7 +84,6 @@ export const AgentSettings = ({
       const result = await response.json();
       setAgentCreationResult(result);
       
-      console.log('🎉 Enhanced agent created successfully!', result);
       
     } catch (error) {
       console.error('❌ Failed to create enhanced agent:', error);

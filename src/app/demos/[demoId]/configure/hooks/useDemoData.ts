@@ -62,18 +62,15 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
 
     channel
       .on('broadcast', { event: 'play_video' }, (payload) => {
-        console.log('Received play_video event:', payload);
         if (payload?.payload?.url) {
           setPlayingVideoUrl(payload.payload.url);
           setUiState(UIState.VIDEO_PLAYING);
         }
       })
       .on('broadcast', { event: 'show_trial_cta' }, (payload) => {
-        console.log('Received show_trial_cta event:', payload);
         setUiState(UIState.DEMO_COMPLETE);
       })
       .on('broadcast', { event: 'analytics_updated' }, (payload) => {
-        console.log('Received analytics_updated event:', payload);
         // Refresh demo data so Reporting reflects the latest analytics snapshot
         fetchDemoData();
       })
@@ -84,14 +81,12 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
         (payload) => {
           try {
             const changedCols = Object.keys(payload?.new || {});
-            console.log('Postgres change on demos row:', { changedCols });
           } catch {}
           fetchDemoData();
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`Successfully subscribed to channel: demo-${demoId}`);
         }
       });
 

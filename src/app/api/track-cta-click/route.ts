@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Tracked CTA click for conversation ${conversation_id}, demo ${demo_id}`);
     return NextResponse.json({ success: true });
 
   } catch (error) {

@@ -46,8 +46,6 @@ export async function handleVideoUpload(params: VideoUploadParams) {
     const fileExtension = selectedVideoFile.name.split('.').pop();
     const filePath = `${demoId}/${uuidv4()}.${fileExtension}`;
 
-    console.log('Uploading file:', filePath, 'Size:', selectedVideoFile.size);
-
     // Upload with explicit options to avoid metadata issues
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('demo-videos')
@@ -61,7 +59,6 @@ export async function handleVideoUpload(params: VideoUploadParams) {
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    console.log('Upload successful:', uploadData);
     setProcessingStatus({ stage: 'processing', progress: 50, message: 'Video uploaded. Adding to database...' });
 
     const { data: newVideo, error: dbError } = await supabase

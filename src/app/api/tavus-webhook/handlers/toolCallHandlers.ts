@@ -19,9 +19,6 @@ export async function handleFetchVideo(
     return NextResponse.json({ message: 'Invalid or missing video title.' });
   }
 
-  console.log('Extracted video title:', videoTitle);
-  console.log(`Processing video request for: ${videoTitle}`);
-
   // 1. Find the demo associated with this conversation
   const { data: demo, error: demoError } = await supabase
     .from('demos')
@@ -35,8 +32,6 @@ export async function handleFetchVideo(
     // Return 200 to prevent Tavus from retrying, as this is a permanent error.
     return NextResponse.json({ message: 'Demo not found for conversation.' });
   }
-
-  console.log(`Found demo: ${demo.id}`);
 
   // 2. Find the video in that demo
   const { data: video, error: videoError } = await supabase
@@ -55,12 +50,9 @@ export async function handleFetchVideo(
       .from('demo_videos')
       .select('title')
       .eq('demo_id', demo.id);
-    console.log('Available videos in demo:', availableVideos?.map((v: { title: string }) => v.title));
 
     return NextResponse.json({ message: 'Video not found.' });
   }
-
-  console.log(`Found video storage path: ${video.storage_url}`);
 
   // 3. Generate a signed URL for the video
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -71,8 +63,6 @@ export async function handleFetchVideo(
     logError(signedUrlError, 'Error creating signed URL');
     return NextResponse.json({ message: 'Could not generate video URL.' });
   }
-
-  console.log(`Generated signed URL: ${signedUrlData.signedUrl}`);
 
   // 4. Broadcast the signed video URL to the frontend via Supabase Realtime
   await broadcastToDemo(supabase, demo.id, 'play_video', { url: signedUrlData.signedUrl });
@@ -125,7 +115,6 @@ async function trackVideoShowcase(
       if (updateErr) {
         console.warn('Failed to update video_showcase_data:', updateErr);
       } else {
-        console.log(`Updated video_showcase_data for ${conversationId}:`, videoTitle);
       }
     } else {
       const { error: insertErr } = await supabase
@@ -135,7 +124,6 @@ async function trackVideoShowcase(
       if (insertErr) {
         console.warn('Failed to insert video_showcase_data:', insertErr);
       } else {
-        console.log(`Inserted video_showcase_data for ${conversationId}:`, videoTitle);
       }
     }
   } catch (trackErr) {
@@ -147,7 +135,6 @@ export async function handleShowTrialCTA(
   supabase: any,
   conversationId: string
 ): Promise<NextResponse> {
-  console.log('Processing show_trial_cta tool call');
 
   // 1. Find the demo associated with this conversation
   const { data: demo, error: demoError } = await supabase
@@ -201,7 +188,6 @@ async function trackCTAShown(
       if (updateErr) {
         console.warn('Failed to update CTA shown event:', updateErr);
       } else {
-        console.log(`Updated CTA shown for conversation ${conversationId}`);
       }
     } else {
       const { error: insertErr } = await supabase
@@ -217,7 +203,6 @@ async function trackCTAShown(
       if (insertErr) {
         console.warn('Failed to insert CTA shown event:', insertErr);
       } else {
-        console.log(`Inserted CTA shown for conversation ${conversationId}`);
       }
     }
   } catch (trackingError) {

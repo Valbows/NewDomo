@@ -104,7 +104,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	const { hasMicError } = useDevices()
 	const isE2E = process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true';
 	const localId = useLocalSessionId();
-	const debugDaily = process.env.NEXT_PUBLIC_DEBUG_DAILY === 'true';
 
 	// Guard to prevent double-calling onLeave (can happen if user clicks leave button
 	// which triggers both handleLeave and the left-meeting event)
@@ -112,7 +111,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 
 	// Debug meeting state
 	useEffect(() => {
-		if (debugDaily) console.log('🎯 CVI Meeting State:', meetingState);
 		try {
 			Sentry.addBreadcrumb({
 				category: 'daily',
@@ -121,17 +119,10 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 				data: { meetingState },
 			});
 		} catch {}
-	}, [meetingState, debugDaily]);
+	}, [meetingState]);
 
 	// Granular Daily event logging for diagnosis
-	useDailyEvent('joined-meeting', (ev) => {
-		if (debugDaily) {
-			console.info('✅ Daily joined-meeting', {
-				localSessionId: localId,
-				event: ev,
-				url: conversationUrl,
-			});
-		}
+	useDailyEvent('joined-meeting', () => {
 		try {
 			Sentry.addBreadcrumb({
 				category: 'daily',
@@ -142,8 +133,7 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		} catch {}
 	});
 
-	useDailyEvent('left-meeting', (ev) => {
-		if (debugDaily) console.info('👋 Daily left-meeting', ev);
+	useDailyEvent('left-meeting', () => {
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'left-meeting' });
 		} catch {}
@@ -151,19 +141,11 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 		// This handles cases where the remote agent ends the call
 		if (!hasCalledOnLeaveRef.current) {
 			hasCalledOnLeaveRef.current = true;
-			if (debugDaily) console.info('👋 Calling onLeave from left-meeting event');
 			onLeave();
 		}
 	});
 
 	useDailyEvent('participant-joined', (ev) => {
-		if (debugDaily) {
-			console.log('👤 participant-joined', {
-				id: ev?.participant?.session_id,
-				name: ev?.participant?.user_name,
-				user_id: ev?.participant?.user_id,
-			});
-		}
 		try {
 			Sentry.addBreadcrumb({
 				category: 'daily',
@@ -175,87 +157,75 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	});
 
 	useDailyEvent('participant-left', (ev) => {
-		if (debugDaily) {
-			console.log('🚪 participant-left', {
-				id: ev?.participant?.session_id,
-				name: ev?.participant?.user_name,
-				user_id: ev?.participant?.user_id,
-			});
-		}
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'participant-left', data: { id: ev?.participant?.session_id } });
 		} catch {}
 	});
 
 	useDailyEvent('camera-error', (ev) => {
-		if (debugDaily) console.error('📷 camera-error', ev);
+		console.error('Camera error', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'error', message: 'camera-error' });
 		} catch {}
 	});
 
 	useDailyEvent('error', (ev) => {
-		if (debugDaily) console.error('🛑 daily error event', ev);
+		console.error('Daily error event', ev);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'error', message: 'daily-error-event' });
 		} catch {}
 	});
 
-	useDailyEvent('active-speaker-change', (ev) => {
-		if (debugDaily) console.log('🗣️ active-speaker-change', ev);
+	useDailyEvent('active-speaker-change', () => {
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'debug', message: 'active-speaker-change' });
 		} catch {}
 	});
 
-	useDailyEvent('network-quality-change', (ev) => {
-		if (debugDaily) console.log('📶 network-quality-change', ev);
+	useDailyEvent('network-quality-change', () => {
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'debug', message: 'network-quality-change' });
 		} catch {}
 	});
 
-	useDailyEvent('app-message', (ev) => {
+	useDailyEvent('app-message', () => {
 		try {
-			if (debugDaily) console.log('💬 app-message', typeof ev?.data === 'string' ? ev?.data : ev);
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'app-message' });
-		} catch (e) {
-			if (debugDaily) console.log('💬 app-message (unserializable)');
+		} catch {
+			// unserializable message
 		}
 	});
 
 	// Log mic access issues detected via devices hook (covers versions where 'mic-error' typed event may be missing)
 	useEffect(() => {
 		if (hasMicError) {
-			if (debugDaily) console.error('🎙️ Microphone error detected via devices hook (hasMicError=true)');
+			console.error('Microphone error detected via devices hook');
 			try {
 				Sentry.addBreadcrumb({ category: 'daily', level: 'error', message: 'mic-error-detected' });
 			} catch {}
 		}
-	}, [hasMicError, debugDaily]);
+	}, [hasMicError]);
 
 	useEffect(() => {
 		if (meetingState === 'error') {
-			if (debugDaily) console.warn('Daily meeting entered error state; not leaving automatically. Showing retry UI.');
+			console.warn('Daily meeting entered error state; not leaving automatically. Showing retry UI.');
 			try {
 				Sentry.addBreadcrumb({ category: 'daily', level: 'warning', message: 'meeting-state-error' });
 			} catch {}
 		}
-	}, [meetingState, debugDaily]);
+	}, [meetingState]);
 
 	// Initialize call when conversation is available
 	useEffect(() => {
 		if (!conversationUrl) return;
 		if (isE2E || conversationUrl === 'about:blank') {
-			if (debugDaily) console.log('🧪 E2E mode: Skipping Daily join');
 			return;
 		}
-		if (debugDaily) console.log('🎥 CVI: Joining call with URL:', conversationUrl);
 		try {
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'join-call', data: { url: conversationUrl } });
 		} catch {}
 		joinCall({ url: conversationUrl });
-	}, [conversationUrl, joinCall, isE2E, debugDaily]);
+	}, [conversationUrl, joinCall, isE2E]);
 
 	// Ensure we leave the call when component unmounts to prevent lingering sessions
 	useEffect(() => {
@@ -272,7 +242,6 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 	const retryJoin = useCallback(() => {
 		if (isE2E || conversationUrl === 'about:blank') return;
 		try {
-			if (debugDaily) console.log('🔁 Retrying join');
 			Sentry.addBreadcrumb({ category: 'daily', level: 'info', message: 'retry-join' });
 		} catch {}
 		try {
@@ -281,7 +250,7 @@ export const Conversation = React.memo(({ onLeave, conversationUrl }: Conversati
 			// no-op
 		}
 		joinCall({ url: conversationUrl });
-	}, [joinCall, leaveCall, conversationUrl, isE2E, debugDaily]);
+	}, [joinCall, leaveCall, conversationUrl, isE2E]);
 
 	const handleLeave = useCallback(() => {
 		try {

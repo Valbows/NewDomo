@@ -97,7 +97,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         if (existingUrl && isDailyRoomUrl(existingUrl) && existingConvId) {
           // Check if the Tavus conversation is still active (not just if room exists)
           if (await isTavusConversationActive(existingConvId, tavusApiKey)) {
-            console.log('Reusing existing active Tavus conversation:', existingConvId);
             return NextResponse.json({
               conversation_id: existingConvId,
               conversation_url: existingUrl,
@@ -114,7 +113,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
                   metadata: restMetadata
                 })
                 .eq('id', demoId);
-              console.log('Cleared stale conversation data from demo');
             } catch (clearError) {
               console.warn('Failed to clear stale conversation data:', clearError);
             }
@@ -124,12 +122,10 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         console.warn('Failed to parse demo metadata while checking for existing conversation URL:', e);
       }
     } else {
-      console.log('forceNew=true: will create a new conversation even if an existing URL is present.');
     }
 
     // If another request is already starting a conversation for this demo, wait and then reuse the result
     if (!forceNew && startLocks.has(demoId)) {
-      console.log('Conversation start already in progress for demo', demoId, '— waiting');
       try {
         await startLocks.get(demoId);
       } catch (_) {
@@ -168,7 +164,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           const persona = await personaResp.json();
           finalReplicaId = (persona?.default_replica_id || '').trim();
           if (finalReplicaId) {
-            console.log('Using persona default_replica_id for conversation:', finalReplicaId);
           } else {
             console.warn('Persona has no default_replica_id; a replica_id must be provided via TAVUS_REPLICA_ID.');
           }
@@ -180,7 +175,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         console.warn('Error fetching persona default_replica_id:', e);
       }
     } else {
-      console.log('Using replica_id from env for conversation:', finalReplicaId);
     }
 
     // Per Tavus docs, conversations accept callback_url for webhooks
@@ -193,12 +187,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // 1. If persona was created with custom objectives, those are already baked in
     // 2. If persona uses default objectives, those are also baked in
     // 3. Tavus personas have their objectives set at creation time
-    console.log('\n🎭 CONVERSATION PERSONA SELECTION');
-    console.log('='.repeat(40));
-    console.log(`Demo ID: ${demoId}`);
-    console.log(`Persona ID from DB: ${demo.tavus_persona_id}`);
-    console.log(`Using persona with its configured objectives (no override)`);
-    console.log('='.repeat(40));
 
     const conversationPayload: any = {
       persona_id: demo.tavus_persona_id,
@@ -267,7 +255,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
 
       const conversationData = await conversationResponse.json();
       
-      console.log('Conversation data received:', conversationData);
 
       // Get current demo metadata
       const { data: currentDemo, error: fetchError } = await supabase
@@ -305,7 +292,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // Execute under in-memory lock
     let result: any;
     if (startLocks.has(demoId)) {
-      console.log('Conversation start already in progress for demo', demoId, '— waiting');
       try {
         await startLocks.get(demoId);
       } catch (_) {}

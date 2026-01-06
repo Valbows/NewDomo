@@ -42,7 +42,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
 
   // Normalize incoming title (trim and remove a single leading/trailing quote)
   const normalizedTitle = videoTitle.trim().replace(/^["']|["']$/g, '');
-  console.log('Processing real-time video request:', normalizedTitle);
 
   // Ensure CTA banner is hidden while a video is starting and clear prior alerts
   setShowCTA(false);
@@ -118,7 +117,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
 
     // If storagePath is already a full URL, don't try to sign it
     if (/^https?:\/\//i.test(storagePath)) {
-      console.log('Using direct video URL (no signing needed):', storagePath);
       // New video source: reset any saved paused position
       pausedPositionRef.current = 0;
       setPlayingVideoUrl(storagePath);
@@ -141,7 +139,6 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
       return;
     }
 
-    console.log('Signed URL created:', signedUrlData.signedUrl);
     // New video source: reset any saved paused position
     pausedPositionRef.current = 0;
     setPlayingVideoUrl(signedUrlData.signedUrl);
@@ -163,7 +160,6 @@ export function handleVideoEnd(
   setUiState: (state: UIState) => void,
   setShowCTA: (show: boolean) => void
 ) {
-  console.log('Video ended, returning agent to full screen and showing CTA');
   pausedPositionRef.current = 0;
   setPlayingVideoUrl(null);
   setUiState(UIState.CONVERSATION);
@@ -178,7 +174,6 @@ export function handleVideoClose(
   suppressFetchUntilRef: React.MutableRefObject<number>,
   suppressReasonRef: React.MutableRefObject<'close' | 'pause' | 'resume' | null>
 ) {
-  console.log('❎ Video closed by user; clearing paused position and returning to conversation');
   pausedPositionRef.current = 0;
   setPlayingVideoUrl(null);
   setUiState(UIState.CONVERSATION);
@@ -189,14 +184,12 @@ export function handleVideoClose(
   // This prevents React batching issues where CTA might not render
   setTimeout(() => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Video closed, showing CTA banner');
     }
     setShowCTA(true);
   }, 100);
   // Small delay to ensure smooth transition
   setTimeout(() => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Video closed, agent returned to full screen');
     }
   }, 300);
 }

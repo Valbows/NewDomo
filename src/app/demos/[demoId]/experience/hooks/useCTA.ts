@@ -44,7 +44,6 @@ export function useCTA({ demo, conversationUrl }: UseCTAParams): UseCTAResult {
     ctaOverrides?.cta_button_url ?? demo?.cta_button_url ?? demo?.metadata?.ctaButtonUrl ?? '#';
 
   const handleCTAClick = useCallback(async () => {
-    console.log('🔗 CTA Button Clicked');
     const currentConversationId = conversationUrl
       ? extractConversationIdFromUrl(conversationUrl)
       : demo?.tavus_conversation_id;
@@ -62,7 +61,6 @@ export function useCTA({ demo, conversationUrl }: UseCTAParams): UseCTAResult {
             cta_url: ctaButtonUrl
           })
         });
-        console.log('✅ CTA click tracked successfully');
       } catch (error) {
         console.warn('⚠️ Failed to track CTA click:', error);
       }

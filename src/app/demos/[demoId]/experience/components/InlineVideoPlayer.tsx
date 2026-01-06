@@ -100,7 +100,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       if (shouldAutoplayRef.current) {
         try {
           await videoElement.play();
-          console.log('Video started playing:', videoUrl);
           setPaused(false);
         } catch (error) {
           console.error('Video autoplay failed:', error);
@@ -125,7 +124,6 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     };
 
     const handleEnded = () => {
-      console.log('Video ended');
       if (onVideoEnd) {
         onVideoEnd();
       }

@@ -16,7 +16,6 @@ export const CVIProvider = ({ children }: { children: React.ReactNode }) => {
       // Reuse existing instance and bump refcount
       daily = w.__CVI_CALL_OBJECT__;
       w.__CVI_CALL_REFCOUNT__ = (w.__CVI_CALL_REFCOUNT__ || 0) + 1;
-      console.log('🌐 CVIProvider: Reusing global Daily instance (refcount =', w.__CVI_CALL_REFCOUNT__, ')');
     } else {
       // Create a new global instance
       daily = Daily.createCallObject({
@@ -24,7 +23,6 @@ export const CVIProvider = ({ children }: { children: React.ReactNode }) => {
       });
       w.__CVI_CALL_OBJECT__ = daily;
       w.__CVI_CALL_REFCOUNT__ = 1;
-      console.log('🌐 CVIProvider: Created global Daily instance');
     }
 
     setCallObject(daily);
@@ -33,7 +31,6 @@ export const CVIProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       const nextRef = (w.__CVI_CALL_REFCOUNT__ || 1) - 1;
       w.__CVI_CALL_REFCOUNT__ = nextRef;
-      console.log('🧹 CVIProvider: Unmount (refcount =', nextRef, ')');
       if (nextRef <= 0) {
         try {
           daily.destroy();
@@ -42,7 +39,6 @@ export const CVIProvider = ({ children }: { children: React.ReactNode }) => {
         }
         delete w.__CVI_CALL_OBJECT__;
         delete w.__CVI_CALL_REFCOUNT__;
-        console.log('🧨 CVIProvider: Destroyed global Daily instance');
       }
     };
   }, []);

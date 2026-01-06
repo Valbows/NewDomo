@@ -70,7 +70,6 @@ export async function getOrCreateIndex(): Promise<string> {
     const existingIndex = indexesResponse.data?.find((idx: any) => idx.index_name === DOMO_INDEX_NAME);
 
     if (existingIndex) {
-      console.log('[TwelveLabs] Found existing index:', existingIndex._id);
       return existingIndex._id;
     }
 
@@ -89,7 +88,6 @@ export async function getOrCreateIndex(): Promise<string> {
       ],
     });
 
-    console.log('[TwelveLabs] Created new index:', newIndex._id);
     return newIndex._id;
   } catch (error) {
     console.error('[TwelveLabs] Error getting/creating index:', error);
@@ -113,8 +111,6 @@ export async function indexVideo(
       index_id: indexId,
       video_url: videoUrl,
     });
-
-    console.log('[TwelveLabs] Started indexing video:', task._id);
 
     return {
       indexId,

@@ -273,7 +273,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       lastSentContextRef.current = contextMessage;
 
       // Log for debugging
-      console.log('[VideoContext] Sending:', contextMessage);
 
       // Track the video context event
       analytics.videoContextSent({

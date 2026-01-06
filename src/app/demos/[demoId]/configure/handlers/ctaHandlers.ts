@@ -11,11 +11,6 @@ export async function handleSaveCTA(
   setDemo: (demo: Demo) => void
 ) {
   try {
-    console.log('💾 Saving CTA data:', {
-      ctaTitle,
-      ctaMessage,
-      ctaButtonText
-    });
 
     const { error } = await supabase
       .from('demos')
@@ -31,8 +26,6 @@ export async function handleSaveCTA(
 
     if (error) throw error;
 
-    console.log('✅ CTA data saved successfully to Supabase');
-
     // Update local demo state
     if (demo) {
       setDemo({
@@ -44,7 +37,6 @@ export async function handleSaveCTA(
           ctaButtonText
         }
       });
-      console.log('🔄 Updated local demo state with CTA data');
     }
 
     alert('CTA settings saved successfully!');
@@ -61,7 +53,6 @@ export async function handleSaveAdminCTAUrl(
   setDemo: (demo: Demo) => void
 ) {
   try {
-    console.log('🔐 Saving admin CTA URL:', url);
     const { error } = await supabase
       .from('demos')
       .update({ cta_button_url: url ? url : null })

@@ -23,7 +23,6 @@ export async function getCurrentNgrokUrl(): Promise<string | null> {
     );
     
     if (httpsTunnel?.public_url) {
-      console.log(`🔗 Found ngrok URL: ${httpsTunnel.public_url}`);
       return httpsTunnel.public_url;
     }
     
@@ -58,15 +57,11 @@ export async function autoUpdateWebhookUrls(): Promise<boolean> {
   const { changed, currentUrl, envUrl } = await checkNgrokUrlChanged();
   
   if (changed && currentUrl) {
-    console.log('🔄 Ngrok URL changed, updating webhook URLs...');
-    console.log(`   Old: ${envUrl}`);
-    console.log(`   New: ${currentUrl}`);
     
     try {
       const { updateWebhookUrlsForAllObjectives } = await import('../tavus/webhook-url-manager');
       await updateWebhookUrlsForAllObjectives(`${currentUrl}/api/tavus-webhook?t=${process.env.TAVUS_WEBHOOK_TOKEN}`);
       
-      console.log('✅ Webhook URLs updated successfully');
       return true;
     } catch (error) {
       console.error('❌ Failed to update webhook URLs:', error);

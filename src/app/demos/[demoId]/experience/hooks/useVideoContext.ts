@@ -52,7 +52,6 @@ export function useVideoContext(options?: UseVideoContextOptions) {
           context: contextMessage,
           timestamp: Date.now()
         }, '*');
-        console.log('[VideoContext] Sent to agent:', contextMessage);
       } catch (error) {
         console.warn('[VideoContext] Failed to send via Daily:', error);
       }

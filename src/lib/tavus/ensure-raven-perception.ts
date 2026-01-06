@@ -104,8 +104,6 @@ export async function enableRavenPerception(personaId: string): Promise<PersonaP
       };
     }
 
-    console.log(`✅ Updated persona ${personaId} to use raven-0 perception model`);
-
     return {
       ...status,
       current_perception_model: 'raven-0',

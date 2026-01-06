@@ -49,11 +49,6 @@ export class ObjectivesManager {
       data: template.objectives,
     };
 
-    console.log(
-      "📤 Creating objectives with payload:",
-      JSON.stringify(requestBody, null, 2)
-    );
-
     const response = await fetch(`${this.baseUrl}/objectives/`, {
       method: "POST",
       headers: {
@@ -72,9 +67,6 @@ export class ObjectivesManager {
     }
 
     const result = await response.json();
-    console.log(
-      `✅ Created objectives: ${template.name} (${result.objectives_id})`
-    );
     return {
       ...result,
       uuid: result.objectives_id, // Normalize the ID field
@@ -145,9 +137,6 @@ export class ObjectivesManager {
     }
 
     const result = await response.json();
-    console.log(
-      `✅ Updated objectives: ${template.name} (${result.objectives_id})`
-    );
     return result;
   }
 
@@ -169,7 +158,6 @@ export class ObjectivesManager {
       );
     }
 
-    console.log(`✅ Deleted objectives: ${objectivesId}`);
   }
 
   /**
@@ -199,7 +187,6 @@ export class ObjectivesManager {
       const existing = await this.findObjectivesByName(template.name);
 
       if (existing) {
-        console.log(`📋 Found existing objectives: ${existing.uuid}`);
         return existing.uuid!;
       }
 

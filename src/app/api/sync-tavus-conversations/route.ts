@@ -103,18 +103,7 @@ async function handleGET(req: NextRequest) {
         const conversationData: TavusConversationDetail = await conversationResponse.json();
         
         // Log the FULL response to see what fields are actually available
-        console.log(`🔍 FULL Conversation Response for ${conversationId}:`);
-        console.log(JSON.stringify(conversationData, null, 2));
         
-        console.log(`📊 Conversation summary:`, {
-          conversation_id: conversationData.conversation_id,
-          status: conversationData.status,
-          created_at: conversationData.created_at,
-          updated_at: conversationData.updated_at,
-          all_keys: Object.keys(conversationData),
-          has_transcript: !!conversationData.transcript,
-          has_perception: !!(conversationData as any).application?.perception_analysis
-        });
 
         // Extract transcript and perception analysis from events array
         const events = (conversationData as any).events || [];
@@ -155,24 +144,17 @@ async function handleGET(req: NextRequest) {
           perceptionAnalysis = (conversationData as any).perception_analysis;
         }
         
-        console.log(`📋 Found ${events.length} events in conversation`);
-        console.log(`🎯 Event types:`, events.map((e: any) => e.event_type).join(', '));
         
-        console.log(`✅ Transcript entries: ${transcript ? (Array.isArray(transcript) ? transcript.length : 'present') : 'none'}`);
-        console.log(`🧠 Perception analysis: ${perceptionAnalysis ? 'present' : 'none'}`);
         
         if (transcript) {
-          console.log(`📝 Transcript sample:`, Array.isArray(transcript) ? transcript.slice(0, 2) : 'string format');
         }
         
         if (perceptionAnalysis) {
-          console.log(`🧠 Perception analysis preview:`, typeof perceptionAnalysis === 'string' ? perceptionAnalysis.substring(0, 100) + '...' : 'object format');
         }
 
         // If no perception analysis, check persona configuration
         if (!perceptionAnalysis && demo.tavus_persona_id) {
           try {
-            console.log(`🔍 Checking persona configuration for perception analysis...`);
             const personaResponse = await fetch(
               `https://tavusapi.com/v2/personas/${demo.tavus_persona_id}`,
               {
@@ -187,11 +169,9 @@ async function handleGET(req: NextRequest) {
             if (personaResponse.ok) {
               const personaData = await personaResponse.json();
               const perceptionModel = personaData.perception_model;
-              console.log(`🧠 Persona perception model: ${perceptionModel || 'not set'}`);
               
               if (perceptionModel !== 'raven-0') {
                 console.warn(`⚠️ Perception analysis requires perception_model to be set to 'raven-0'. Current: ${perceptionModel || 'not set'}`);
-                console.log(`🔧 To fix: Use POST /api/check-persona-config with personaId and perception_model: 'raven-0'`);
               }
             }
           } catch (personaError) {

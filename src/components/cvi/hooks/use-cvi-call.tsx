@@ -22,11 +22,9 @@ export const useCVICall = (): {
 			const d: any = daily as any;
 			// Skip if we are already joining the same URL or already joined that URL
 			if (d.__CVI_JOINING__) {
-				console.log(' CVI join skipped: already joining');
 				return;
 			}
 			if (d.__CVI_JOIN_URL__ === url && (d.__CVI_JOINED__ === true)) {
-				console.log(' CVI join skipped: already joined this URL');
 				return;
 			}
 			// Mark as joining and record target url
@@ -46,7 +44,6 @@ export const useCVICall = (): {
 					},
 				})
 				.then(() => {
-					console.log(' CVI joined call');
 					d.__CVI_JOINED__ = true;
 				})
 				.catch((e: unknown) => {
@@ -65,7 +62,6 @@ export const useCVICall = (): {
 		if (!daily) return;
 		const d: any = daily as any;
 		if (d.__CVI_JOINED__ !== true && !d.__CVI_JOINING__) {
-			console.log(' CVI leave skipped: not joined');
 			return;
 		}
 		// Clear flags before leaving

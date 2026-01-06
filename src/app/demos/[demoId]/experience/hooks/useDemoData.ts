@@ -99,10 +99,8 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
         let processedDemoData = { ...demoData };
 
         if (typeof processedDemoData.metadata === 'string') {
-          console.log('⚠️ Metadata is a string, parsing...');
           try {
             processedDemoData.metadata = JSON.parse(processedDemoData.metadata);
-            console.log('✅ Metadata parsed successfully');
           } catch (e: unknown) {
             logError(e, '❌ Failed to parse metadata');
             processedDemoData.metadata = {};
@@ -113,15 +111,6 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
         setDemo(processedDemoData);
 
         // Debug: Log full demo data
-        console.log('📊 Full Demo Data:', JSON.stringify(processedDemoData, null, 2));
-        console.log('📦 Demo Metadata Type:', typeof processedDemoData.metadata);
-        console.log('📦 Demo Metadata Value:', JSON.stringify(processedDemoData.metadata, null, 2));
-        console.log('🎯 Demo CTA Data:', {
-          ctaTitle: processedDemoData.metadata?.ctaTitle,
-          ctaMessage: processedDemoData.metadata?.ctaMessage,
-          ctaButtonText: processedDemoData.metadata?.ctaButtonText,
-          ctaButtonUrl: processedDemoData.metadata?.ctaButtonUrl
-        });
 
         // Load available video titles for dropdown debugging
         try {
@@ -142,7 +131,6 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
         }
 
         // Always obtain a fresh/validated Daily conversation URL from the server
-        console.log('🚀 Requesting Daily conversation URL from API (ignoring saved metadata)');
         try {
           // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
           const win: any = typeof window !== 'undefined' ? window : undefined;
@@ -165,7 +153,6 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
             });
             inflight?.set(processedDemoData.id, startPromise);
           } else {
-            console.log('⏳ Waiting for in-flight conversation start (deduped)');
           }
           let data: any;
           try {
@@ -175,7 +162,6 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
           }
           const url = data?.conversation_url as string | undefined;
           if (url && isDailyRoomUrl(url)) {
-            console.log('✅ Received Daily conversation URL from API:', url);
             setConversationUrl(url);
             setUiState(UIState.CONVERSATION);
           } else {

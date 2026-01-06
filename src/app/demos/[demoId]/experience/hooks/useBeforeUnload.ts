@@ -17,7 +17,6 @@ export function useBeforeUnload({ conversationId, demoId }: UseBeforeUnloadParam
 
         try {
           navigator.sendBeacon('/api/end-conversation', endPayload);
-          console.log('📡 Sent conversation end beacon');
         } catch (error) {
           console.warn('Failed to send conversation end beacon:', error);
         }

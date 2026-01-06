@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
-  console.log('🎬 Video Showcase Webhook received');
 
   try {
     const body = await request.json();
-    console.log('📊 Video Showcase Webhook payload:', JSON.stringify(body, null, 2));
 
     // Extract data from webhook payload
     const event = body;
@@ -33,12 +31,8 @@ export async function POST(request: NextRequest) {
       event?.output_variables || 
       {};
 
-    console.log(`🎯 Processing objective completion: ${objectiveName}`);
-    console.log(`📊 Output variables:`, JSON.stringify(outputVariables, null, 2));
-
     // Validate this is a video showcase objective
     if (objectiveName !== 'demo_video_showcase') {
-      console.log(`⚠️ Ignoring non-video-showcase objective: ${objectiveName}`);
       return NextResponse.json({ 
         message: 'Not a video showcase objective', 
         objective: objectiveName 
@@ -57,10 +51,6 @@ export async function POST(request: NextRequest) {
         videosShownArray = [videosShown];
       }
     }
-
-    console.log(`🎬 Video data extracted:`, {
-      shown: videosShownArray
-    });
 
     // Store in database (only videos_shown column after schema update)
     const { data, error } = await supabase
@@ -82,8 +72,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log('✅ Video showcase data stored successfully:', data);
 
     return NextResponse.json({
       success: true,

@@ -19,7 +19,6 @@ export async function checkAndRecordIdempotency(
       .single();
 
     if (existing?.event_id) {
-      console.log('Idempotency: duplicate tool-call event detected, skipping processing:', eventId);
       return true; // Is duplicate
     }
 

@@ -17,7 +17,6 @@ export async function getObjectivesForDemo(demoId: string): Promise<string | nul
     const activeCustomObjective = await getActiveCustomObjective(demoId);
     
     if (activeCustomObjective && activeCustomObjective.tavus_objectives_id) {
-      console.log(`Using custom objectives for demo ${demoId}: ${activeCustomObjective.name}`);
       return activeCustomObjective.tavus_objectives_id;
     }
 
@@ -29,7 +28,6 @@ export async function getObjectivesForDemo(demoId: string): Promise<string | nul
       const defaultObjectives = await objectivesManager.ensureObjectives(
         OBJECTIVES_TEMPLATES.PRODUCT_DEMO
       );
-      console.log(`Using default product demo objectives for demo ${demoId}`);
       return defaultObjectives;
     } catch (error) {
       console.error('Failed to get default objectives:', error);
@@ -186,7 +184,6 @@ export async function validateObjectivesOverride(demoId: string) {
       }
     };
 
-    console.log('🔍 Objectives Override Validation:', result);
     return result;
   } catch (error) {
     console.error('Error validating objectives override:', error);

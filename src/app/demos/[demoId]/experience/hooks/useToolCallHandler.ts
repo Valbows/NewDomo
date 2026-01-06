@@ -70,7 +70,6 @@ export function useToolCallHandler({
   const playVideoByTitle = useCallback(async (videoTitle: string) => {
     // In E2E mode, use a placeholder URL
     if (isE2E) {
-      console.log('🧪 E2E mode: Using placeholder video URL');
       setPlayingVideoUrl('about:blank');
       setUiState(UIState.VIDEO_PLAYING);
       setCurrentVideoTitle(videoTitle);
@@ -92,8 +91,6 @@ export function useToolCallHandler({
       (t) => t.toLowerCase() === normalizedTitle.toLowerCase()
     );
     const finalTitle = matchedTitle || normalizedTitle;
-
-    console.log(`🎬 Fetching video: "${finalTitle}" (original: "${videoTitle}")`);
 
     // Look up video from database
     const { data: videoData, error: videoError } = await supabase
@@ -131,8 +128,6 @@ export function useToolCallHandler({
         return;
       }
 
-      console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
-
       // Track video viewing for Domo Score
       const currentConversationId = conversationUrl ? extractConversationIdFromUrl(conversationUrl) : demo?.tavus_conversation_id;
       if (currentConversationId && demo?.id) {
@@ -148,7 +143,6 @@ export function useToolCallHandler({
               video_title: finalTitle
             })
           });
-          console.log('✅ Video view tracked successfully:', finalTitle);
         } catch (error) {
           console.warn('⚠️ Failed to track video view:', error);
         }
@@ -178,8 +172,6 @@ export function useToolCallHandler({
       return;
     }
 
-    console.log('Real-time video playback triggered:', signedUrlData.signedUrl);
-
     // Track video viewing for Domo Score
     const currentConversationId = conversationUrl ? extractConversationIdFromUrl(conversationUrl) : demo?.tavus_conversation_id;
     if (currentConversationId && demo?.id) {
@@ -195,7 +187,6 @@ export function useToolCallHandler({
             video_title: videoData.title
           })
         });
-        console.log('✅ Video view tracked successfully:', videoData.title);
       } catch (error) {
         console.warn('⚠️ Failed to track video view:', error);
       }
@@ -214,13 +205,11 @@ export function useToolCallHandler({
 
   // Handle real-time tool calls from Daily.co
   const handleRealTimeToolCall = useCallback(async (toolName: string, args: any) => {
-    console.log(`🔧 Real-time tool call: ${toolName}`, args);
 
     // Check suppression window (e.g. if user just closed video)
     const now = Date.now();
     if (now < suppressFetchUntilRef.current) {
       const reason = suppressReasonRef.current;
-      console.log(`⏸️ Suppressing tool call (${reason} within window):`, toolName);
       return;
     }
 
@@ -228,7 +217,6 @@ export function useToolCallHandler({
     if (toolName === 'fetch_video' || toolName === 'play_video') {
       // Already playing the same video? Skip to avoid flicker
       if (uiState === UIState.VIDEO_PLAYING && playingVideoUrl) {
-        console.log('⏩ Already playing a video, ignoring duplicate play request');
         return;
       }
       const videoTitle = args?.title || args?.video_title || args?.video_name;
@@ -243,7 +231,6 @@ export function useToolCallHandler({
 
     // Handle pause_video tool call
     if (toolName === 'pause_video') {
-      console.log('⏸️ Pause video requested');
       if (videoPlayerRef.current) {
         suppressReasonRef.current = 'pause';
         suppressFetchUntilRef.current = Date.now() + 1000;
@@ -254,7 +241,6 @@ export function useToolCallHandler({
 
     // Handle resume/play_video tool call (for resuming paused video)
     if (toolName === 'resume_video') {
-      console.log('▶️ Resume video requested');
       if (videoPlayerRef.current) {
         suppressReasonRef.current = 'resume';
         suppressFetchUntilRef.current = Date.now() + 1000;
@@ -265,7 +251,6 @@ export function useToolCallHandler({
 
     // Handle close_video tool call
     if (toolName === 'close_video') {
-      console.log('❌ Close video requested');
       suppressReasonRef.current = 'close';
       suppressFetchUntilRef.current = Date.now() + 1000;
       setPlayingVideoUrl(null);
@@ -277,21 +262,17 @@ export function useToolCallHandler({
 
     // Handle next_video tool call
     if (toolName === 'next_video') {
-      console.log('⏭️ Next video requested');
       if (currentVideoIndex !== null && Array.isArray(videoTitles) && videoTitles.length > 0) {
         const nextIdx = (currentVideoIndex + 1) % videoTitles.length;
         const nextTitle = videoTitles[nextIdx];
-        console.log(`⏭️  Advancing from "${currentVideoTitle}" to "${nextTitle}"`);
         await playVideoByTitle(nextTitle);
       } else {
-        console.log('⏭️ No current video index or no titles available');
       }
       return;
     }
 
     // Handle show_trial_cta tool call
     if (toolName === 'show_trial_cta') {
-      console.log('🎯 Show trial CTA requested');
       // Accept optional override fields from args
       if (args && typeof args === 'object') {
         setCtaOverrides({

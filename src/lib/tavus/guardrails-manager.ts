@@ -53,7 +53,6 @@ export class GuardrailsManager {
     }
 
     const result = await response.json();
-    console.log('Create API Response:', JSON.stringify(result, null, 2));
     // The create response returns the created guardrail directly, not in a data array
     return result;
   }
@@ -150,21 +149,16 @@ export class GuardrailsManager {
     const existing = await this.findGuardrailsByName(ALL_GUARDRAIL_TEMPLATES.DOMO_AI_GUARDRAILS.name);
     
     if (existing) {
-      console.log(`Found existing guardrails: ${existing.uuid}`);
-      console.log('Deleting old guardrails to create updated version...');
       
       // Delete existing guardrails
       await this.deleteGuardrails(existing.uuid);
-      console.log('Old guardrails deleted successfully');
     }
 
     // Create new guardrails with latest template
-    console.log('Creating new Domo AI guardrails with updated rules...');
     const created = await this.createGuardrails(ALL_GUARDRAIL_TEMPLATES.DOMO_AI_GUARDRAILS);
     
     // The create API returns guardrails_id, not uuid
     const guardrailsId = (created as any).guardrails_id;
-    console.log(`Created guardrails: ${guardrailsId}`);
     
     return guardrailsId;
   }
