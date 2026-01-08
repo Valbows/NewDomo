@@ -14,20 +14,11 @@ export function useOnboardingStatus(
     // Step 2: Knowledge Base - at least one Q&A pair or document
     const knowledgeComplete = knowledgeChunks.length > 0;
 
-    // Step 3: Agent Settings - agent name and persona configured
-    const agentComplete = Boolean(
-      demo?.metadata?.agentName &&
-      demo?.metadata?.agentPersonality &&
-      demo?.tavus_persona_id
-    );
+    // Step 3: Agent Settings - Tavus persona created (agent exists)
+    const agentComplete = Boolean(demo?.tavus_persona_id);
 
-    // Step 4: CTA - CTA settings configured
-    const ctaComplete = Boolean(
-      demo?.metadata?.ctaTitle &&
-      demo?.metadata?.ctaMessage &&
-      demo?.metadata?.ctaButtonText &&
-      demo?.cta_button_url
-    );
+    // Step 4: CTA - CTA URL is set (main requirement)
+    const ctaComplete = Boolean(demo?.cta_button_url);
 
     return {
       videos: videosComplete,
