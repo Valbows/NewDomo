@@ -228,7 +228,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           {/* Back button row */}
           <div className="mb-2">
             <Link
-              href="/demos"
+              href="/dashboard"
               className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
