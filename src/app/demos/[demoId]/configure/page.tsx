@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { ProcessingStatus } from './types';
-import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft, ChevronDown, User, Megaphone, Code2 } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { VideoManagement } from './components/VideoManagement';
 import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
@@ -14,7 +14,6 @@ import { CTASettings } from './components/CTASettings';
 import { AdminCTAUrlEditor } from './components/AdminCTAUrlEditor';
 import { EmbedSettings } from './components/embed/EmbedSettings';
 import { OnboardingStepper, getStepFromTab, getTabFromStep } from './components/OnboardingStepper';
-import { CollapsibleSettings } from './components/CollapsibleSettings';
 
 // Custom hooks
 import { useDemoData } from './hooks/useDemoData';
@@ -85,6 +84,32 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
     setActiveTab(getTabFromStep(step));
+  };
+
+  // Settings dropdown state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+
+    if (settingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [settingsOpen]);
+
+  const handleSettingsOptionClick = (tab: string) => {
+    setActiveTab(tab);
+    setSettingsOpen(false);
   };
 
   // CTA Settings State
@@ -278,7 +303,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
           {/* Show different navigation based on onboarding status */}
           {isOnboardingComplete ? (
-            /* Post-onboarding: Main navigation with collapsible settings */
+            /* Post-onboarding: Main navigation with settings dropdown */
             <Tabs.List className="flex items-center gap-1 border-b border-gray-200 pb-0">
               {/* Content Management - Primary tabs */}
               <div className="flex items-center">
@@ -294,12 +319,58 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 </div>
               </div>
 
-              {/* Settings */}
-              <div className="ml-auto">
-                <Tabs.Trigger value="settings" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-400 hover:text-gray-600 rounded-t border-b-2 border-transparent data-[state=active]:text-gray-700 data-[state=active]:border-gray-400 transition-all">
+              {/* Hidden triggers for settings pages */}
+              <Tabs.Trigger value="agent" className="sr-only">Agent</Tabs.Trigger>
+              <Tabs.Trigger value="cta" className="sr-only">CTA</Tabs.Trigger>
+              <Tabs.Trigger value="embed" className="sr-only">Embed</Tabs.Trigger>
+
+              {/* Settings Dropdown */}
+              <div className="ml-auto relative" ref={settingsRef}>
+                <button
+                  onClick={() => setSettingsOpen(!settingsOpen)}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t border-b-2 transition-all ${
+                    ['agent', 'cta', 'embed'].includes(activeTab)
+                      ? 'text-gray-700 border-gray-400'
+                      : 'text-gray-400 hover:text-gray-600 border-transparent'
+                  }`}
+                >
                   <Settings className="w-4 h-4" />
                   Settings
-                </Tabs.Trigger>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {settingsOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={() => handleSettingsOptionClick('agent')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                        activeTab === 'agent' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <User className="w-4 h-4" />
+                      Agent Settings
+                    </button>
+                    <button
+                      onClick={() => handleSettingsOptionClick('cta')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                        activeTab === 'cta' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <Megaphone className="w-4 h-4" />
+                      Call-to-Action
+                    </button>
+                    <button
+                      onClick={() => handleSettingsOptionClick('embed')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                        activeTab === 'embed' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <Code2 className="w-4 h-4" />
+                      Embed Settings
+                    </button>
+                  </div>
+                )}
               </div>
             </Tabs.List>
           ) : (
@@ -452,61 +523,6 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               )}
             </Tabs.Content>
 
-            {/* Settings panel - only shown after onboarding */}
-            <Tabs.Content value="settings">
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Demo Settings</h2>
-
-                <CollapsibleSettings
-                  title="Agent Settings"
-                  description="Configure agent personality and behavior"
-                  isConfigured={stepStatus.agent}
-                >
-                  <AgentSettings
-                    demo={demo}
-                    agentName={agentName}
-                    setAgentName={setAgentName}
-                    agentPersonality={agentPersonality}
-                    setAgentPersonality={setAgentPersonality}
-                    agentGreeting={agentGreeting}
-                    setAgentGreeting={setAgentGreeting}
-                    objectives={objectives}
-                    setObjectives={setObjectives}
-                  />
-                </CollapsibleSettings>
-
-                <CollapsibleSettings
-                  title="Call-to-Action Settings"
-                  description="Configure the CTA shown at the end of demos"
-                  isConfigured={stepStatus.cta}
-                >
-                  <div className="space-y-6">
-                    <AdminCTAUrlEditor
-                      currentUrl={demo?.cta_button_url || null}
-                      onSave={handleSaveAdminCTAUrl}
-                    />
-                    <CTASettings
-                      demo={demo}
-                      ctaTitle={ctaTitle}
-                      setCTATitle={setCTATitle}
-                      ctaMessage={ctaMessage}
-                      setCTAMessage={setCTAMessage}
-                      ctaButtonText={ctaButtonText}
-                      setCTAButtonText={setCTAButtonText}
-                      onSaveCTA={handleSaveCTA}
-                    />
-                  </div>
-                </CollapsibleSettings>
-
-                <CollapsibleSettings
-                  title="Embed Settings"
-                  description="Get embed code to add your demo to any website"
-                  isConfigured={!!demo?.embed_token}
-                >
-                  <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
-                </CollapsibleSettings>
-              </div>
-            </Tabs.Content>
           </div>
         </Tabs.Root>
       </main>
