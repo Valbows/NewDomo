@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { ProcessingStatus } from './types';
 import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft, ChevronDown, User, Megaphone, Code2 } from 'lucide-react';
@@ -226,13 +227,13 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
           {/* Back button row */}
           <div className="mb-2">
-            <a
+            <Link
               href="/demos"
               className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Dashboard
-            </a>
+            </Link>
           </div>
 
           {/* Main header row */}
@@ -242,19 +243,19 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               <p className="text-sm text-gray-500">Manage your demo videos, knowledge base, and agent settings.</p>
             </div>
             <div className="flex items-center space-x-3">
-              <a
+              <Link
                 href={`/demos/${demoId}/reporting`}
                 className="inline-flex items-center px-4 py-2 text-gray-700 bg-gray-100 font-medium rounded-md hover:bg-gray-200 transition-colors"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Reporting
-              </a>
-              <a
+              </Link>
+              <Link
                 href={`/demos/${demoId}/experience`}
                 className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
               >
                 View Demo Experience
-              </a>
+              </Link>
             </div>
           </div>
         </div>
