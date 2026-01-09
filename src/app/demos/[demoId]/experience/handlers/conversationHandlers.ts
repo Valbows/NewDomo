@@ -73,6 +73,6 @@ export async function handleConversationEnd(
   }
 
   setUiState(UIState.IDLE);
-  // Redirect to the reporting page (configure page with reporting tab)
-  router.push(`/demos/${demoId}/configure?tab=reporting`);
+  // Redirect to the reporting page
+  router.push(`/demos/${demoId}/reporting`);
 }

@@ -1,22 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface UseConversationSyncProps {
   demoId: string | undefined;
   onSyncComplete?: () => Promise<void>;
+  autoSync?: boolean; // Auto-sync on mount
 }
 
 interface UseConversationSyncReturn {
   syncing: boolean;
   syncError: string | null;
   syncConversations: () => Promise<void>;
+  initialSyncComplete: boolean; // Track if initial auto-sync finished
 }
 
 export function useConversationSync({
   demoId,
   onSyncComplete,
+  autoSync = false,
 }: UseConversationSyncProps): UseConversationSyncReturn {
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [initialSyncComplete, setInitialSyncComplete] = useState(!autoSync); // If no autoSync, consider it complete
+  const hasAutoSynced = useRef(false);
 
   const syncConversations = async () => {
     if (!demoId) return;
@@ -62,12 +67,22 @@ export function useConversationSync({
       setSyncError("Failed to sync conversations from Domo");
     } finally {
       setSyncing(false);
+      setInitialSyncComplete(true);
     }
   };
+
+  // Auto-sync on mount if enabled
+  useEffect(() => {
+    if (autoSync && demoId && !hasAutoSynced.current) {
+      hasAutoSynced.current = true;
+      syncConversations();
+    }
+  }, [autoSync, demoId]);
 
   return {
     syncing,
     syncError,
     syncConversations,
+    initialSyncComplete,
   };
 }

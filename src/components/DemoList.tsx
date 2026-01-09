@@ -1,9 +1,10 @@
  'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import DemoListItem from './DemoListItem';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
 import { useDemosRealtime } from '@/hooks/useDemosRealtime';
+import { supabase } from '@/lib/supabase';
 
 interface DemoListProps {
   demos?: Demo[];
@@ -20,6 +21,40 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
   const loading = loadingProp ?? hook.loading;
   const error = errorProp ?? hook.error;
   const refresh = onRefresh ?? hook.refresh;
+
+  // Fetch conversation counts for each demo
+  const [conversationCounts, setConversationCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const fetchConversationCounts = async () => {
+      if (demos.length === 0) return;
+
+      try {
+        const demoIds = demos.map((d) => d.id);
+
+        const { data, error: fetchError } = await supabase
+          .from("conversation_details")
+          .select("demo_id")
+          .in("demo_id", demoIds);
+
+        if (fetchError) {
+          console.error("Failed to fetch conversation counts:", fetchError);
+          return;
+        }
+
+        // Count conversations per demo
+        const counts: Record<string, number> = {};
+        for (const conv of data || []) {
+          counts[conv.demo_id] = (counts[conv.demo_id] || 0) + 1;
+        }
+        setConversationCounts(counts);
+      } catch (err) {
+        console.error("Error fetching conversation counts:", err);
+      }
+    };
+
+    fetchConversationCounts();
+  }, [demos]);
 
   return (
     <div className="mt-8" data-testid="demo-list" aria-busy={loading} aria-live="polite">
@@ -60,7 +95,11 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
       ) : (
         <div className="space-y-4">
           {demos.map((demo) => (
-            <DemoListItem key={demo.id} demo={demo} />
+            <DemoListItem
+              key={demo.id}
+              demo={demo}
+              conversationCount={conversationCounts[demo.id] || 0}
+            />
           ))}
         </div>
       )}

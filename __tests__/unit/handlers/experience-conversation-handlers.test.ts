@@ -59,7 +59,7 @@ describe('Experience Conversation Handlers', () => {
       });
 
       expect(setUiState).toHaveBeenCalledWith(UIState.IDLE);
-      expect(router.push).toHaveBeenCalledWith('/demos/demo1/configure?tab=reporting');
+      expect(router.push).toHaveBeenCalledWith('/demos/demo1/reporting');
     });
 
     it('should handle end conversation API failure gracefully', async () => {
@@ -87,7 +87,7 @@ describe('Experience Conversation Handlers', () => {
       );
 
       expect(setUiState).toHaveBeenCalledWith(UIState.IDLE);
-      expect(router.push).toHaveBeenCalledWith('/demos/demo1/configure?tab=reporting');
+      expect(router.push).toHaveBeenCalledWith('/demos/demo1/reporting');
     });
 
     it('should handle sync failure gracefully', async () => {
@@ -122,7 +122,7 @@ describe('Experience Conversation Handlers', () => {
       await new Promise(resolve => setTimeout(resolve, 1100));
 
       expect(setUiState).toHaveBeenCalledWith(UIState.IDLE);
-      expect(router.push).toHaveBeenCalledWith('/demos/demo1/configure?tab=reporting');
+      expect(router.push).toHaveBeenCalledWith('/demos/demo1/reporting');
     });
 
     it('should work when conversation_id is not set', async () => {
@@ -146,7 +146,7 @@ describe('Experience Conversation Handlers', () => {
 
       expect(mockFetch).not.toHaveBeenCalled();
       expect(setUiState).toHaveBeenCalledWith(UIState.IDLE);
-      expect(router.push).toHaveBeenCalledWith('/demos/demo1/configure?tab=reporting');
+      expect(router.push).toHaveBeenCalledWith('/demos/demo1/reporting');
     });
 
     it('should work when demo is null', async () => {
@@ -165,7 +165,7 @@ describe('Experience Conversation Handlers', () => {
 
       expect(mockFetch).not.toHaveBeenCalled();
       expect(setUiState).toHaveBeenCalledWith(UIState.IDLE);
-      expect(router.push).toHaveBeenCalledWith('/demos/demo1/configure?tab=reporting');
+      expect(router.push).toHaveBeenCalledWith('/demos/demo1/reporting');
     });
   });
 });

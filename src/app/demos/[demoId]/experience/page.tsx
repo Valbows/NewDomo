@@ -92,7 +92,7 @@ export default function DemoExperiencePage() {
     }
 
     // Redirect to the reporting page
-    router.push(`/demos/${demoId}/configure?tab=reporting`);
+    router.push(`/demos/${demoId}/reporting`);
   }, [demo?.tavus_conversation_id, demo?.id, demoId, router]);
 
   // Handle tool calls (for any experience-specific tracking)
