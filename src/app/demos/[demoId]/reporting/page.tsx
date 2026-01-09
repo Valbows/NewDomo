@@ -38,11 +38,11 @@ export default function ReportingPage({ params }: { params: { demoId: string } }
           {/* Back button row */}
           <div className="mb-2">
             <Link
-              href={`/demos/${demoId}/configure`}
+              href="/dashboard"
               className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Configure
+              Back to Dashboard
             </Link>
           </div>
 

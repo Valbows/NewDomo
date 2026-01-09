@@ -222,6 +222,17 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           lastSentContextRef.current = '';
           setPlayingVideoUrl(null);
           setUiState(UIState.CONVERSATION);
+
+          // Auto-show CTA when AI closes video (usually means trial request)
+          setShowCTA(true);
+
+          // Track CTA shown
+          analytics.ctaShown({
+            demoId,
+            ctaTitle,
+            ctaButtonText,
+          });
+
           onToolCall({ name: toolName, args });
           return;
         }

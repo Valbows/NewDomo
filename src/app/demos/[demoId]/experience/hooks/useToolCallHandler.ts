@@ -257,6 +257,9 @@ export function useToolCallHandler({
       setCurrentVideoTitle(null);
       setCurrentVideoIndex(null);
       setUiState(UIState.CONVERSATION);
+
+      // Auto-show CTA when AI closes video (usually means trial request)
+      setShowCTA(true);
       return;
     }
 
