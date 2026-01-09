@@ -3,8 +3,21 @@ const nextConfig = {
   reactStrictMode: false,
   async headers() {
     const headers = [
+      // Allow iframe embedding for /embed/* routes
       {
-        source: '/(.*)',
+        source: '/embed/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+          // Allow embedding from any origin for embed pages
+          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'Permissions-Policy', value: 'camera=*, microphone=*, geolocation=()' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors *" },
+        ],
+      },
+      // Restrict all other routes
+      {
+        source: '/((?!embed).*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'same-origin' },
@@ -14,7 +27,8 @@ const nextConfig = {
       },
     ];
     if (process.env.NODE_ENV === 'production') {
-      headers[0].headers.push({
+      // Add CSP for non-embed routes only
+      headers[1].headers.push({
         key: 'Content-Security-Policy-Report-Only',
         value:
           "default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co https://api.elevenlabs.io https://tavusapi.com https://*.sentry.io; img-src 'self' data: blob:; media-src 'self' blob: https://*.supabase.co; frame-ancestors 'none'",

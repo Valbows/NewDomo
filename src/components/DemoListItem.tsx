@@ -44,7 +44,7 @@
            View
          </Link>
          <Link
-           href={`/demos/${demo.id}/configure/videos`}
+           href={`/demos/${demo.id}/configure?tab=videos`}
            className="text-xs px-3 py-1 rounded bg-gray-50 text-gray-700 hover:bg-gray-100"
          >
            Manage
