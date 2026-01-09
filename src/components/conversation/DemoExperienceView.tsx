@@ -228,6 +228,15 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
         // Handle show_trial_cta
         if (toolName === 'show_trial_cta' || toolName === 'show_cta') {
+          // Silently close any playing video first
+          if (playingVideoUrl) {
+            currentVideoRef.current = null;
+            lastSentContextRef.current = '';
+            setPlayingVideoUrl(null);
+            setUiState(UIState.CONVERSATION);
+          }
+
+          // Show CTA immediately
           setShowCTA(true);
 
           // Track CTA shown
@@ -244,7 +253,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         // Unknown tool call - pass to parent
         onToolCall({ name: toolName, args });
       },
-      [onToolCall, demoId, ctaTitle, ctaButtonText]
+      [onToolCall, demoId, ctaTitle, ctaButtonText, playingVideoUrl]
     );
 
     // Handle conversation end

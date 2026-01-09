@@ -14,14 +14,16 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 async function sendLog(level: LogLevel, message: string, data?: any, source?: string): Promise<void> {
-  // Always log to browser console
-  const consoleMethod = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
-  const prefix = source ? `[${source}]` : '';
+  // Only log to browser console in development mode
+  if (IS_DEV) {
+    const consoleMethod = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+    const prefix = source ? `[${source}]` : '';
 
-  if (data) {
-    consoleMethod(`${prefix} ${message}`, data);
-  } else {
-    consoleMethod(`${prefix} ${message}`);
+    if (data) {
+      consoleMethod(`${prefix} ${message}`, data);
+    } else {
+      consoleMethod(`${prefix} ${message}`);
+    }
   }
 
   // Send to server to write to debug.log (only in dev)
