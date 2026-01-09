@@ -20,8 +20,8 @@ export function useOnboardingStatus(
     // Step 4: CTA - CTA URL is set (main requirement)
     const ctaComplete = Boolean(demo?.cta_button_url);
 
-    // Step 5: Embed - embed token generated (ready to deploy)
-    const embedComplete = Boolean(demo?.embed_token);
+    // Step 5: Embed - user has enabled embedding (is_embeddable = true)
+    const embedComplete = Boolean(demo?.is_embeddable);
 
     return {
       videos: videosComplete,
