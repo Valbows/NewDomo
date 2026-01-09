@@ -273,6 +273,14 @@ export function useToolCallHandler({
 
     // Handle show_trial_cta tool call
     if (toolName === 'show_trial_cta') {
+      // Silently close any playing video first
+      if (playingVideoUrl) {
+        setPlayingVideoUrl(null);
+        setCurrentVideoTitle(null);
+        setCurrentVideoIndex(null);
+        setUiState(UIState.CONVERSATION);
+      }
+
       // Accept optional override fields from args
       if (args && typeof args === 'object') {
         setCtaOverrides({
@@ -286,7 +294,7 @@ export function useToolCallHandler({
       return;
     }
 
-    console.warn(`⚠️ Unknown tool call: ${toolName}`);
+    // Unknown tool call - ignore silently
   }, [uiState, playingVideoUrl, videoTitles, currentVideoIndex, currentVideoTitle, videoPlayerRef, playVideoByTitle, setPlayingVideoUrl, setUiState, setCurrentVideoTitle, setCurrentVideoIndex, setShowCTA, setCtaOverrides]);
 
   return {
