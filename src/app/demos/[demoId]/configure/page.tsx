@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { ProcessingStatus } from './types';
-import { Loader2, AlertCircle, Settings, BarChart3, Code2, Video, BookOpen, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { VideoManagement } from './components/VideoManagement';
 import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
@@ -294,16 +294,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 </div>
               </div>
 
-              {/* Divider */}
-              <div className="h-6 w-px bg-gray-300 mx-3"></div>
-
-              {/* Deploy */}
-              <Tabs.Trigger value="embed" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-emerald-600 rounded-t border-b-2 border-transparent data-[state=active]:text-emerald-700 data-[state=active]:border-emerald-600 transition-all">
-                <Code2 className="w-4 h-4" />
-                Embed
-              </Tabs.Trigger>
-
-              {/* Settings - collapsible */}
+              {/* Settings */}
               <div className="ml-auto">
                 <Tabs.Trigger value="settings" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-400 hover:text-gray-600 rounded-t border-b-2 border-transparent data-[state=active]:text-gray-700 data-[state=active]:border-gray-400 transition-all">
                   <Settings className="w-4 h-4" />
@@ -445,10 +436,6 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               )}
             </Tabs.Content>
 
-            <Tabs.Content value="embed">
-              <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
-            </Tabs.Content>
-
             {/* Settings panel - only shown after onboarding */}
             <Tabs.Content value="settings">
               <div className="space-y-4">
@@ -493,6 +480,14 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                       onSaveCTA={handleSaveCTA}
                     />
                   </div>
+                </CollapsibleSettings>
+
+                <CollapsibleSettings
+                  title="Embed Settings"
+                  description="Get embed code to add your demo to any website"
+                  isConfigured={!!demo?.embed_token}
+                >
+                  <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
                 </CollapsibleSettings>
               </div>
             </Tabs.Content>
