@@ -40,10 +40,11 @@ describe('Mixpanel Analytics', () => {
       initMixpanel();
 
       expect(mixpanel.init).toHaveBeenCalledWith(
-        'b6bca0aef2fc049b7376d9168e202cc6',
+        '3a185c402520defd864bd67568f6397f',
         expect.objectContaining({
           track_pageview: true,
           persistence: 'localStorage',
+          autocapture: true,
         })
       );
     });

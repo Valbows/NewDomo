@@ -2,7 +2,7 @@
  import Link from 'next/link';
  import { MoreVertical } from 'lucide-react';
  import type { Demo } from '@/app/demos/[demoId]/configure/types';
- 
+
  function formatDate(iso?: string | null) {
    if (!iso) return '—';
    try {
@@ -11,27 +11,13 @@
      return '—';
    }
  }
- 
- function countConversations(analytics: any): number {
-   try {
-     const conv = analytics?.conversations || {};
-     return Object.keys(conv).length;
-   } catch {
-     return 0;
-   }
- }
- 
+
  interface Props {
    demo: Demo;
+   conversationCount?: number;
  }
- 
- const DemoListItem: React.FC<Props> = ({ demo }) => {
-   const analytics = demo?.metadata?.analytics as
-     | { last_updated?: string; conversations?: Record<string, any> }
-     | undefined;
-   const convCount = countConversations(analytics);
-   const lastUpdated = analytics?.last_updated || null;
- 
+
+ const DemoListItem: React.FC<Props> = ({ demo, conversationCount = 0 }) => {
    const isActive = Boolean(demo.tavus_persona_id || demo.tavus_conversation_id);
  
    return (
@@ -40,9 +26,8 @@
          <h3 className="text-lg font-bold text-domo-dark-text truncate">{demo.name}</h3>
          <p className="text-xs text-domo-light-text mt-1">
            Created: {formatDate(demo.created_at)}
-           {lastUpdated ? ` • Analytics updated: ${new Date(lastUpdated).toLocaleString()}` : ''}
          </p>
-         <p className="text-xs text-gray-500 mt-1">Conversations tracked: {convCount}</p>
+         <p className="text-xs text-gray-500 mt-1">Conversations tracked: {conversationCount}</p>
        </div>
        <div className="flex items-center space-x-3">
          <span

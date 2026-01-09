@@ -24,9 +24,10 @@ export const Reporting = ({ demo }: ReportingProps) => {
     refreshAllData,
   } = useConversationData({ demoId: demo?.id });
 
-  const { syncing, syncError, syncConversations } = useConversationSync({
+  const { syncing, syncError, syncConversations, initialSyncComplete } = useConversationSync({
     demoId: demo?.id,
     onSyncComplete: refreshAllData,
+    autoSync: true, // Auto-sync when page loads
   });
 
   // Combine errors
@@ -70,6 +71,23 @@ export const Reporting = ({ demo }: ReportingProps) => {
     setExpandedConversation(expandedConversation === conversationId ? null : conversationId);
   };
 
+  // Show loading state during initial sync
+  if (!initialSyncComplete && syncing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-indigo-200 rounded-full"></div>
+          <div className="w-16 h-16 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
+        </div>
+        <h3 className="mt-6 text-lg font-semibold text-gray-900">Loading Conversation Data</h3>
+        <p className="mt-2 text-gray-600 text-center max-w-md">
+          Syncing your latest conversations and generating perception analysis...
+        </p>
+        <p className="mt-1 text-sm text-gray-500">This may take a few moments</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header */}
@@ -83,14 +101,15 @@ export const Reporting = ({ demo }: ReportingProps) => {
         <button
           onClick={syncConversations}
           disabled={syncing || !demo?.tavus_conversation_id}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          title="Manually refresh conversation data"
         >
           {syncing ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <RefreshCw className="w-4 h-4 mr-2" />
           )}
-          {syncing ? "Syncing..." : "Sync from Domo"}
+          {syncing ? "Syncing..." : "Refresh"}
         </button>
       </div>
 

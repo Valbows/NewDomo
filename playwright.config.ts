@@ -6,7 +6,7 @@ const baseURL = `http://localhost:${PORT}`;
 const isCI = !!process.env.CI;
 
 export default defineConfig({
-  testDir: 'e2e',
+  testDir: '__tests__/e2e',
   timeout: 30_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,

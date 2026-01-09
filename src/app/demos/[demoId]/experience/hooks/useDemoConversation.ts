@@ -142,7 +142,7 @@ export function useDemoConversation(demoId: string) {
 
   // Handle conversation end
   const endConversation = () => {
-    router.push(`/demos/${demoId}/configure?tab=reporting`);
+    router.push(`/demos/${demoId}/reporting`);
   };
 
   return {

@@ -1,23 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { ProcessingStatus } from './types';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft, ChevronDown, User, Megaphone, Code2 } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { VideoManagement } from './components/VideoManagement';
 import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
 import { AgentSettings } from './components/AgentSettings';
 import { VideoPlayer } from './components/VideoPlayer';
 import { CTASettings } from './components/CTASettings';
-import { Reporting } from './components/reporting';
 import { AdminCTAUrlEditor } from './components/AdminCTAUrlEditor';
 import { EmbedSettings } from './components/embed/EmbedSettings';
+import { OnboardingStepper, getStepFromTab, getTabFromStep } from './components/OnboardingStepper';
 
 // Custom hooks
 import { useDemoData } from './hooks/useDemoData';
 import { useAutoSaveMetadata } from './hooks/useAutoSaveMetadata';
+import { useOnboardingStatus } from './hooks/useOnboardingStatus';
 
 // Handlers
 import { handleVideoUpload as videoUpload, handlePreviewVideo as previewVideo, handleDeleteVideo as deleteVideo } from './handlers/videoHandlers';
@@ -60,6 +62,56 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
   // Get the initial tab from URL parameters
   const initialTab = searchParams?.get('tab') || 'videos';
+
+  // Onboarding status
+  const { stepStatus, isOnboardingComplete, firstIncompleteStep } = useOnboardingStatus(
+    demo,
+    demoVideos,
+    knowledgeChunks
+  );
+
+  // Current step for onboarding flow
+  const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Sync step with tab
+  useEffect(() => {
+    if (!isOnboardingComplete) {
+      setCurrentStep(firstIncompleteStep);
+      setActiveTab(getTabFromStep(firstIncompleteStep));
+    }
+  }, [isOnboardingComplete, firstIncompleteStep]);
+
+  const handleStepClick = (step: number) => {
+    setCurrentStep(step);
+    setActiveTab(getTabFromStep(step));
+  };
+
+  // Settings dropdown state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+
+    if (settingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [settingsOpen]);
+
+  const handleSettingsOptionClick = (tab: string) => {
+    setActiveTab(tab);
+    setSettingsOpen(false);
+  };
 
   // CTA Settings State
   const [ctaTitle, setCTATitle] = useState('Ready to Get Started?');
@@ -172,18 +224,39 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Configure: {demo?.name}</h1>
-            <p className="text-sm text-gray-500">Manage your demo videos, knowledge base, and agent settings.</p>
-          </div>
-          <div className="flex space-x-4">
-            <a
-              href={`/demos/${demoId}/experience`}
-              className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+          {/* Back button row */}
+          <div className="mb-2">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
-              View Demo Experience
-            </a>
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back to Dashboard
+            </Link>
+          </div>
+
+          {/* Main header row */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Configure: {demo?.name}</h1>
+              <p className="text-sm text-gray-500">Manage your demo videos, knowledge base, and agent settings.</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Link
+                href={`/demos/${demoId}/reporting`}
+                className="inline-flex items-center px-4 py-2 text-gray-700 bg-gray-100 font-medium rounded-md hover:bg-gray-200 transition-colors"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Reporting
+              </Link>
+              <Link
+                href={`/demos/${demoId}/experience`}
+                className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                View Demo Experience
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -219,18 +292,102 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           />
         )}
 
-        <Tabs.Root defaultValue={initialTab}>
-          <Tabs.List className="border-b border-gray-200">
-            <Tabs.Trigger value="videos" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Videos</Tabs.Trigger>
-            <Tabs.Trigger value="knowledge" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Knowledge Base</Tabs.Trigger>
-            <Tabs.Trigger value="agent" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Agent Settings</Tabs.Trigger>
-            <Tabs.Trigger value="cta" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Call-to-Action</Tabs.Trigger>
-            <Tabs.Trigger value="embed" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Embed</Tabs.Trigger>
-            <Tabs.Trigger value="reporting" className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500">Reporting</Tabs.Trigger>
-          </Tabs.List>
+        {/* Onboarding Stepper - shown during onboarding */}
+        {!isOnboardingComplete && (
+          <OnboardingStepper
+            currentStep={currentStep}
+            stepStatus={stepStatus}
+            onStepClick={handleStepClick}
+          />
+        )}
+
+        <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+          {/* Show different navigation based on onboarding status */}
+          {isOnboardingComplete ? (
+            /* Post-onboarding: Main navigation with settings dropdown */
+            <Tabs.List className="flex items-center gap-1 border-b border-gray-200 pb-0">
+              {/* Content Management - Primary tabs */}
+              <div className="flex items-center">
+                <div className="flex bg-white rounded-t-lg">
+                  <Tabs.Trigger value="videos" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-indigo-600 rounded-t border-b-2 border-transparent data-[state=active]:text-indigo-700 data-[state=active]:border-indigo-600 transition-all">
+                    <Video className="w-4 h-4" />
+                    Videos
+                  </Tabs.Trigger>
+                  <Tabs.Trigger value="knowledge" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-indigo-600 rounded-t border-b-2 border-transparent data-[state=active]:text-indigo-700 data-[state=active]:border-indigo-600 transition-all">
+                    <BookOpen className="w-4 h-4" />
+                    Knowledge Base
+                  </Tabs.Trigger>
+                </div>
+              </div>
+
+              {/* Hidden triggers for settings pages */}
+              <Tabs.Trigger value="agent" className="sr-only">Agent</Tabs.Trigger>
+              <Tabs.Trigger value="cta" className="sr-only">CTA</Tabs.Trigger>
+              <Tabs.Trigger value="embed" className="sr-only">Embed</Tabs.Trigger>
+
+              {/* Settings Dropdown */}
+              <div className="ml-auto relative" ref={settingsRef}>
+                <button
+                  onClick={() => setSettingsOpen(!settingsOpen)}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t border-b-2 transition-all ${
+                    ['agent', 'cta', 'embed'].includes(activeTab)
+                      ? 'text-gray-700 border-gray-400'
+                      : 'text-gray-400 hover:text-gray-600 border-transparent'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                  <ChevronDown className={`w-4 h-4 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {settingsOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={() => handleSettingsOptionClick('agent')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                        activeTab === 'agent' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <User className="w-4 h-4" />
+                      Agent Settings
+                    </button>
+                    <button
+                      onClick={() => handleSettingsOptionClick('cta')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                        activeTab === 'cta' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <Megaphone className="w-4 h-4" />
+                      Call-to-Action
+                    </button>
+                    <button
+                      onClick={() => handleSettingsOptionClick('embed')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                        activeTab === 'embed' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <Code2 className="w-4 h-4" />
+                      Embed Settings
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Tabs.List>
+          ) : (
+            /* During onboarding: Simple step indicators */
+            <Tabs.List className="sr-only">
+              <Tabs.Trigger value="videos">Videos</Tabs.Trigger>
+              <Tabs.Trigger value="knowledge">Knowledge Base</Tabs.Trigger>
+              <Tabs.Trigger value="agent">Agent Settings</Tabs.Trigger>
+              <Tabs.Trigger value="cta">Call-to-Action</Tabs.Trigger>
+              <Tabs.Trigger value="embed">Embed</Tabs.Trigger>
+            </Tabs.List>
+          )}
+
           <div className="mt-6">
             <Tabs.Content value="videos">
-              <VideoManagement 
+              <VideoManagement
                 demoVideos={demoVideos}
                 selectedVideoFile={selectedVideoFile}
                 setSelectedVideoFile={setSelectedVideoFile}
@@ -243,9 +400,21 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 previewVideoUrl={previewVideoUrl}
                 setPreviewVideoUrl={setPreviewVideoUrl}
               />
+              {/* Next step button during onboarding */}
+              {!isOnboardingComplete && stepStatus.videos && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => handleStepClick(2)}
+                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    Continue to Knowledge Base →
+                  </button>
+                </div>
+              )}
             </Tabs.Content>
+
             <Tabs.Content value="knowledge">
-              <KnowledgeBaseManagement 
+              <KnowledgeBaseManagement
                 knowledgeChunks={knowledgeChunks}
                 newQuestion={newQuestion}
                 setNewQuestion={setNewQuestion}
@@ -257,9 +426,21 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setKnowledgeDoc={setKnowledgeDoc}
                 handleKnowledgeDocUpload={handleKnowledgeDocUpload}
               />
+              {/* Next step button during onboarding */}
+              {!isOnboardingComplete && stepStatus.knowledge && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => handleStepClick(3)}
+                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    Continue to Agent Settings →
+                  </button>
+                </div>
+              )}
             </Tabs.Content>
+
             <Tabs.Content value="agent">
-              <AgentSettings 
+              <AgentSettings
                 demo={demo}
                 agentName={agentName}
                 setAgentName={setAgentName}
@@ -273,13 +454,13 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               <div className="mt-6">
                 {demo?.tavus_persona_id ? (
                   <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                    <p className="font-bold">✅ Agent Configured!</p>
+                    <p className="font-bold">Agent Configured!</p>
                     <p>Persona ID: {demo.tavus_persona_id}</p>
-                    <p className="text-sm mt-2">Your agent is ready to use. Go to the <strong>Experience</strong> tab to test it!</p>
+                    <p className="text-sm mt-2">Your agent is ready to use.</p>
                   </div>
                 ) : (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded">
-                    <p className="font-medium">🤖 Agent Not Configured</p>
+                    <p className="font-medium">Agent Not Configured</p>
                     <p className="text-sm mt-1">Use the "Create Agent" button above to configure your Domo agent with system prompt, guardrails, and objectives.</p>
                   </div>
                 )}
@@ -289,31 +470,60 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                   <p>An error occurred. Please check the console for details.</p>
                 </div>
               )}
+              {/* Next step button during onboarding */}
+              {!isOnboardingComplete && stepStatus.agent && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => handleStepClick(4)}
+                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    Continue to Call-to-Action →
+                  </button>
+                </div>
+              )}
             </Tabs.Content>
+
             <Tabs.Content value="cta">
               <div className="space-y-6">
                 <AdminCTAUrlEditor
                   currentUrl={demo?.cta_button_url || null}
                   onSave={handleSaveAdminCTAUrl}
                 />
-              <CTASettings
-                demo={demo}
-                ctaTitle={ctaTitle}
-                setCTATitle={setCTATitle}
-                ctaMessage={ctaMessage}
-                setCTAMessage={setCTAMessage}
-                ctaButtonText={ctaButtonText}
-                setCTAButtonText={setCTAButtonText}
-                onSaveCTA={handleSaveCTA}
-              />
+                <CTASettings
+                  demo={demo}
+                  ctaTitle={ctaTitle}
+                  setCTATitle={setCTATitle}
+                  ctaMessage={ctaMessage}
+                  setCTAMessage={setCTAMessage}
+                  ctaButtonText={ctaButtonText}
+                  setCTAButtonText={setCTAButtonText}
+                  onSaveCTA={handleSaveCTA}
+                />
               </div>
+              {/* Next step button during onboarding */}
+              {!isOnboardingComplete && stepStatus.cta && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => handleStepClick(5)}
+                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    Continue to Embed →
+                  </button>
+                </div>
+              )}
             </Tabs.Content>
+
             <Tabs.Content value="embed">
               <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
+              {/* Completion message during onboarding */}
+              {!isOnboardingComplete && stepStatus.embed && (
+                <div className="mt-6 p-4 bg-green-100 border border-green-400 rounded-lg">
+                  <p className="text-green-800 font-semibold">Setup Complete!</p>
+                  <p className="text-green-700 text-sm mt-1">Your demo is ready to share! Copy the embed code above and add it to your website.</p>
+                </div>
+              )}
             </Tabs.Content>
-            <Tabs.Content value="reporting">
-              <Reporting demo={demo} />
-            </Tabs.Content>
+
           </div>
         </Tabs.Root>
       </main>

@@ -127,38 +127,107 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     }, [error, demoId, source]);
 
     // Handle tool calls from conversation
+    // Note: TavusConversationCVI calls onToolCall(toolName, args) with two arguments
     const handleToolCall = useCallback(
-      (toolCall: any) => {
-        const { name: toolName, parameters } = toolCall;
+      async (toolName: string, args: any) => {
+        // Handle fetch_video - look up the video by title and play it
+        if (toolName === 'fetch_video') {
+          const videoTitle = args?.title || args?.video_title || args?.video_name;
+          if (!videoTitle) {
+            console.warn('❌ fetch_video called without a title');
+            return;
+          }
 
-        if (toolName === 'play_video' && parameters?.video_url) {
-          setPlayingVideoUrl(parameters.video_url);
-          setUiState(UIState.VIDEO_PLAYING);
-          setShowCTA(false);
+          // Look up video from database
+          const { supabase } = await import('@/lib/supabase');
+          const normalizedTitle = videoTitle.trim().replace(/^['"]|['"]$/g, '');
+
+          // Try case-insensitive match first
+          let { data: videoData, error: videoError } = await supabase
+            .from('demo_videos')
+            .select('storage_url, title, id')
+            .eq('demo_id', demoId)
+            .ilike('title', normalizedTitle)
+            .single();
+
+          if (videoError || !videoData) {
+            // Try exact match as fallback
+            const exactResult = await supabase
+              .from('demo_videos')
+              .select('storage_url, title, id')
+              .eq('demo_id', demoId)
+              .eq('title', normalizedTitle)
+              .single();
+
+            if (exactResult.error || !exactResult.data) {
+              console.warn(`❌ Video not found: "${normalizedTitle}"`, videoError);
+              return;
+            }
+            videoData = exactResult.data;
+          }
+
+          // Get signed URL for the video
+          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+            .from('demo-videos')
+            .createSignedUrl(videoData.storage_url, 3600);
+
+          if (signedUrlError || !signedUrlData) {
+            console.error('Failed to create signed URL:', signedUrlError);
+            return;
+          }
 
           // Set up video context tracking
           const videoMetadata: CurrentVideoMetadata = {
-            title: parameters.video_title || 'Demo Video',
-            url: parameters.video_url,
-            demoVideoId: parameters.demo_video_id,
-            generatedContext: parameters.generated_context,
+            title: videoData.title,
+            url: signedUrlData.signedUrl,
+            demoVideoId: videoData.id,
           };
-
-          // Parse chapters from generated context if available
-          if (videoMetadata.generatedContext) {
-            videoMetadata.chapters = parseChaptersFromContext(videoMetadata.generatedContext);
-          }
 
           currentVideoRef.current = videoMetadata;
           lastSentContextRef.current = ''; // Reset last sent context for new video
 
+          setPlayingVideoUrl(signedUrlData.signedUrl);
+          setUiState(UIState.VIDEO_PLAYING);
+          setShowCTA(false);
+
           // Track video played
           analytics.videoPlayed({
             demoId,
-            videoUrl: parameters.video_url,
-            videoTitle: parameters.video_title,
+            videoUrl: signedUrlData.signedUrl,
+            videoTitle: videoData.title,
           });
-        } else if (toolName === 'show_cta') {
+
+          // Also call parent handler
+          onToolCall({ name: toolName, args });
+          return;
+        }
+
+        // Handle pause_video
+        if (toolName === 'pause_video') {
+          videoPlayerRef.current?.pause?.();
+          onToolCall({ name: toolName, args });
+          return;
+        }
+
+        // Handle play_video (resume)
+        if (toolName === 'play_video') {
+          videoPlayerRef.current?.play?.();
+          onToolCall({ name: toolName, args });
+          return;
+        }
+
+        // Handle close_video
+        if (toolName === 'close_video') {
+          currentVideoRef.current = null;
+          lastSentContextRef.current = '';
+          setPlayingVideoUrl(null);
+          setUiState(UIState.CONVERSATION);
+          onToolCall({ name: toolName, args });
+          return;
+        }
+
+        // Handle show_trial_cta
+        if (toolName === 'show_trial_cta' || toolName === 'show_cta') {
           setShowCTA(true);
 
           // Track CTA shown
@@ -167,10 +236,13 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             ctaTitle,
             ctaButtonText,
           });
+
+          onToolCall({ name: toolName, args });
+          return;
         }
 
-        // Also call parent handler
-        onToolCall(toolCall);
+        // Unknown tool call - pass to parent
+        onToolCall({ name: toolName, args });
       },
       [onToolCall, demoId, ctaTitle, ctaButtonText]
     );
