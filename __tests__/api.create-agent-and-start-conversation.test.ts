@@ -138,6 +138,33 @@ describe('Create Agent and Start Conversation APIs', () => {
       };
     });
 
+    // Mock Supabase service client for counting active conversations
+    jest.doMock('@/utils/supabase/service', () => {
+      return {
+        createServiceClient: jest.fn(() => ({
+          from: (table: string) => {
+            if (table === 'demos') {
+              return {
+                select: () => ({
+                  eq: () => Promise.resolve({ data: [{ id: demoId }], error: null }),
+                }),
+              } as any;
+            }
+            if (table === 'conversation_details') {
+              return {
+                select: () => ({
+                  in: () => ({
+                    in: () => Promise.resolve({ count: 0, error: null }),
+                  }),
+                }),
+              } as any;
+            }
+            throw new Error(`Unexpected table in service client: ${table}`);
+          },
+        })),
+      };
+    });
+
     const { POST: StartConversationPOST } = await import('../src/app/api/start-conversation/route');
 
     const req = new Request('http://localhost/api/start-conversation', {
@@ -168,7 +195,7 @@ describe('Create Agent and Start Conversation APIs', () => {
                 select: (cols: string) => {
                   if (cols.includes('user_id') && cols.includes('tavus_persona_id')) {
                     return {
-                      eq: () => ({ single: () => Promise.resolve({ data: { user_id: userId, tavus_persona_id: personaId }, error: null }) }),
+                      eq: () => ({ single: () => Promise.resolve({ data: { user_id: userId, tavus_persona_id: personaId, name: 'Test Demo' }, error: null }) }),
                     } as any;
                   }
                   if (cols.includes('metadata')) {
@@ -187,6 +214,34 @@ describe('Create Agent and Start Conversation APIs', () => {
               } as any;
             }
             throw new Error(`Unexpected table: ${table}`);
+          },
+        })),
+      };
+    });
+
+    // Mock Supabase service client for counting active conversations and upserting details
+    jest.doMock('@/utils/supabase/service', () => {
+      return {
+        createServiceClient: jest.fn(() => ({
+          from: (table: string) => {
+            if (table === 'demos') {
+              return {
+                select: () => ({
+                  eq: () => Promise.resolve({ data: [{ id: demoId }], error: null }),
+                }),
+              } as any;
+            }
+            if (table === 'conversation_details') {
+              return {
+                select: () => ({
+                  in: () => ({
+                    in: () => Promise.resolve({ count: 0, error: null }),
+                  }),
+                }),
+                upsert: () => Promise.resolve({ error: null }),
+              } as any;
+            }
+            throw new Error(`Unexpected table in service client: ${table}`);
           },
         })),
       };

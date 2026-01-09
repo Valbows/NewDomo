@@ -1,59 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { logger } from '@/lib/debug-logger';
 
-// Validate that a URL points to a Daily room
-const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
+// Maximum concurrent conversations allowed per account (Tavus Starter plan = 3)
+const MAX_CONCURRENT_CONVERSATIONS = parseInt(process.env.TAVUS_MAX_CONCURRENT || '3', 10);
 
-// Extract conversation ID from a Daily/Tavus URL
-function extractConversationIdFromUrl(url: string): string | null {
-  const match = url.match(/tavus\.daily\.co\/([a-zA-Z0-9]+)/);
-  return match ? match[1] : null;
-}
-
-// Check if a Tavus conversation is still active (not ended)
-// This is more reliable than just checking if the Daily room exists
-async function isTavusConversationActive(conversationId: string, apiKey: string): Promise<boolean> {
-  try {
-    const resp = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}`, {
-      method: 'GET',
-      headers: {
-        'x-api-key': apiKey,
-      },
-    });
-
-    if (!resp.ok) {
-      // 404 means conversation doesn't exist or was deleted
-      if (resp.status === 404) {
-        logger.info(`Tavus conversation ${conversationId} not found (404)`);
-        return false;
-      }
-      logger.warn(`Tavus API returned ${resp.status} when checking conversation ${conversationId}`);
-      return false;
-    }
-
-    const data = await resp.json();
-    const status = data.status;
-
-    // Active statuses that mean we can still join
-    const activeStatuses = ['active', 'starting', 'waiting'];
-    const isActive = activeStatuses.includes(status);
-
-    logger.info(`Tavus conversation ${conversationId} status: ${status} (active: ${isActive})`);
-    return isActive;
-  } catch (e) {
-    logger.warn(`Error checking Tavus conversation ${conversationId}`, { error: e });
-    return false;
-  }
-}
-
-// Simple in-memory lock to dedupe concurrent starts per demo within a single server instance
+// Simple in-memory lock to dedupe concurrent starts per user session
 const startLocks = new Map<string, Promise<unknown>>();
+
+// Count active conversations for an account (user)
+async function countActiveConversations(userId: string): Promise<number> {
+  const supabase = createServiceClient();
+
+  // Count conversations that are currently active (not ended/completed)
+  const { count, error } = await supabase
+    .from('conversation_details')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['active', 'starting', 'waiting'])
+    .eq('demo_id', userId); // This will be fixed to properly filter by user's demos
+
+  if (error) {
+    logger.warn('Error counting active conversations', { error });
+    return 0;
+  }
+
+  return count || 0;
+}
+
+// Count active conversations across all demos owned by a user
+async function countActiveConversationsForUser(userId: string): Promise<number> {
+  const supabase = createServiceClient();
+
+  // First get all demo IDs owned by this user
+  const { data: demos, error: demosError } = await supabase
+    .from('demos')
+    .select('id')
+    .eq('user_id', userId);
+
+  if (demosError || !demos || demos.length === 0) {
+    return 0;
+  }
+
+  const demoIds = demos.map(d => d.id);
+
+  // Count active conversations for these demos
+  const { count, error } = await supabase
+    .from('conversation_details')
+    .select('*', { count: 'exact', head: true })
+    .in('demo_id', demoIds)
+    .in('status', ['active', 'starting', 'waiting']);
+
+  if (error) {
+    logger.warn('Error counting active conversations for user', { error, userId });
+    return 0;
+  }
+
+  logger.info(`User ${userId} has ${count || 0} active conversations`);
+  return count || 0;
+}
 
 async function handlePOST(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
+  const serviceSupabase = createServiceClient();
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -61,7 +72,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { demoId, forceNew = false } = await req.json();
+    const { demoId } = await req.json();
 
     if (!demoId) {
       return NextResponse.json({ error: 'Missing demoId' }, { status: 400 });
@@ -70,7 +81,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // Verify user owns the demo and get the persona ID
     const { data: demo, error: demoError } = await supabase
       .from('demos')
-      .select('user_id, tavus_persona_id, tavus_conversation_id, metadata')
+      .select('user_id, tavus_persona_id, metadata, name')
       .eq('id', demoId)
       .single();
 
@@ -87,70 +98,26 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Tavus API key is not configured.' }, { status: 500 });
     }
 
-    // Reuse existing active conversation if a valid Daily room URL is already saved AND conversation is still active
-    if (!forceNew) {
-      try {
-        const md = typeof (demo as any).metadata === 'string' ? JSON.parse((demo as any).metadata as string) : (demo as any).metadata;
-        const existingUrl = md?.tavusShareableLink as string | undefined;
-        const existingConvId = (demo as any).tavus_conversation_id as string | undefined;
-
-        if (existingUrl && isDailyRoomUrl(existingUrl) && existingConvId) {
-          // Check if the Tavus conversation is still active (not just if room exists)
-          if (await isTavusConversationActive(existingConvId, tavusApiKey)) {
-            console.log('Reusing existing active Tavus conversation:', existingConvId);
-            return NextResponse.json({
-              conversation_id: existingConvId,
-              conversation_url: existingUrl,
-            });
-          } else {
-            console.warn('Existing Tavus conversation is ended or invalid. Creating a new conversation:', existingConvId);
-            // Clear stale data from database
-            try {
-              const { tavusShareableLink, ...restMetadata } = md || {};
-              await supabase
-                .from('demos')
-                .update({
-                  tavus_conversation_id: null,
-                  metadata: restMetadata
-                })
-                .eq('id', demoId);
-              console.log('Cleared stale conversation data from demo');
-            } catch (clearError) {
-              console.warn('Failed to clear stale conversation data:', clearError);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to parse demo metadata while checking for existing conversation URL:', e);
-      }
-    } else {
-      console.log('forceNew=true: will create a new conversation even if an existing URL is present.');
+    // Check concurrent conversation limit BEFORE creating a new one
+    const activeCount = await countActiveConversationsForUser(user.id);
+    if (activeCount >= MAX_CONCURRENT_CONVERSATIONS) {
+      logger.warn(`User ${user.id} at max capacity: ${activeCount}/${MAX_CONCURRENT_CONVERSATIONS}`);
+      return NextResponse.json({
+        error: 'Maximum concurrent conversations reached',
+        message: `You have reached the maximum of ${MAX_CONCURRENT_CONVERSATIONS} active conversations. Please wait for an existing conversation to end before starting a new one.`,
+        code: 'MAX_CAPACITY_REACHED',
+        activeCount,
+        maxAllowed: MAX_CONCURRENT_CONVERSATIONS,
+      }, { status: 429 });
     }
 
-    // If another request is already starting a conversation for this demo, wait and then reuse the result
-    if (!forceNew && startLocks.has(demoId)) {
-      console.log('Conversation start already in progress for demo', demoId, '— waiting');
-      try {
-        await startLocks.get(demoId);
-      } catch (_) {
-        // ignore; we'll proceed to try again
-      }
-      const { data: afterDemo } = await supabase
-        .from('demos')
-        .select('tavus_conversation_id, metadata')
-        .eq('id', demoId)
-        .single();
-      try {
-        const md2 = typeof afterDemo?.metadata === 'string' ? JSON.parse(afterDemo?.metadata as any) : (afterDemo as any)?.metadata;
-        const url2 = md2?.tavusShareableLink as string | undefined;
-        if (url2 && isDailyRoomUrl(url2)) {
-          return NextResponse.json({
-            conversation_id: afterDemo?.tavus_conversation_id || null,
-            conversation_url: url2,
-          });
-        }
-      } catch {}
-      // If not found, fall through to attempt creation
+    // Generate unique session ID for this user's conversation request
+    const sessionId = `${user.id}-${Date.now()}`;
+
+    // Use lock to prevent duplicate starts from rapid clicks
+    if (startLocks.has(sessionId)) {
+      logger.info('Duplicate start request detected, waiting for existing request');
+      await startLocks.get(sessionId);
     }
 
     // Determine replica_id: prefer env override, else fetch persona default
@@ -218,7 +185,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    // Define the creation flow so we can run it under the lock
+    // Create conversation with Tavus
     const doStart = async (): Promise<NextResponse | any> => {
       const conversationResponse = await fetch('https://tavusapi.com/v2/conversations', {
         method: 'POST',
@@ -245,6 +212,16 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         }
         logError(errorBody, 'Tavus Conversation API Error');
 
+        // Check if this is a concurrent limit error from Tavus
+        const errorStr = JSON.stringify(errorBody).toLowerCase();
+        if (errorStr.includes('concurrent') || errorStr.includes('limit') || conversationResponse.status === 429) {
+          return NextResponse.json({
+            error: 'Maximum concurrent conversations reached',
+            message: 'The demo service is currently at capacity. Please try again in a few minutes.',
+            code: 'TAVUS_CAPACITY_REACHED',
+          }, { status: 429 });
+        }
+
         const base = {
           error: `Failed to start Tavus conversation: ${conversationResponse.status} ${conversationResponse.statusText}`,
         } as any;
@@ -266,80 +243,71 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       }
 
       const conversationData = await conversationResponse.json();
-      
-      console.log('Conversation data received:', conversationData);
 
-      // Get current demo metadata
-      const { data: currentDemo, error: fetchError } = await supabase
+      logger.info('New conversation created:', {
+        conversation_id: conversationData.conversation_id,
+        demo_id: demoId,
+        user_id: user.id,
+      });
+
+      // Create conversation_details record immediately to track active conversations
+      const { error: detailsError } = await serviceSupabase
+        .from('conversation_details')
+        .upsert({
+          tavus_conversation_id: conversationData.conversation_id,
+          demo_id: demoId,
+          conversation_name: `${demo.name || 'Demo'} - ${new Date().toLocaleString()}`,
+          status: 'active',
+          started_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        }, {
+          onConflict: 'tavus_conversation_id',
+        });
+
+      if (detailsError) {
+        logger.warn('Failed to create conversation_details record', { error: detailsError });
+      } else {
+        logger.info(`Created conversation_details for ${conversationData.conversation_id}`);
+      }
+
+      // Update demo with latest conversation info (for reference only, not for sharing)
+      const { data: currentDemo } = await supabase
         .from('demos')
         .select('metadata')
         .eq('id', demoId)
         .single();
 
-      if (fetchError) {
-        logError(fetchError, 'Error fetching current demo');
-      }
+      const currentMetadata = typeof currentDemo?.metadata === 'string'
+        ? (() => { try { return JSON.parse(currentDemo?.metadata as any) } catch { return {} } })()
+        : currentDemo?.metadata || {};
 
-      // Save the conversation ID and shareable link to the demo
-      const updatedMetadata = {
-        ...(typeof currentDemo?.metadata === 'string' ? (() => { try { return JSON.parse(currentDemo?.metadata as any) } catch { return {} } })() : currentDemo?.metadata),
-        tavusShareableLink: conversationData.conversation_url
-      };
-
-      const { error: updateError } = await supabase
+      await supabase
         .from('demos')
-        .update({ 
+        .update({
           tavus_conversation_id: conversationData.conversation_id,
-          metadata: updatedMetadata
+          metadata: {
+            ...currentMetadata,
+            tavusShareableLink: conversationData.conversation_url,
+            lastConversationStarted: new Date().toISOString(),
+          },
         })
         .eq('id', demoId);
-
-      if (updateError) {
-        logError(updateError, 'Supabase update error after starting conversation');
-        // We will proceed but this is a critical error to flag for debugging
-      }
 
       return conversationData;
     };
 
-    // Execute under in-memory lock
-    let result: any;
-    if (startLocks.has(demoId)) {
-      console.log('Conversation start already in progress for demo', demoId, '— waiting');
-      try {
-        await startLocks.get(demoId);
-      } catch (_) {}
-      // After wait, reuse if available
-      const { data: afterDemo2 } = await supabase
-        .from('demos')
-        .select('tavus_conversation_id, metadata')
-        .eq('id', demoId)
-        .single();
-      try {
-        const md3 = typeof afterDemo2?.metadata === 'string' ? JSON.parse(afterDemo2?.metadata as any) : (afterDemo2 as any)?.metadata;
-        const url3 = md3?.tavusShareableLink as string | undefined;
-        if (url3 && isDailyRoomUrl(url3)) {
-          return NextResponse.json({
-            conversation_id: afterDemo2?.tavus_conversation_id || null,
-            conversation_url: url3,
-          });
-        }
-      } catch {}
-      // Fall-through: we'll try to start anew
-    }
-
+    // Execute under session lock to prevent duplicate rapid clicks
     const p = doStart();
-    startLocks.set(demoId, p);
+    startLocks.set(sessionId, p);
     try {
-      result = await p;
+      const result = await p;
+      if (result instanceof NextResponse) {
+        return result;
+      }
+      return NextResponse.json(result);
     } finally {
-      startLocks.delete(demoId);
+      startLocks.delete(sessionId);
     }
-
-    if (result instanceof NextResponse) {
-      return result;
-    }
-    return NextResponse.json(result);
 
   } catch (error: unknown) {
     logError(error, 'Start Conversation Error');

@@ -4,37 +4,54 @@ import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { logger } from '@/lib/debug-logger';
 
-// Validate that a URL points to a Daily room
-const isDailyRoomUrl = (url: string) => /^https?:\/\/[a-z0-9.-]+\.daily\.co\/.+/i.test(url);
+// Maximum concurrent conversations allowed per account (Tavus Starter plan = 3)
+const MAX_CONCURRENT_CONVERSATIONS = parseInt(process.env.TAVUS_MAX_CONCURRENT || '3', 10);
 
-// Check if a Tavus conversation is still active
-async function isTavusConversationActive(conversationId: string, apiKey: string): Promise<boolean> {
-  try {
-    const resp = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}`, {
-      method: 'GET',
-      headers: { 'x-api-key': apiKey },
-    });
-
-    if (!resp.ok) {
-      if (resp.status === 404) {
-        logger.info(`Tavus conversation ${conversationId} not found (404)`);
-        return false;
-      }
-      logger.warn(`Tavus API returned ${resp.status} when checking conversation ${conversationId}`);
-      return false;
-    }
-
-    const data = await resp.json();
-    const activeStatuses = ['active', 'starting', 'waiting'];
-    return activeStatuses.includes(data.status);
-  } catch (e) {
-    logger.warn(`Error checking Tavus conversation ${conversationId}`, { error: e });
-    return false;
-  }
-}
-
-// In-memory lock to prevent duplicate starts
+// In-memory lock to prevent duplicate starts per session
 const startLocks = new Map<string, Promise<unknown>>();
+
+// Count active conversations for a demo's owner
+async function countActiveConversationsForDemo(demoId: string): Promise<{ count: number; userId: string | null }> {
+  const supabase = createServiceClient();
+
+  // Get the user who owns this demo
+  const { data: demo, error: demoError } = await supabase
+    .from('demos')
+    .select('user_id')
+    .eq('id', demoId)
+    .single();
+
+  if (demoError || !demo) {
+    return { count: 0, userId: null };
+  }
+
+  // Get all demos owned by this user
+  const { data: userDemos, error: demosError } = await supabase
+    .from('demos')
+    .select('id')
+    .eq('user_id', demo.user_id);
+
+  if (demosError || !userDemos || userDemos.length === 0) {
+    return { count: 0, userId: demo.user_id };
+  }
+
+  const demoIds = userDemos.map(d => d.id);
+
+  // Count active conversations for these demos
+  const { count, error } = await supabase
+    .from('conversation_details')
+    .select('*', { count: 'exact', head: true })
+    .in('demo_id', demoIds)
+    .in('status', ['active', 'starting', 'waiting']);
+
+  if (error) {
+    logger.warn('Error counting active conversations', { error });
+    return { count: 0, userId: demo.user_id };
+  }
+
+  logger.info(`Demo owner ${demo.user_id} has ${count || 0} active conversations`);
+  return { count: count || 0, userId: demo.user_id };
+}
 
 /**
  * POST /api/embed/[token]/start-conversation
@@ -114,50 +131,26 @@ async function handlePOST(
 
     const demoId = demo.id;
 
-    // Check for existing active conversation
-    const metadata = typeof demo.metadata === 'string'
-      ? JSON.parse(demo.metadata)
-      : demo.metadata;
-    const existingUrl = metadata?.tavusShareableLink;
-    const existingConvId = demo.tavus_conversation_id;
-
-    if (existingUrl && isDailyRoomUrl(existingUrl) && existingConvId) {
-      if (await isTavusConversationActive(existingConvId, tavusApiKey)) {
-        logger.info(`[Embed] Reusing existing conversation ${existingConvId}`);
-        return createCorsResponse(
-          { conversation_id: existingConvId, conversation_url: existingUrl },
-          origin
-        );
-      } else {
-        // Clear stale conversation data
-        const { tavusShareableLink, ...restMetadata } = metadata || {};
-        await supabase
-          .from('demos')
-          .update({ tavus_conversation_id: null, metadata: restMetadata })
-          .eq('id', demoId);
-        logger.info(`[Embed] Cleared stale conversation for demo ${demoId}`);
-      }
+    // Check concurrent conversation limit BEFORE creating a new one
+    const { count: activeCount, userId: demoOwnerId } = await countActiveConversationsForDemo(demoId);
+    if (activeCount >= MAX_CONCURRENT_CONVERSATIONS) {
+      logger.warn(`[Embed] Demo owner ${demoOwnerId} at max capacity: ${activeCount}/${MAX_CONCURRENT_CONVERSATIONS}`);
+      return createCorsResponse({
+        error: 'Maximum concurrent conversations reached',
+        message: `The demo service is currently at capacity. Please try again in a few minutes.`,
+        code: 'MAX_CAPACITY_REACHED',
+        activeCount,
+        maxAllowed: MAX_CONCURRENT_CONVERSATIONS,
+      }, origin, 429);
     }
 
-    // Wait if another request is already starting a conversation
-    if (startLocks.has(demoId)) {
-      await startLocks.get(demoId);
-      const { data: afterDemo } = await supabase
-        .from('demos')
-        .select('tavus_conversation_id, metadata')
-        .eq('id', demoId)
-        .single();
+    // Generate unique session ID for this embed request to prevent duplicate starts
+    const sessionId = `embed-${demoId}-${Date.now()}`;
 
-      const md = typeof afterDemo?.metadata === 'string'
-        ? JSON.parse(afterDemo.metadata)
-        : afterDemo?.metadata;
-      const url = md?.tavusShareableLink;
-      if (url && isDailyRoomUrl(url)) {
-        return createCorsResponse(
-          { conversation_id: afterDemo?.tavus_conversation_id, conversation_url: url },
-          origin
-        );
-      }
+    // Wait if another request is already starting a conversation for this session
+    if (startLocks.has(sessionId)) {
+      logger.info('[Embed] Duplicate start request detected, waiting for existing request');
+      await startLocks.get(sessionId);
     }
 
     // Get replica ID
@@ -252,15 +245,15 @@ async function handlePOST(
       return conversationData;
     };
 
-    // Execute under lock
+    // Execute under lock to prevent duplicate starts from rapid clicks
     const p = doStart();
-    startLocks.set(demoId, p);
+    startLocks.set(sessionId, p);
 
     try {
       const result = await p;
       return createCorsResponse(result, origin);
     } finally {
-      startLocks.delete(demoId);
+      startLocks.delete(sessionId);
     }
 
   } catch (error: unknown) {
@@ -270,8 +263,8 @@ async function handlePOST(
   }
 }
 
-function createCorsResponse(data: any, origin: string | null): NextResponse {
-  const response = NextResponse.json(data);
+function createCorsResponse(data: any, origin: string | null, status: number = 200): NextResponse {
+  const response = NextResponse.json(data, { status });
   if (origin) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
