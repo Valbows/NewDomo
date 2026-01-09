@@ -309,6 +309,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               <Tabs.Trigger value="knowledge">Knowledge Base</Tabs.Trigger>
               <Tabs.Trigger value="agent">Agent Settings</Tabs.Trigger>
               <Tabs.Trigger value="cta">Call-to-Action</Tabs.Trigger>
+              <Tabs.Trigger value="embed">Embed</Tabs.Trigger>
             </Tabs.List>
           )}
 
@@ -427,11 +428,26 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                   onSaveCTA={handleSaveCTA}
                 />
               </div>
-              {/* Completion message during onboarding */}
+              {/* Next step button during onboarding */}
               {!isOnboardingComplete && stepStatus.cta && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => handleStepClick(5)}
+                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    Continue to Embed →
+                  </button>
+                </div>
+              )}
+            </Tabs.Content>
+
+            <Tabs.Content value="embed">
+              <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
+              {/* Completion message during onboarding */}
+              {!isOnboardingComplete && stepStatus.embed && (
                 <div className="mt-6 p-4 bg-green-100 border border-green-400 rounded-lg">
                   <p className="text-green-800 font-semibold">Setup Complete!</p>
-                  <p className="text-green-700 text-sm mt-1">Your demo is ready. Head to Embed to share it or Reporting to track engagement.</p>
+                  <p className="text-green-700 text-sm mt-1">Your demo is ready to share! Copy the embed code above and add it to your website.</p>
                 </div>
               )}
             </Tabs.Content>

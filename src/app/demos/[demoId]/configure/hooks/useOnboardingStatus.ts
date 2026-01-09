@@ -20,11 +20,15 @@ export function useOnboardingStatus(
     // Step 4: CTA - CTA URL is set (main requirement)
     const ctaComplete = Boolean(demo?.cta_button_url);
 
+    // Step 5: Embed - embed token generated (ready to deploy)
+    const embedComplete = Boolean(demo?.embed_token);
+
     return {
       videos: videosComplete,
       knowledge: knowledgeComplete,
       agent: agentComplete,
       cta: ctaComplete,
+      embed: embedComplete,
     };
   }, [demo, demoVideos, knowledgeChunks]);
 
@@ -37,6 +41,7 @@ export function useOnboardingStatus(
     if (!stepStatus.knowledge) return 2;
     if (!stepStatus.agent) return 3;
     if (!stepStatus.cta) return 4;
+    if (!stepStatus.embed) return 5;
     return 1; // All complete, default to first
   }, [stepStatus]);
 

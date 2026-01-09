@@ -7,6 +7,7 @@ export interface StepStatus {
   knowledge: boolean;
   agent: boolean;
   cta: boolean;
+  embed: boolean;
 }
 
 interface OnboardingStepperProps {
@@ -20,6 +21,7 @@ const STEPS = [
   { id: 2, key: 'knowledge', label: 'Knowledge Base', description: 'Add Q&A pairs' },
   { id: 3, key: 'agent', label: 'Agent Settings', description: 'Configure personality' },
   { id: 4, key: 'cta', label: 'Call-to-Action', description: 'Set up CTA' },
+  { id: 5, key: 'embed', label: 'Embed', description: 'Deploy to website' },
 ] as const;
 
 export function OnboardingStepper({ currentStep, stepStatus, onStepClick }: OnboardingStepperProps) {
@@ -128,6 +130,7 @@ export function getStepFromTab(tab: string): number {
     knowledge: 2,
     agent: 3,
     cta: 4,
+    embed: 5,
   };
   return stepMap[tab] || 1;
 }
@@ -138,6 +141,7 @@ export function getTabFromStep(step: number): string {
     2: 'knowledge',
     3: 'agent',
     4: 'cta',
+    5: 'embed',
   };
   return tabMap[step] || 'videos';
 }
