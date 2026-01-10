@@ -32,19 +32,16 @@ const Sidebar = () => {
         >
           Dashboard
         </Link>
-        <Link 
-          href="/demos" 
+        <Link
+          href="/demos"
           className={`block py-2.5 px-4 rounded transition duration-200 ${
-            pathname === '/demos' 
-              ? 'bg-domo-blue-accent text-white' 
+            pathname === '/demos'
+              ? 'bg-domo-blue-accent text-white'
               : 'hover:bg-gray-200'
           }`}
         >
           Demos
         </Link>
-        <span className="block py-2.5 px-4 rounded transition duration-200 text-gray-400 cursor-not-allowed">
-          Settings
-        </span>
         <button onClick={handleLogout} className="block w-full text-left py-2.5 px-4 rounded transition duration-200 hover:bg-gray-200">
           Logout
         </button>

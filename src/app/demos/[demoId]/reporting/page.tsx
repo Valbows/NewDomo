@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Loader2, AlertCircle, ArrowLeft, Settings } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import { Reporting } from '../configure/components/reporting';
 import { useDemoData } from '../configure/hooks/useDemoData';
 
@@ -27,6 +27,38 @@ export default function ReportingPage({ params }: { params: { demoId: string } }
       <div className="flex items-center justify-center min-h-screen">
         <AlertCircle className="w-12 h-12 text-red-500" />
         <p className="ml-4">{error}</p>
+      </div>
+    );
+  }
+
+  // Check if demo setup is complete (has an active agent)
+  const isSetupComplete = Boolean(demo?.tavus_persona_id);
+
+  if (!isSetupComplete) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md text-center p-8 bg-white rounded-lg shadow-sm">
+          <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Setup Not Complete</h2>
+          <p className="text-gray-600 mb-6">
+            You need to complete the demo setup before viewing analytics.
+            Please finish configuring your demo agent first.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 text-gray-700 bg-gray-100 font-medium rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Back to Dashboard
+            </Link>
+            <Link
+              href={`/demos/${demoId}/configure`}
+              className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+            >
+              Complete Setup
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

@@ -91,11 +91,29 @@ export const VideoManagement = ({
       <div className="mt-8">
         <h3 className="text-lg font-medium leading-6 text-gray-900">Uploaded Videos</h3>
         <ul className="mt-4 space-y-3">
-          {demoVideos.map(video => (
+          {demoVideos.map(video => {
+            const statusColors: Record<string, string> = {
+              pending: 'text-amber-600 bg-amber-50',
+              processing: 'text-blue-600 bg-blue-50',
+              completed: 'text-green-600 bg-green-50',
+              failed: 'text-red-600 bg-red-50',
+            };
+            const statusLabels: Record<string, string> = {
+              pending: 'Pending',
+              processing: 'Processing...',
+              completed: 'Ready',
+              failed: 'Processing Failed',
+            };
+            const statusClass = statusColors[video.processing_status] || 'text-gray-600 bg-gray-50';
+            const statusLabel = statusLabels[video.processing_status] || video.processing_status;
+
+            return (
             <li key={video.id} className="bg-white shadow overflow-hidden rounded-md px-6 py-4 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-indigo-600 truncate">{video.title}</p>
-                <p className="text-sm text-gray-500 capitalize">Status: {video.processing_status}</p>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusClass}`}>
+                  {statusLabel}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <button 
@@ -112,7 +130,8 @@ export const VideoManagement = ({
                 </button>
               </div>
             </li>
-          ))}
+          );
+          })}
           {demoVideos.length === 0 && (
             <li className="bg-white shadow overflow-hidden rounded-md px-6 py-4">
               <p className="text-center text-sm text-gray-500">No videos have been uploaded yet.</p>

@@ -74,13 +74,14 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [currentStep, setCurrentStep] = useState(1);
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // Sync step with tab
+  // Sync step with tab - but respect explicit URL parameter
+  const hasExplicitTabParam = searchParams?.has('tab');
   useEffect(() => {
-    if (!isOnboardingComplete) {
+    if (!isOnboardingComplete && !hasExplicitTabParam) {
       setCurrentStep(firstIncompleteStep);
       setActiveTab(getTabFromStep(firstIncompleteStep));
     }
-  }, [isOnboardingComplete, firstIncompleteStep]);
+  }, [isOnboardingComplete, firstIncompleteStep, hasExplicitTabParam]);
 
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
