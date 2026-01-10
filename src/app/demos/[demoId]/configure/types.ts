@@ -49,6 +49,7 @@ export interface DemoVideo {
   title: string;
   order_index: number;
   processing_status: 'pending' | 'processing' | 'completed' | 'failed';
+  processing_error?: string | null;
   transcript?: string;
   metadata?: any;
 }

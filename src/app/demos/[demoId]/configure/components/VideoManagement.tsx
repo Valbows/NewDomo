@@ -1,6 +1,6 @@
-import { Play, Upload, Trash2 } from 'lucide-react';
+import React from 'react';
+import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import { DemoVideo, ProcessingStatus } from '@/app/demos/[demoId]/configure/types';
-import { SupabaseClient } from '@supabase/supabase-js';
 
 interface VideoManagementProps {
   demoVideos: DemoVideo[];
@@ -92,42 +92,72 @@ export const VideoManagement = ({
         <h3 className="text-lg font-medium leading-6 text-gray-900">Uploaded Videos</h3>
         <ul className="mt-4 space-y-3">
           {demoVideos.map(video => {
-            const statusColors: Record<string, string> = {
-              pending: 'text-amber-600 bg-amber-50',
-              processing: 'text-blue-600 bg-blue-50',
-              completed: 'text-green-600 bg-green-50',
-              failed: 'text-red-600 bg-red-50',
+            const statusConfig: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
+              pending: {
+                color: 'text-amber-600',
+                bg: 'bg-amber-50 border-amber-200',
+                icon: <Clock className="h-4 w-4" />,
+                label: 'Pending Transcription',
+              },
+              processing: {
+                color: 'text-blue-600',
+                bg: 'bg-blue-50 border-blue-200',
+                icon: <Loader2 className="h-4 w-4 animate-spin" />,
+                label: 'Transcribing Audio...',
+              },
+              completed: {
+                color: 'text-green-600',
+                bg: 'bg-green-50 border-green-200',
+                icon: <CheckCircle className="h-4 w-4" />,
+                label: 'Video Ready',
+              },
+              failed: {
+                color: 'text-red-600',
+                bg: 'bg-red-50 border-red-200',
+                icon: <AlertCircle className="h-4 w-4" />,
+                label: 'Transcription Failed',
+              },
             };
-            const statusLabels: Record<string, string> = {
-              pending: 'Pending',
-              processing: 'Processing...',
-              completed: 'Ready',
-              failed: 'Processing Failed',
-            };
-            const statusClass = statusColors[video.processing_status] || 'text-gray-600 bg-gray-50';
-            const statusLabel = statusLabels[video.processing_status] || video.processing_status;
+            const config = statusConfig[video.processing_status] || statusConfig.pending;
 
             return (
-            <li key={video.id} className="bg-white shadow overflow-hidden rounded-md px-6 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-indigo-600 truncate">{video.title}</p>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusClass}`}>
-                  {statusLabel}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => handlePreviewVideo(video)}
-                  className="px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <Play className="h-5 w-5" />
-                </button>
-                <button 
-                  onClick={() => handleDeleteVideo(video.id)}
-                  className="px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+            <li key={video.id} className={`shadow overflow-hidden rounded-md px-6 py-4 border ${config.bg}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{video.title}</p>
+                  <div className={`flex items-center gap-1.5 mt-1 ${config.color}`}>
+                    {config.icon}
+                    <span className="text-xs font-medium">{config.label}</span>
+                  </div>
+                  {/* Show error details if transcription failed */}
+                  {video.processing_status === 'failed' && (
+                    <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700">
+                      <p className="font-medium">Error Details:</p>
+                      <p className="mt-0.5">{video.processing_error || 'Unknown error - check ElevenLabs API key'}</p>
+                      <p className="mt-1 text-red-600">Note: Video playback still works. Only audio transcription failed.</p>
+                    </div>
+                  )}
+                  {/* Show success note for completed */}
+                  {video.processing_status === 'completed' && (
+                    <p className="mt-1 text-xs text-green-600">Audio transcribed and added to knowledge base</p>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2 ml-4">
+                  <button
+                    onClick={() => handlePreviewVideo(video)}
+                    className="px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    title="Preview video"
+                  >
+                    <Play className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteVideo(video.id)}
+                    className="px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    title="Delete video"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             </li>
           );
