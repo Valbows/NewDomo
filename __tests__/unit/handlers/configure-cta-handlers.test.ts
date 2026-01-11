@@ -12,11 +12,13 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+// Mock logError
+jest.mock('@/lib/errors', () => ({
+  logError: jest.fn(),
+}));
+
 // Get reference to mocked supabase after mocking
 const { supabase } = require('@/lib/supabase');
-
-// Mock alert
-global.alert = jest.fn();
 
 describe('Configure CTA Handlers', () => {
   beforeEach(() => {
@@ -48,6 +50,7 @@ describe('Configure CTA Handlers', () => {
         'Try Our Product',
         'Sign up for a free trial',
         'Start Free Trial',
+        'https://example.com/signup',
         demo as any,
         'demo1',
         setDemo
@@ -55,6 +58,7 @@ describe('Configure CTA Handlers', () => {
 
       expect(mockFrom).toHaveBeenCalledWith('demos');
       expect(mockUpdate).toHaveBeenCalledWith({
+        cta_button_url: 'https://example.com/signup',
         metadata: {
           agentName: 'Test Agent',
           ctaTitle: 'Try Our Product',
@@ -66,6 +70,7 @@ describe('Configure CTA Handlers', () => {
 
       expect(setDemo).toHaveBeenCalledWith({
         ...demo,
+        cta_button_url: 'https://example.com/signup',
         metadata: {
           agentName: 'Test Agent',
           ctaTitle: 'Try Our Product',
@@ -73,8 +78,6 @@ describe('Configure CTA Handlers', () => {
           ctaButtonText: 'Start Free Trial',
         },
       });
-
-      expect(global.alert).toHaveBeenCalledWith('CTA settings saved successfully!');
     });
 
     it('should handle save error', async () => {
@@ -82,16 +85,17 @@ describe('Configure CTA Handlers', () => {
         error: new Error('Database error'),
       });
 
-      await handleSaveCTA(
-        'Title',
-        'Message',
-        'Button',
-        { id: 'demo1', metadata: {} } as any,
-        'demo1',
-        jest.fn()
-      );
-
-      expect(global.alert).toHaveBeenCalledWith('Failed to save CTA settings.');
+      await expect(
+        handleSaveCTA(
+          'Title',
+          'Message',
+          'Button',
+          'https://example.com',
+          { id: 'demo1', metadata: {} } as any,
+          'demo1',
+          jest.fn()
+        )
+      ).rejects.toThrow('Database error');
     });
 
     it('should work with null demo', async () => {
@@ -105,12 +109,14 @@ describe('Configure CTA Handlers', () => {
         'Title',
         'Message',
         'Button',
+        'https://example.com',
         null,
         'demo1',
         setDemo
       );
 
       expect(mockUpdate).toHaveBeenCalledWith({
+        cta_button_url: 'https://example.com',
         metadata: {
           ctaTitle: 'Title',
           ctaMessage: 'Message',
@@ -118,7 +124,39 @@ describe('Configure CTA Handlers', () => {
         },
       });
 
+      // setDemo should not be called when demo is null
       expect(setDemo).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty URL by setting null', async () => {
+      const demo = {
+        id: 'demo1',
+        metadata: {},
+      };
+      const setDemo = jest.fn();
+
+      mockEq.mockResolvedValue({
+        error: null,
+      });
+
+      await handleSaveCTA(
+        'Title',
+        'Message',
+        'Button',
+        '',
+        demo as any,
+        'demo1',
+        setDemo
+      );
+
+      expect(mockUpdate).toHaveBeenCalledWith({
+        cta_button_url: null,
+        metadata: {
+          ctaTitle: 'Title',
+          ctaMessage: 'Message',
+          ctaButtonText: 'Button',
+        },
+      });
     });
   });
 
@@ -192,9 +230,7 @@ describe('Configure CTA Handlers', () => {
           { id: 'demo1' } as any,
           jest.fn()
         )
-      ).rejects.toThrow();
-
-      expect(global.alert).toHaveBeenCalledWith('Failed to save Admin CTA URL.');
+      ).rejects.toThrow('Database error');
     });
 
     it('should work with null demo', async () => {

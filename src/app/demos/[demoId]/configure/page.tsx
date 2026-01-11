@@ -23,7 +23,7 @@ import { useOnboardingStatus } from './hooks/useOnboardingStatus';
 
 // Handlers
 import { handleVideoUpload as videoUpload, handlePreviewVideo as previewVideo, handleDeleteVideo as deleteVideo } from './handlers/videoHandlers';
-import { handleAddQAPair as addQAPair, handleDeleteKnowledgeChunk as deleteKnowledgeChunk, handleKnowledgeDocUpload as knowledgeDocUpload } from './handlers/knowledgeHandlers';
+import { handleAddQAPair as addQAPair, handleDeleteKnowledgeChunk as deleteKnowledgeChunk, handleKnowledgeDocUpload as knowledgeDocUpload, handleUrlImport as urlImport } from './handlers/knowledgeHandlers';
 import { handleSaveCTA as saveCTA } from './handlers/ctaHandlers';
 
 export default function DemoConfigurationPage({ params }: { params: { demoId: string } }) {
@@ -56,6 +56,9 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
   const [knowledgeDoc, setKnowledgeDoc] = useState<File | null>(null);
+  const [knowledgeUrl, setKnowledgeUrl] = useState('');
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isUploadingUrl, setIsUploadingUrl] = useState(false);
   const [agentName, setAgentName] = useState('');
   const [agentPersonality, setAgentPersonality] = useState('Friendly and helpful assistant.');
   const [agentGreeting, setAgentGreeting] = useState('Hello! How can I help you with the demo today?');
@@ -121,6 +124,25 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [ctaTitle, setCTATitle] = useState('Ready to Get Started?');
   const [ctaMessage, setCTAMessage] = useState('Start your free trial today and see the difference!');
   const [ctaButtonText, setCTAButtonText] = useState('Start Free Trial');
+
+  // Congratulations modal state - shows once when onboarding completes
+  const [showCongrats, setShowCongrats] = useState(false);
+
+  // Show congratulations modal once when onboarding completes
+  useEffect(() => {
+    if (isOnboardingComplete && demoId) {
+      const congratsKey = `congrats_shown_${demoId}`;
+      const alreadyShown = localStorage.getItem(congratsKey);
+      if (!alreadyShown) {
+        setShowCongrats(true);
+        localStorage.setItem(congratsKey, 'true');
+      }
+    }
+  }, [isOnboardingComplete, demoId]);
+
+  const dismissCongrats = () => {
+    setShowCongrats(false);
+  };
 
   // Initialize state from demo data when loaded
   useEffect(() => {
@@ -193,7 +215,20 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       knowledgeChunks,
       setKnowledgeChunks,
       setKnowledgeDoc,
-      setError
+      setError,
+      setIsUploadingFile
+    );
+  };
+
+  const handleUrlImport = async () => {
+    await urlImport(
+      knowledgeUrl,
+      demoId,
+      knowledgeChunks,
+      setKnowledgeChunks,
+      setKnowledgeUrl,
+      setError,
+      setIsUploadingUrl
     );
   };
 
@@ -457,6 +492,11 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 knowledgeDoc={knowledgeDoc}
                 setKnowledgeDoc={setKnowledgeDoc}
                 handleKnowledgeDocUpload={handleKnowledgeDocUpload}
+                knowledgeUrl={knowledgeUrl}
+                setKnowledgeUrl={setKnowledgeUrl}
+                handleUrlImport={handleUrlImport}
+                isUploadingFile={isUploadingFile}
+                isUploadingUrl={isUploadingUrl}
               />
               {/* Next step button during onboarding */}
               {!isOnboardingComplete && stepStatus.knowledge && (
@@ -482,9 +522,13 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setAgentGreeting={setAgentGreeting}
                 selectedObjectiveTemplate={selectedObjectiveTemplate}
                 setSelectedObjectiveTemplate={setSelectedObjectiveTemplate}
-                onAgentCreated={() => {
+                onAgentCreated={async () => {
                   // Refresh demo data to get updated persona_id
-                  fetchDemoData();
+                  await fetchDemoData();
+                  // Auto-advance to next step (CTA) during onboarding
+                  if (!isOnboardingComplete) {
+                    handleStepClick(4);
+                  }
                 }}
               />
               {/* Next step button during onboarding */}
@@ -526,33 +570,40 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
             <Tabs.Content value="embed">
               <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
-              {/* Celebration when all steps complete */}
-              {isOnboardingComplete && (
-                <div className="mt-8 p-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl text-white text-center">
-                  <div className="text-5xl mb-4">🎉</div>
-                  <h3 className="text-2xl font-bold mb-2">Congratulations!</h3>
-                  <p className="text-lg opacity-90 mb-6">Your demo is fully set up and ready to go!</p>
-                  <div className="flex justify-center gap-4">
-                    <a
-                      href={`/demos/${demoId}/experience`}
-                      className="px-6 py-3 bg-white text-green-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      View Demo
-                    </a>
-                    <a
-                      href="/demos"
-                      className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors"
-                    >
-                      Back to Dashboard
-                    </a>
-                  </div>
-                </div>
-              )}
             </Tabs.Content>
 
           </div>
         </Tabs.Root>
       </main>
+
+      {/* Full-page Congratulations Modal - shows once when onboarding completes */}
+      {showCongrats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500" />
+
+          {/* Content */}
+          <div className="relative z-10 text-center text-white px-8">
+            <div className="text-7xl mb-6">🎉</div>
+            <h2 className="text-4xl font-bold mb-4">Congratulations!</h2>
+            <p className="text-xl opacity-90 mb-10">Your demo is fully set up and ready to go!</p>
+            <div className="flex justify-center gap-4">
+              <a
+                href={`/demos/${demoId}/experience`}
+                className="px-8 py-4 bg-white text-green-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-lg"
+              >
+                View Demo
+              </a>
+              <button
+                onClick={dismissCongrats}
+                className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors text-lg"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

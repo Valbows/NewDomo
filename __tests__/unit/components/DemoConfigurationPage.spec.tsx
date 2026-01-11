@@ -1,6 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import DemoConfigurationPage from '@/app/demos/[demoId]/configure/page';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { AgentSettings } from '@/app/demos/[demoId]/configure/components/AgentSettings';
 
 // Mock the Next.js router
@@ -22,7 +21,7 @@ jest.mock('@/lib/supabase', () => {
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(), // Add mock for update
+      update: jest.fn().mockReturnThis(),
     };
 
     if (tableName === 'demos') {
@@ -30,8 +29,6 @@ jest.mock('@/lib/supabase', () => {
     } else if (tableName === 'demo_videos') {
       mock.order.mockResolvedValue({ data: [], error: null });
     } else if (tableName === 'knowledge_chunks') {
-      // This call is awaited directly without a terminating method like .single() or .order()
-      // So we make the mock itself thenable.
       (mock as any).then = (resolve: any) => resolve({ data: [], error: null });
     }
 
@@ -50,7 +47,6 @@ jest.mock('@/lib/supabase', () => {
 });
 
 describe('DemoConfigurationPage', () => {
-  // Use real timers to allow the async save in useEffect to work correctly
   beforeAll(() => {
     jest.useRealTimers();
   });
@@ -58,6 +54,7 @@ describe('DemoConfigurationPage', () => {
   afterAll(() => {
     jest.useFakeTimers();
   });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -87,9 +84,10 @@ describe('DemoConfigurationPage', () => {
       />
     );
 
-    const agentNameInput = screen.getByLabelText('Agent Name');
-    const agentPersonalityInput = screen.getByLabelText('Personality');
-    const agentGreetingInput = screen.getByLabelText('Initial Greeting');
+    // Use getByRole with name or getElementById since labels have extra text
+    const agentNameInput = screen.getByRole('textbox', { name: /agent name/i });
+    const agentPersonalityInput = screen.getByRole('textbox', { name: /personality/i });
+    const agentGreetingInput = screen.getByRole('textbox', { name: /initial greeting/i });
 
     expect(agentNameInput).toBeInTheDocument();
     expect(agentPersonalityInput).toBeInTheDocument();

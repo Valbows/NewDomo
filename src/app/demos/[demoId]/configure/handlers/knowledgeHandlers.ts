@@ -61,20 +61,39 @@ export async function handleKnowledgeDocUpload(
   knowledgeChunks: KnowledgeChunk[],
   setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void,
   setKnowledgeDoc: (doc: File | null) => void,
-  setError: (error: string | null) => void
+  setError: (error: string | null) => void,
+  setIsUploading?: (uploading: boolean) => void
 ) {
   if (!knowledgeDoc) {
     setError('Please select a document to upload.');
     return;
   }
   setError(null);
+  setIsUploading?.(true);
 
   try {
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const content = event.target?.result as string;
-      if (!content) {
-        setError('File is empty or could not be read.');
+    const fileName = knowledgeDoc.name.toLowerCase();
+
+    // For PDF and DOCX, use the server-side API
+    if (fileName.endsWith('.pdf') || fileName.endsWith('.docx')) {
+      const formData = new FormData();
+      formData.append('file', knowledgeDoc);
+
+      const response = await fetch('/api/parse-document', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to parse document');
+      }
+
+      const { content, source } = await response.json();
+
+      if (!content || content.trim().length === 0) {
+        setError('No content could be extracted from the document.');
+        setIsUploading?.(false);
         return;
       }
 
@@ -82,7 +101,7 @@ export async function handleKnowledgeDocUpload(
         demo_id: demoId,
         content: content,
         chunk_type: 'document',
-        source: knowledgeDoc.name
+        source: source
       }).select().single();
 
       if (insertError) throw insertError;
@@ -90,9 +109,111 @@ export async function handleKnowledgeDocUpload(
 
       setKnowledgeChunks([...knowledgeChunks, newChunk]);
       setKnowledgeDoc(null);
-    };
-    reader.readAsText(knowledgeDoc);
+      setIsUploading?.(false);
+    } else {
+      // For TXT files, read directly in browser
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const content = event.target?.result as string;
+        if (!content) {
+          setError('File is empty or could not be read.');
+          setIsUploading?.(false);
+          return;
+        }
+
+        try {
+          const { data: newChunk, error: insertError } = await supabase.from('knowledge_chunks').insert({
+            demo_id: demoId,
+            content: content,
+            chunk_type: 'document',
+            source: knowledgeDoc.name
+          }).select().single();
+
+          if (insertError) throw insertError;
+          if (!newChunk) throw new Error('Failed to upload document.');
+
+          setKnowledgeChunks([...knowledgeChunks, newChunk]);
+          setKnowledgeDoc(null);
+        } catch (err: unknown) {
+          setError(getErrorMessage(err, 'Failed to upload document.'));
+        } finally {
+          setIsUploading?.(false);
+        }
+      };
+      reader.onerror = () => {
+        setError('Failed to read file.');
+        setIsUploading?.(false);
+      };
+      reader.readAsText(knowledgeDoc);
+    }
   } catch (err: unknown) {
     setError(getErrorMessage(err, 'Failed to upload document.'));
+    setIsUploading?.(false);
+  }
+}
+
+export async function handleUrlImport(
+  url: string,
+  demoId: string,
+  knowledgeChunks: KnowledgeChunk[],
+  setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void,
+  setKnowledgeUrl: (url: string) => void,
+  setError: (error: string | null) => void,
+  setIsUploading?: (uploading: boolean) => void
+) {
+  if (!url.trim()) {
+    setError('Please enter a URL.');
+    return;
+  }
+
+  // Validate URL format
+  try {
+    new URL(url);
+  } catch {
+    setError('Please enter a valid URL.');
+    return;
+  }
+
+  setError(null);
+  setIsUploading?.(true);
+
+  try {
+    const response = await fetch('/api/parse-document', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch URL content');
+    }
+
+    const { content, source } = await response.json();
+
+    if (!content || content.trim().length === 0) {
+      setError('No content could be extracted from the URL.');
+      setIsUploading?.(false);
+      return;
+    }
+
+    const { data: newChunk, error: insertError } = await supabase.from('knowledge_chunks').insert({
+      demo_id: demoId,
+      content: content,
+      chunk_type: 'document',
+      source: source
+    }).select().single();
+
+    if (insertError) throw insertError;
+    if (!newChunk) throw new Error('Failed to import URL content.');
+
+    setKnowledgeChunks([...knowledgeChunks, newChunk]);
+    setKnowledgeUrl('');
+  } catch (err: unknown) {
+    setError(getErrorMessage(err, 'Failed to import URL content.'));
+  } finally {
+    setIsUploading?.(false);
   }
 }

@@ -2,6 +2,7 @@ import { Demo } from '@/app/demos/[demoId]/configure/types';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/tavus/demo-objectives';
 import { useState } from 'react';
 import { DomoModal } from '@/components/DomoModal';
+import { ObjectiveTemplateSelector } from '@/components/ObjectiveTemplateSelector';
 
 interface AgentSettingsProps {
   demo: Demo | null;
@@ -149,6 +150,14 @@ export const AgentSettings = ({
             placeholder="e.g., Hello! How can I help you today?"
           />
         </div>
+
+        {/* Objective Template Selector */}
+        {setSelectedObjectiveTemplate && (
+          <ObjectiveTemplateSelector
+            selectedTemplateId={currentTemplate}
+            onSelect={setSelectedObjectiveTemplate}
+          />
+        )}
 
         {/* Result Message */}
         {agentCreationResult && (

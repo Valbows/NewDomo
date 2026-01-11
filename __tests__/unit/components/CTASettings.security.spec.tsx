@@ -1,12 +1,12 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { CTASettings } from '@/app/demos/[demoId]/configure/components/CTASettings';
 import { Demo } from '@/app/demos/[demoId]/configure/types';
 
 function noop() {}
 
-describe('CTASettings - Admin-controlled URL', () => {
+describe('CTASettings', () => {
   const baseProps = {
     ctaTitle: 'Title',
     setCTATitle: noop,
@@ -14,54 +14,91 @@ describe('CTASettings - Admin-controlled URL', () => {
     setCTAMessage: noop,
     ctaButtonText: 'Start Free Trial',
     setCTAButtonText: noop,
-    onSaveCTA: noop,
+    onSaveCTA: jest.fn().mockResolvedValue(undefined),
   };
 
-  test('shows admin-controlled badge and displays admin CTA URL (no input)', () => {
+  test('renders CTA settings form with all fields', () => {
     const demo: Demo = {
       id: 'd1',
       name: 'Demo',
       user_id: 'u1',
       created_at: new Date().toISOString(),
-      cta_title: 'Admin Title',
-      cta_message: 'Admin Message',
-      cta_button_text: 'Admin Button',
-      cta_button_url: 'https://dashboard.example.com/trial',
       metadata: {},
     };
 
     render(<CTASettings demo={demo} {...baseProps} />);
 
-    // Label present
-    expect(screen.getByText(/Primary Button URL/i)).toBeInTheDocument();
-    // Admin-controlled badge visible
-    expect(screen.getByText(/Admin-controlled/i)).toBeInTheDocument();
-    // URL shown as text (not an editable input)
-    expect(screen.getByText('https://dashboard.example.com/trial')).toBeInTheDocument();
-    // Ensure there is NO input associated with Primary Button URL
-    expect(screen.queryByLabelText(/Primary Button URL/i)).toBeNull();
+    // Check all form elements are present
+    expect(screen.getByRole('textbox', { name: /button url/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /button text/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /headline/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /message/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save cta settings/i })).toBeInTheDocument();
   });
 
-  test('shows legacy metadata warning when using metadata.ctaButtonUrl fallback', () => {
+  test('displays existing CTA URL when demo has one configured', () => {
     const demo: Demo = {
-      id: 'd2',
+      id: 'd1',
       name: 'Demo',
-      user_id: 'u2',
+      user_id: 'u1',
       created_at: new Date().toISOString(),
-      cta_title: null,
-      cta_message: null,
-      cta_button_text: null,
-      cta_button_url: null,
-      metadata: {
-        ctaButtonUrl: 'https://legacy.example.com/trial',
-      },
+      cta_button_url: 'https://example.com/signup',
+      metadata: {},
     };
 
     render(<CTASettings demo={demo} {...baseProps} />);
 
-    expect(screen.getByText('https://legacy.example.com/trial')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Using legacy metadata URL. Contact an admin to set the official CTA URL./i)
-    ).toBeInTheDocument();
+    const urlInput = screen.getByRole('textbox', { name: /button url/i });
+    expect(urlInput).toHaveValue('https://example.com/signup');
+  });
+
+  test('shows configured status when URL is set', () => {
+    const demo: Demo = {
+      id: 'd1',
+      name: 'Demo',
+      user_id: 'u1',
+      created_at: new Date().toISOString(),
+      cta_button_url: 'https://example.com/signup',
+      metadata: {},
+    };
+
+    render(<CTASettings demo={demo} {...baseProps} />);
+
+    expect(screen.getByText('CTA configured')).toBeInTheDocument();
+  });
+
+  test('shows preview with provided values', () => {
+    const demo: Demo = {
+      id: 'd1',
+      name: 'Demo',
+      user_id: 'u1',
+      created_at: new Date().toISOString(),
+      metadata: {},
+    };
+
+    render(<CTASettings demo={demo} {...baseProps} />);
+
+    // Preview section should exist
+    expect(screen.getByText('Preview')).toBeInTheDocument();
+    // Title and Message appear in both form labels and preview - check they exist
+    expect(screen.getAllByText('Title').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Message').length).toBeGreaterThanOrEqual(1);
+    // Button text in preview
+    expect(screen.getByRole('button', { name: 'Start Free Trial' })).toBeInTheDocument();
+  });
+
+  test('save button is disabled when URL is empty', () => {
+    const demo: Demo = {
+      id: 'd1',
+      name: 'Demo',
+      user_id: 'u1',
+      created_at: new Date().toISOString(),
+      metadata: {},
+    };
+
+    render(<CTASettings demo={demo} {...baseProps} />);
+
+    const saveButton = screen.getByRole('button', { name: /save cta settings/i });
+    expect(saveButton).toBeDisabled();
   });
 });
