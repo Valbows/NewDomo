@@ -8,7 +8,7 @@ export function useAutoSaveMetadata(
   agentName: string,
   agentPersonality: string,
   agentGreeting: string,
-  objectives: string[]
+  selectedObjectiveTemplate: string
 ) {
   useEffect(() => {
     const handler = setTimeout(async () => {
@@ -18,7 +18,7 @@ export function useAutoSaveMetadata(
           agentName,
           agentPersonality,
           agentGreeting,
-          objectives: objectives.map((o) => (o || '').trim()).filter(Boolean).slice(0, 5),
+          selectedObjectiveTemplate,
         };
 
         if (JSON.stringify(newMetadata) === JSON.stringify(demo.metadata)) {
@@ -35,5 +35,5 @@ export function useAutoSaveMetadata(
     return () => {
       clearTimeout(handler);
     };
-  }, [agentName, agentPersonality, agentGreeting, objectives, demo, demoId]);
+  }, [agentName, agentPersonality, agentGreeting, selectedObjectiveTemplate, demo, demoId]);
 }

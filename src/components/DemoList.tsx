@@ -24,6 +24,29 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
 
   // Fetch conversation counts for each demo
   const [conversationCounts, setConversationCounts] = useState<Record<string, number>>({});
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteDemo = async (demoId: string) => {
+    try {
+      setDeleteError(null);
+      const { error: deleteErr } = await supabase
+        .from('demos')
+        .delete()
+        .eq('id', demoId);
+
+      if (deleteErr) {
+        console.error('Failed to delete demo:', deleteErr);
+        setDeleteError('Failed to delete demo. Please try again.');
+        return;
+      }
+
+      // Refresh the list after successful deletion
+      refresh();
+    } catch (err) {
+      console.error('Error deleting demo:', err);
+      setDeleteError('An error occurred while deleting the demo.');
+    }
+  };
 
   useEffect(() => {
     const fetchConversationCounts = async () => {
@@ -65,11 +88,14 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
         </Link>
       </div>
 
-      {error && (
+      {(error || deleteError) && (
         <div className="flex items-center justify-between text-sm text-red-700 bg-red-50 border border-red-100 p-3 rounded">
-          <span>{error}</span>
+          <span>{error || deleteError}</span>
           <button
-            onClick={refresh}
+            onClick={() => {
+              setDeleteError(null);
+              refresh();
+            }}
             className="ml-3 inline-flex items-center px-3 py-1 rounded bg-red-100 text-red-800 hover:bg-red-200"
             data-testid="demo-list-retry"
           >
@@ -99,6 +125,7 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
               key={demo.id}
               demo={demo}
               conversationCount={conversationCounts[demo.id] || 0}
+              onDelete={handleDeleteDemo}
             />
           ))}
         </div>

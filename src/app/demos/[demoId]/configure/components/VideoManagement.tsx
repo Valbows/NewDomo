@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2, RotateCcw } from 'lucide-react';
 import { DemoVideo, ProcessingStatus } from '@/app/demos/[demoId]/configure/types';
 
 interface VideoManagementProps {
@@ -14,21 +14,34 @@ interface VideoManagementProps {
   handleDeleteVideo: (id: string) => void;
   previewVideoUrl: string | null;
   setPreviewVideoUrl: (url: string | null) => void;
+  onRetryTranscription?: (videoId: string) => Promise<void>;
 }
 
-export const VideoManagement = ({ 
-  demoVideos, 
-  processingStatus, 
-  videoTitle, 
-  setVideoTitle, 
+export const VideoManagement = ({
+  demoVideos,
+  processingStatus,
+  videoTitle,
+  setVideoTitle,
   selectedVideoFile,
-  setSelectedVideoFile, 
-  handleVideoUpload, 
+  setSelectedVideoFile,
+  handleVideoUpload,
   handlePreviewVideo,
   handleDeleteVideo,
-  previewVideoUrl, 
-  setPreviewVideoUrl
+  previewVideoUrl,
+  setPreviewVideoUrl,
+  onRetryTranscription
 }: VideoManagementProps) => {
+  const [retryingVideoId, setRetryingVideoId] = useState<string | null>(null);
+
+  const handleRetryTranscription = async (videoId: string) => {
+    if (!onRetryTranscription) return;
+    setRetryingVideoId(videoId);
+    try {
+      await onRetryTranscription(videoId);
+    } finally {
+      setRetryingVideoId(null);
+    }
+  };
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Video Segments</h2>
@@ -135,6 +148,25 @@ export const VideoManagement = ({
                       <p className="font-medium">Error Details:</p>
                       <p className="mt-0.5">{video.processing_error || 'Unknown error - check ElevenLabs API key'}</p>
                       <p className="mt-1 text-red-600">Note: Video playback still works. Only audio transcription failed.</p>
+                      {onRetryTranscription && (
+                        <button
+                          onClick={() => handleRetryTranscription(video.id)}
+                          disabled={retryingVideoId === video.id}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 disabled:bg-red-400"
+                        >
+                          {retryingVideoId === video.id ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Retrying...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="h-3 w-3" />
+                              Retry Transcription
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   )}
                   {/* Show success note for completed */}

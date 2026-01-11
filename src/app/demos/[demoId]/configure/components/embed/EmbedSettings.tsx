@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Copy, Check, RefreshCw, ExternalLink, Code2, Globe, MousePointer, Monitor, Smartphone } from 'lucide-react';
 import { Demo } from '../../types';
 import { supabase } from '@/lib/supabase';
+import { DomoModal } from '@/components/DomoModal';
 
 interface EmbedSettingsProps {
   demo: Demo | null;
@@ -26,6 +27,7 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
   const [copied, setCopied] = useState<'token' | 'iframe' | 'popup' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<IframeSizeKey>('responsive');
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
 
   const baseUrl = typeof window !== 'undefined'
     ? window.location.origin
@@ -80,12 +82,14 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
     }
   };
 
+  const handleRegenerateClick = () => {
+    if (!demo) return;
+    setShowRegenerateModal(true);
+  };
+
   const handleRegenerateToken = async () => {
     if (!demo) return;
-    if (!confirm('Are you sure you want to regenerate the embed token? This will break any existing embeds.')) {
-      return;
-    }
-
+    setShowRegenerateModal(false);
     setRegenerating(true);
     setError(null);
 
@@ -201,7 +205,7 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
                 <h3 className="font-medium text-gray-900">Embed URL</h3>
               </div>
               <button
-                onClick={handleRegenerateToken}
+                onClick={handleRegenerateClick}
                 disabled={regenerating}
                 className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
               >
@@ -528,6 +532,17 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
           </div>
         </>
       )}
+
+      {/* Regenerate Token Confirmation Modal */}
+      <DomoModal
+        isOpen={showRegenerateModal}
+        onClose={() => setShowRegenerateModal(false)}
+        onConfirm={handleRegenerateToken}
+        title="Regenerate Embed Token"
+        message="Are you sure you want to regenerate the embed token? This will break any existing embeds using the current token."
+        type="confirm"
+        confirmText="Regenerate"
+      />
     </div>
   );
 }

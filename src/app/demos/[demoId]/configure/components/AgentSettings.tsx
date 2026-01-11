@@ -1,8 +1,7 @@
 import { Demo } from '@/app/demos/[demoId]/configure/types';
-import { CustomObjectivesManager } from '@/components/CustomObjectivesManager';
-import { ObjectivesStatus } from '@/components/ObjectivesStatus';
-import WebhookUrlDisplay from '@/components/WebhookUrlDisplay';
+import { DEFAULT_TEMPLATE_ID } from '@/lib/tavus/demo-objectives';
 import { useState } from 'react';
+import { DomoModal } from '@/components/DomoModal';
 
 interface AgentSettingsProps {
   demo: Demo | null;
@@ -12,50 +11,47 @@ interface AgentSettingsProps {
   setAgentPersonality: (personality: string) => void;
   agentGreeting: string;
   setAgentGreeting: (greeting: string) => void;
-  objectives?: string[];
-  setObjectives?: (objectives: string[]) => void;
+  selectedObjectiveTemplate?: string;
+  setSelectedObjectiveTemplate?: (templateId: string) => void;
+  onAgentCreated?: () => void;
 }
 
-export const AgentSettings = ({ 
+export const AgentSettings = ({
   demo,
-  agentName, 
-  setAgentName, 
-  agentPersonality, 
-  setAgentPersonality, 
-  agentGreeting, 
+  agentName,
+  setAgentName,
+  agentPersonality,
+  setAgentPersonality,
+  agentGreeting,
   setAgentGreeting,
-  objectives,
-  setObjectives
+  selectedObjectiveTemplate,
+  setSelectedObjectiveTemplate,
+  onAgentCreated,
 }: AgentSettingsProps) => {
-  // Provide safe fallbacks if objectives props are omitted (e.g., in tests)
-  const objectivesSafe: string[] = Array.isArray(objectives)
-    ? objectives
-    : (Array.isArray(demo?.metadata?.objectives) && (demo!.metadata!.objectives as string[])) || ['', '', ''];
-  const setObjectivesSafe = typeof setObjectives === 'function' ? setObjectives : (_: string[]) => {};
-
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
   const [agentCreationResult, setAgentCreationResult] = useState<any>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleObjectiveChange = (index: number, value: string) => {
-    const next = [...objectivesSafe];
-    next[index] = value;
-    setObjectivesSafe(next);
-  };
+  // Use the provided template or default
+  const currentTemplate = selectedObjectiveTemplate || DEFAULT_TEMPLATE_ID;
 
-  const addObjective = () => {
-    if (objectivesSafe.length >= 5) return;
-    setObjectivesSafe([...objectivesSafe, '']);
-  };
+  // Auto-select default template if none selected
+  if (!selectedObjectiveTemplate && setSelectedObjectiveTemplate) {
+    setSelectedObjectiveTemplate(DEFAULT_TEMPLATE_ID);
+  }
 
-  const removeObjective = (index: number) => {
-    if (objectivesSafe.length <= 3) return; // enforce minimum of 3
-    const next = objectivesSafe.filter((_, i) => i !== index);
-    setObjectivesSafe(next);
-  };
+  // Check if form is valid
+  const isFormValid = agentName.trim() && currentTemplate;
 
-  const handleCreateEnhancedAgent = async () => {
-    if (!demo?.id || !agentName.trim()) {
-      alert('Please fill in the agent name');
+  const handleCreateAgent = async () => {
+    if (!agentName.trim()) {
+      return;
+    }
+
+    if (!demo?.id) {
+      setErrorMessage('Demo not found. Please refresh the page and try again.');
+      setShowErrorModal(true);
       return;
     }
 
@@ -83,10 +79,13 @@ export const AgentSettings = ({
 
       const result = await response.json();
       setAgentCreationResult(result);
-      
-      
+
+      // Notify parent that agent was created successfully
+      if (result.success && onAgentCreated) {
+        onAgentCreated();
+      }
     } catch (error) {
-      console.error('❌ Failed to create enhanced agent:', error);
+      console.error('Failed to create agent:', error);
       setAgentCreationResult({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -97,145 +96,104 @@ export const AgentSettings = ({
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Agent Settings</h2>
-      <p className="text-gray-600 mb-6">Configure your Domo agent's personality, appearance, and initial greeting.</p>
-      <div className="bg-white p-8 rounded-lg shadow max-w-2xl mx-auto">
-        <div className="space-y-6">
-          <div>
-            <label htmlFor="agent-name" className="block text-sm font-medium text-gray-700">
-              Agent Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              id="agent-name"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                !agentName.trim() ? 'border-amber-300 bg-amber-50' : 'border-gray-300'
-              }`}
-              placeholder={demo?.name ? `${demo.name} Agent` : 'e.g., Sales Assistant'}
-              required
-            />
-            {!agentName.trim() && (
-              <p className="mt-1 text-sm text-amber-600">
-                Agent name is required to create your demo agent
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="agent-personality" className="block text-sm font-medium text-gray-700">Personality</label>
-            <textarea
-              id="agent-personality"
-              value={agentPersonality}
-              onChange={(e) => setAgentPersonality(e.target.value)}
-              rows={3}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Describe the agent's personality..."
-            ></textarea>
-          </div>
-          <div>
-            <label htmlFor="agent-greeting" className="block text-sm font-medium text-gray-700">Initial Greeting</label>
-            <textarea
-              id="agent-greeting"
-              value={agentGreeting}
-              onChange={(e) => setAgentGreeting(e.target.value)}
-              rows={3}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="e.g., Hello! How can I help you today?"
-            ></textarea>
-          </div>
-          {/* Demo Objectives Section */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Demo Objectives</label>
-            
-            {/* Override Behavior Notice */}
-            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800 font-medium">
-                🎯 Objectives Priority System
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                Custom objectives will <strong>always override</strong> default template objectives when active. 
-                Default templates are only used when no custom objectives are set.
-              </p>
-            </div>
-            
-            {/* Objectives Status */}
-            <div className="mb-4">
-              <ObjectivesStatus demoId={demo?.id || ''} />
-            </div>
+    <>
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Agent Settings</h2>
+      <p className="text-gray-600 mb-6">Configure your AI agent's identity and behavior.</p>
 
-            {/* Custom Objectives Manager */}
-            <CustomObjectivesManager demoId={demo?.id || ''} />
-          </div>
-
-          {/* Webhook URL Display */}
-          <div>
-            <WebhookUrlDisplay className="mb-4" />
-          </div>
-
-          {/* Agent Creation */}
-          <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Create New Agent</h3>
-            <p className="text-sm text-blue-700 mb-4">
-              Creates a new Tavus persona with the current settings. Each time you click this button, a completely new agent will be created with a new persona ID, preserving your previous agents.
-            </p>
-            
-            {/* Show current agent status */}
-            {demo?.tavus_persona_id && !agentCreationResult && (
-              <div className="mb-4 p-3 rounded bg-green-100 border border-green-300 text-green-800">
-                <p className="font-medium">✅ Current Agent</p>
-                <p className="text-sm mt-1">Persona ID: {demo.tavus_persona_id}</p>
-                <p className="text-sm">Creating a new agent will generate a new persona ID and preserve this one.</p>
-              </div>
-            )}
-            
-            {agentCreationResult && (
-              <div className={`mb-4 p-3 rounded ${
-                agentCreationResult.success 
-                  ? 'bg-green-100 border border-green-300 text-green-800'
-                  : 'bg-red-100 border border-red-300 text-red-800'
-              }`}>
-                {agentCreationResult.success ? (
-                  <div>
-                    <p className="font-medium">✅ Agent Created Successfully!</p>
-                    <p className="text-sm mt-1">Persona ID: {agentCreationResult.personaId}</p>
-                    <p className="text-sm">System Prompt ✅ Guardrails ✅ Objectives ✅</p>
-                    {agentCreationResult.configuration?.customObjectives && (
-                      <p className="text-sm">Custom Objectives: {agentCreationResult.configuration.customObjectives.name} ({agentCreationResult.configuration.customObjectives.steps} steps) ✅</p>
-                    )}
-                    <p className="text-sm mt-2 font-medium">🚀 Ready to test! Go to the Experience tab and start a conversation.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="font-medium">❌ Agent Creation Failed</p>
-                    <p className="text-sm mt-1">{agentCreationResult.error}</p>
-                    {agentCreationResult.error?.includes('Failed to verify Domo persona') && (
-                      <p className="text-sm mt-2 text-red-600">
-                        This might be a temporary Domo API issue. Please try again in a moment.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={handleCreateEnhancedAgent}
-              disabled={isCreatingAgent || !agentName.trim()}
-              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isCreatingAgent ? 'Creating New Agent...' : 'Create New Agent'}
-            </button>
-            
-            <div className="mt-3 text-xs text-blue-600">
-              <p>✅ Always creates a new persona with new ID</p>
-              <p>✅ System Prompt + Guardrails always included</p>
-              <p>✅ Uses custom objectives if active, otherwise default objectives</p>
-            </div>
-          </div>
+      <div className="bg-white p-6 rounded-lg shadow max-w-2xl mx-auto space-y-5">
+        {/* Agent Name */}
+        <div>
+          <label htmlFor="agent-name" className="block text-sm font-medium text-gray-700 mb-1">
+            Agent Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="agent-name"
+            value={agentName}
+            onChange={(e) => setAgentName(e.target.value)}
+            className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              !agentName.trim() ? 'border-amber-300 bg-amber-50' : 'border-gray-300'
+            }`}
+            placeholder={demo?.name ? `${demo.name} Agent` : 'e.g., Sales Assistant'}
+            required
+          />
         </div>
+
+        {/* Personality */}
+        <div>
+          <label htmlFor="agent-personality" className="block text-sm font-medium text-gray-700 mb-1">
+            Personality <span className="text-gray-400 text-xs">(optional)</span>
+          </label>
+          <textarea
+            id="agent-personality"
+            value={agentPersonality}
+            onChange={(e) => setAgentPersonality(e.target.value)}
+            rows={2}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            placeholder="Describe the agent's personality..."
+          />
+        </div>
+
+        {/* Initial Greeting */}
+        <div>
+          <label htmlFor="agent-greeting" className="block text-sm font-medium text-gray-700 mb-1">
+            Initial Greeting <span className="text-gray-400 text-xs">(optional)</span>
+          </label>
+          <textarea
+            id="agent-greeting"
+            value={agentGreeting}
+            onChange={(e) => setAgentGreeting(e.target.value)}
+            rows={2}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            placeholder="e.g., Hello! How can I help you today?"
+          />
+        </div>
+
+        {/* Result Message */}
+        {agentCreationResult && (
+          <div className={`p-3 rounded-md ${
+            agentCreationResult.success
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {agentCreationResult.success ? (
+              <p className="text-sm font-medium">Agent created successfully!</p>
+            ) : (
+              <div>
+                <p className="text-sm font-medium">Failed to create agent</p>
+                <p className="text-xs mt-1">{agentCreationResult.error}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Current Agent Status */}
+        {demo?.tavus_persona_id && !agentCreationResult && (
+          <div className="p-3 rounded-md bg-green-50 border border-green-200 text-green-800">
+            <p className="text-sm font-medium">Agent configured</p>
+          </div>
+        )}
+
+        {/* Create Agent Button */}
+        <button
+          onClick={handleCreateAgent}
+          disabled={isCreatingAgent || !isFormValid}
+          className="w-full px-6 py-3 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isCreatingAgent ? 'Creating Agent...' : demo?.tavus_persona_id ? 'Update Agent' : 'Create Agent'}
+        </button>
       </div>
-    </div>
+      </div>
+
+      {/* Error Modal */}
+      <DomoModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorMessage}
+        type="alert"
+      />
+    </>
   );
 };

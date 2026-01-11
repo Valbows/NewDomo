@@ -32,7 +32,9 @@ export interface Demo {
     ctaMessage?: string;
     ctaButtonText?: string;
     ctaButtonUrl?: string;
+    /** @deprecated Use selectedObjectiveTemplate instead */
     objectives?: string[];
+    selectedObjectiveTemplate?: string;
     // Optional analytics/reporting fields populated by webhook at end of calls
     analytics?: {
       last_updated?: string;

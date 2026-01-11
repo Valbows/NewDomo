@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { DemoExperienceView } from '@/components/conversation';
 
@@ -35,7 +35,16 @@ export default function DemoExperiencePage() {
     error,
     conversationUrl,
     videoTitles,
+    startConversation,
+    joiningCall,
   } = useDemoData(demoId, forceNew, isE2E);
+
+  // Auto-start conversation when demo is loaded (skip lobby for experience page)
+  useEffect(() => {
+    if (demo && !conversationUrl && !joiningCall && !error) {
+      startConversation();
+    }
+  }, [demo, conversationUrl, joiningCall, error, startConversation]);
 
   // CTA hook
   const {
@@ -101,14 +110,19 @@ export default function DemoExperiencePage() {
     // Additional experience-specific handling can be added here
   }, []);
 
+  // Get agent name from metadata
+  const agentName = demo?.metadata?.agentName;
+
   return (
     <DemoExperienceView
       demoName={demo?.name || 'Demo'}
       demoId={demoId}
+      agentName={agentName}
       conversationUrl={conversationUrl}
       conversationId={demo?.tavus_conversation_id}
-      loading={loading}
+      loading={loading || joiningCall}
       error={error}
+      showLobby={false}
       ctaTitle={ctaTitle}
       ctaMessage={ctaMessage}
       ctaButtonText={ctaButtonText}

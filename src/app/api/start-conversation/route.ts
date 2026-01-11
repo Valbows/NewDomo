@@ -11,9 +11,95 @@ const MAX_CONCURRENT_CONVERSATIONS = parseInt(process.env.TAVUS_MAX_CONCURRENT |
 // Simple in-memory lock to dedupe concurrent starts per user session
 const startLocks = new Map<string, Promise<unknown>>();
 
+// Clean up stale conversations by checking actual status with Tavus API
+async function cleanupStaleConversations(userId: string): Promise<void> {
+  const supabase = createServiceClient();
+  const tavusApiKey = process.env.TAVUS_API_KEY;
+
+  if (!tavusApiKey) return;
+
+  // Get all demo IDs owned by this user
+  const { data: demos, error: demosError } = await supabase
+    .from('demos')
+    .select('id')
+    .eq('user_id', userId);
+
+  if (demosError || !demos || demos.length === 0) return;
+
+  const demoIds = demos.map(d => d.id);
+
+  // Get all "active" conversations for these demos
+  const { data: activeConversations, error: fetchError } = await supabase
+    .from('conversation_details')
+    .select('id, tavus_conversation_id, status, started_at')
+    .in('demo_id', demoIds)
+    .in('status', ['active', 'starting', 'waiting']);
+
+  if (fetchError || !activeConversations || activeConversations.length === 0) return;
+
+  // Check each conversation with Tavus API and clean up stale ones
+  for (const conv of activeConversations) {
+    try {
+      // Skip if no tavus_conversation_id
+      if (!conv.tavus_conversation_id) {
+        // Mark as ended if started more than 1 hour ago with no conversation ID
+        const startedAt = new Date(conv.started_at || 0).getTime();
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        if (startedAt < oneHourAgo) {
+          await supabase
+            .from('conversation_details')
+            .update({ status: 'ended', completed_at: new Date().toISOString() })
+            .eq('id', conv.id);
+          logger.info(`Cleaned up stale conversation without tavus_id: ${conv.id}`);
+        }
+        continue;
+      }
+
+      // Check actual status with Tavus API
+      const response = await fetch(
+        `https://tavusapi.com/v2/conversations/${conv.tavus_conversation_id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': tavusApiKey,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // If Tavus says it's ended, update our record
+        if (data.status === 'ended' || data.status === 'completed') {
+          await supabase
+            .from('conversation_details')
+            .update({
+              status: 'ended',
+              completed_at: data.updated_at || new Date().toISOString(),
+            })
+            .eq('id', conv.id);
+          logger.info(`Cleaned up stale conversation ${conv.tavus_conversation_id} - Tavus status: ${data.status}`);
+        }
+      } else if (response.status === 404) {
+        // Conversation doesn't exist in Tavus, mark as ended
+        await supabase
+          .from('conversation_details')
+          .update({ status: 'ended', completed_at: new Date().toISOString() })
+          .eq('id', conv.id);
+        logger.info(`Cleaned up conversation ${conv.tavus_conversation_id} - not found in Tavus`);
+      }
+    } catch (err) {
+      logger.warn(`Error checking conversation ${conv.tavus_conversation_id}:`, { error: err });
+    }
+  }
+}
+
 // Count active conversations across all demos owned by a user
 async function countActiveConversationsForUser(userId: string): Promise<number> {
   const supabase = createServiceClient();
+
+  // First clean up any stale conversations
+  await cleanupStaleConversations(userId);
 
   // First get all demo IDs owned by this user
   const { data: demos, error: demosError } = await supabase

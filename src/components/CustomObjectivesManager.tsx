@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Play, Copy, CheckCircle } from 'lucide-react';
 import { useCustomObjectives } from '@/hooks/useCustomObjectives';
 import { ObjectiveDefinition } from '@/lib/tavus/objectives-templates';
 import { CustomObjective } from '@/lib/supabase/custom-objectives';
+import { DomoModal } from '@/components/DomoModal';
 
 interface CustomObjectivesManagerProps {
   demoId: string;
@@ -43,6 +44,8 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
     description: '',
     objectives: [{ ...EMPTY_OBJECTIVE }],
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [objectiveToDelete, setObjectiveToDelete] = useState<string | null>(null);
 
   const resetForm = () => {
     setFormData({
@@ -79,14 +82,21 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this objective set?')) {
+  const handleDeleteClick = (id: string) => {
+    setObjectiveToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (objectiveToDelete) {
       try {
-        await deleteObjective(id);
+        await deleteObjective(objectiveToDelete);
       } catch (error) {
         console.error('Failed to delete objective:', error);
       }
     }
+    setShowDeleteModal(false);
+    setObjectiveToDelete(null);
   };
 
   const handleActivate = async (id: string) => {
@@ -194,7 +204,7 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(objective.id)}
+                  onClick={() => handleDeleteClick(objective.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded"
                   title="Delete objective set"
                 >
@@ -400,6 +410,20 @@ export function CustomObjectivesManager({ demoId }: CustomObjectivesManagerProps
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DomoModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setObjectiveToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Objective Set"
+        message="Are you sure you want to delete this objective set? This action cannot be undone."
+        type="delete"
+        confirmText="Delete"
+      />
     </div>
   );
 }

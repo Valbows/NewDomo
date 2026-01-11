@@ -80,6 +80,45 @@ export async function handlePOST(req: NextRequest) {
       }
     }
 
+    // Handle conversation ended/completed events - mark conversation as ended
+    const isConversationEnded =
+      event.event_type === 'conversation.ended' ||
+      event.event_type === 'conversation_ended' ||
+      event.event_type === 'application.conversation_ended' ||
+      event.event_type === 'conversation.completed' ||
+      event.event_type === 'conversation_completed' ||
+      event.event_type === 'application.conversation_completed';
+
+    if (isConversationEnded) {
+      try {
+        const { error: updateError } = await supabase
+          .from('conversation_details')
+          .update({
+            status: 'ended',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('tavus_conversation_id', conversation_id);
+
+        if (updateError) {
+          console.warn(`⚠️ Failed to mark conversation ${conversation_id} as ended:`, updateError);
+        } else {
+          console.log(`✅ Conversation ${conversation_id} marked as ended`);
+        }
+
+        // Also do analytics ingestion for the ended event
+        if (shouldIngestEvent(event)) {
+          await ingestAnalyticsForEvent(supabase, conversation_id, event);
+          await storeDetailedConversationData(supabase, conversation_id, event);
+          await broadcastAnalyticsUpdate(supabase, conversation_id, event);
+        }
+
+        return NextResponse.json({ received: true });
+      } catch (err) {
+        logError(err, 'Error handling conversation ended event');
+        return NextResponse.json({ received: true });
+      }
+    }
+
     // If there is no tool call, check if it's an objective completion or analytics event
     if (!toolName) {
       // Check if this is an objective completion event first

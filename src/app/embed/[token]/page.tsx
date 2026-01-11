@@ -27,10 +27,11 @@ export default function EmbedPage() {
   const [error, setError] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [joiningCall, setJoiningCall] = useState(false);
 
-  // Fetch embed config and start conversation
+  // Fetch embed config only (don't start conversation automatically)
   useEffect(() => {
-    const initEmbed = async () => {
+    const fetchConfig = async () => {
       try {
         // Fetch embed config
         const configResp = await fetch(`/api/embed/${token}/config`);
@@ -45,21 +46,6 @@ export default function EmbedPage() {
           throw new Error('This demo does not have a configured AI agent');
         }
 
-        // Start conversation
-        const startResp = await fetch(`/api/embed/${token}/start-conversation`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-
-        if (!startResp.ok) {
-          const err = await startResp.json().catch(() => ({}));
-          throw new Error(err.error || 'Failed to start conversation');
-        }
-
-        const startData = await startResp.json();
-        setConversationUrl(startData.conversation_url);
-        setConversationId(startData.conversation_id);
         setLoading(false);
       } catch (err: any) {
         setError(err.message || 'Failed to load demo');
@@ -68,9 +54,38 @@ export default function EmbedPage() {
     };
 
     if (token) {
-      initEmbed();
+      fetchConfig();
     }
   }, [token]);
+
+  // Handle join call - start conversation when user clicks join
+  const handleJoinCall = useCallback(async () => {
+    if (!config) return;
+
+    setJoiningCall(true);
+    setError(null);
+
+    try {
+      const startResp = await fetch(`/api/embed/${token}/start-conversation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      if (!startResp.ok) {
+        const err = await startResp.json().catch(() => ({}));
+        throw new Error(err.error || err.message || 'Failed to start conversation');
+      }
+
+      const startData = await startResp.json();
+      setConversationUrl(startData.conversation_url);
+      setConversationId(startData.conversation_id);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start conversation');
+    } finally {
+      setJoiningCall(false);
+    }
+  }, [config, token]);
 
   // Handle conversation end
   const handleConversationEnd = useCallback(async () => {
@@ -144,10 +159,14 @@ export default function EmbedPage() {
     <DemoExperienceView
       demoName={config?.name || 'Demo'}
       demoId={config?.demoId || ''}
+      agentName={config?.agentName}
       conversationUrl={conversationUrl}
       conversationId={conversationId}
       loading={loading}
       error={error}
+      showLobby={true}
+      onJoinCall={handleJoinCall}
+      joiningCall={joiningCall}
       ctaTitle={config?.cta.title}
       ctaMessage={config?.cta.message}
       ctaButtonText={config?.cta.buttonText}

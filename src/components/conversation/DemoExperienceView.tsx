@@ -6,7 +6,7 @@ import { TavusConversationCVI } from '@/app/demos/[demoId]/experience/components
 import { InlineVideoPlayer } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
-import { BusyErrorScreen, CTABanner, ConversationEndedScreen, pipStyles } from '@/components/conversation';
+import { BusyErrorScreen, CTABanner, ConversationEndedScreen, PreCallLobby, pipStyles } from '@/components/conversation';
 import { analytics } from '@/lib/mixpanel';
 import {
   formatTime,
@@ -27,6 +27,7 @@ export interface DemoExperienceViewProps {
   // Demo info
   demoName: string;
   demoId: string;
+  agentName?: string;
 
   // Conversation
   conversationUrl: string | null;
@@ -35,6 +36,11 @@ export interface DemoExperienceViewProps {
   // State
   loading: boolean;
   error: string | null;
+
+  // Pre-call lobby
+  showLobby?: boolean;
+  onJoinCall?: () => void;
+  joiningCall?: boolean;
 
   // CTA config
   ctaTitle?: string;
@@ -66,10 +72,14 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     {
       demoName,
       demoId,
+      agentName,
       conversationUrl,
       conversationId,
       loading,
       error,
+      showLobby = true,
+      onJoinCall,
+      joiningCall = false,
       ctaTitle,
       ctaMessage,
       ctaButtonText,
@@ -450,8 +460,8 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       }
     }, [sendVideoContext]);
 
-    // Loading state
-    if (loading) {
+    // Initial loading state (fetching config)
+    if (loading && !joiningCall) {
       return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center">
           <div className="text-white text-lg">Loading demo...</div>
@@ -459,12 +469,25 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       );
     }
 
-    // Error state
-    if (error) {
+    // Error state (but not if we're in lobby - show error in lobby instead)
+    if (error && !showLobby) {
       return (
         <BusyErrorScreen
           error={error}
           onRetry={onRetry || (() => window.location.reload())}
+        />
+      );
+    }
+
+    // Pre-call lobby - show when lobby is enabled and no conversation URL yet
+    if (showLobby && !conversationUrl && onJoinCall) {
+      return (
+        <PreCallLobby
+          demoName={demoName}
+          agentName={agentName}
+          onJoinCall={onJoinCall}
+          loading={joiningCall}
+          error={error}
         />
       );
     }

@@ -12,7 +12,7 @@ import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
 import { AgentSettings } from './components/AgentSettings';
 import { VideoPlayer } from './components/VideoPlayer';
 import { CTASettings } from './components/CTASettings';
-import { AdminCTAUrlEditor } from './components/AdminCTAUrlEditor';
+// AdminCTAUrlEditor removed - functionality merged into CTASettings
 import { EmbedSettings } from './components/embed/EmbedSettings';
 import { OnboardingStepper, getStepFromTab, getTabFromStep } from './components/OnboardingStepper';
 
@@ -24,7 +24,7 @@ import { useOnboardingStatus } from './hooks/useOnboardingStatus';
 // Handlers
 import { handleVideoUpload as videoUpload, handlePreviewVideo as previewVideo, handleDeleteVideo as deleteVideo } from './handlers/videoHandlers';
 import { handleAddQAPair as addQAPair, handleDeleteKnowledgeChunk as deleteKnowledgeChunk, handleKnowledgeDocUpload as knowledgeDocUpload } from './handlers/knowledgeHandlers';
-import { handleSaveCTA as saveCTA, handleSaveAdminCTAUrl as saveAdminCTAUrl } from './handlers/ctaHandlers';
+import { handleSaveCTA as saveCTA } from './handlers/ctaHandlers';
 
 export default function DemoConfigurationPage({ params }: { params: { demoId: string } }) {
   const { demoId } = params;
@@ -45,6 +45,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     setPlayingVideoUrl,
     uiState,
     setUiState,
+    fetchDemoData,
   } = useDemoData(demoId);
 
   // Local component state
@@ -58,7 +59,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [agentName, setAgentName] = useState('');
   const [agentPersonality, setAgentPersonality] = useState('Friendly and helpful assistant.');
   const [agentGreeting, setAgentGreeting] = useState('Hello! How can I help you with the demo today?');
-  const [objectives, setObjectives] = useState<string[]>(['', '', '']);
+  const [selectedObjectiveTemplate, setSelectedObjectiveTemplate] = useState('');
 
   // Get the initial tab from URL parameters
   const initialTab = searchParams?.get('tab') || 'videos';
@@ -86,6 +87,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
     setActiveTab(getTabFromStep(step));
+    // Scroll to top when changing steps
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Settings dropdown state
@@ -126,11 +129,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setAgentPersonality(demo.metadata?.agentPersonality || 'Friendly and helpful assistant.');
       setAgentGreeting(demo.metadata?.agentGreeting || 'Hello! How can I help you with the demo today?');
 
-      // Initialize objectives: ensure 3–5 slots
-      const rawObjectives: string[] = Array.isArray(demo.metadata?.objectives) ? demo.metadata!.objectives! : [];
-      const trimmed = rawObjectives.filter((o) => typeof o === 'string').slice(0, 5);
-      const padded = trimmed.length >= 3 ? trimmed : [...trimmed, ...Array(Math.max(0, 3 - trimmed.length)).fill('')];
-      setObjectives(padded);
+      // Initialize selected objective template from metadata
+      setSelectedObjectiveTemplate(demo.metadata?.selectedObjectiveTemplate || '');
 
       // Initialize CTA settings from demo metadata
       setCTATitle(demo.metadata?.ctaTitle || 'Ready to Get Started?');
@@ -140,7 +140,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   }, [demo]);
 
   // Auto-save metadata when agent settings change
-  useAutoSaveMetadata(demo, demoId, agentName, agentPersonality, agentGreeting, objectives);
+  useAutoSaveMetadata(demo, demoId, agentName, agentPersonality, agentGreeting, selectedObjectiveTemplate);
 
   // Wrapper functions that call extracted handlers
   const handleVideoUpload = async () => {
@@ -197,12 +197,42 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     );
   };
 
-  const handleSaveCTA = async () => {
-    await saveCTA(ctaTitle, ctaMessage, ctaButtonText, demo, demoId, setDemo);
+  const handleSaveCTA = async (url: string) => {
+    await saveCTA(ctaTitle, ctaMessage, ctaButtonText, url, demo, demoId, setDemo);
   };
 
-  const handleSaveAdminCTAUrl = async (url: string) => {
-    await saveAdminCTAUrl(url, demoId, demo, setDemo);
+  const handleRetryTranscription = async (videoId: string) => {
+    // Update UI to show processing
+    setDemoVideos(prev => prev.map(v =>
+      v.id === videoId ? { ...v, processing_status: 'processing' as const, processing_error: null } : v
+    ));
+
+    try {
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demo_video_id: videoId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Transcription failed');
+      }
+
+      // Update video with success - API updates DB so we refetch
+      setDemoVideos(prev => prev.map(v =>
+        v.id === videoId ? { ...v, processing_status: 'completed' as const } : v
+      ));
+    } catch (err) {
+      // Update video with error
+      setDemoVideos(prev => prev.map(v =>
+        v.id === videoId ? {
+          ...v,
+          processing_status: 'failed' as const,
+          processing_error: err instanceof Error ? err.message : 'Unknown error'
+        } : v
+      ));
+    }
   };
 
   if (loading) {
@@ -400,6 +430,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 processingStatus={processingStatus}
                 previewVideoUrl={previewVideoUrl}
                 setPreviewVideoUrl={setPreviewVideoUrl}
+                onRetryTranscription={handleRetryTranscription}
               />
               {/* Next step button during onboarding */}
               {!isOnboardingComplete && stepStatus.videos && (
@@ -408,7 +439,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     onClick={() => handleStepClick(2)}
                     className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
                   >
-                    Continue to Knowledge Base →
+                    Next →
                   </button>
                 </div>
               )}
@@ -434,7 +465,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     onClick={() => handleStepClick(3)}
                     className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
                   >
-                    Continue to Agent Settings →
+                    Next →
                   </button>
                 </div>
               )}
@@ -449,28 +480,13 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setAgentPersonality={setAgentPersonality}
                 agentGreeting={agentGreeting}
                 setAgentGreeting={setAgentGreeting}
-                objectives={objectives}
-                setObjectives={setObjectives}
+                selectedObjectiveTemplate={selectedObjectiveTemplate}
+                setSelectedObjectiveTemplate={setSelectedObjectiveTemplate}
+                onAgentCreated={() => {
+                  // Refresh demo data to get updated persona_id
+                  fetchDemoData();
+                }}
               />
-              <div className="mt-6">
-                {demo?.tavus_persona_id ? (
-                  <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                    <p className="font-bold">Agent Configured!</p>
-                    <p>Persona ID: {demo.tavus_persona_id}</p>
-                    <p className="text-sm mt-2">Your agent is ready to use.</p>
-                  </div>
-                ) : (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded">
-                    <p className="font-medium">Agent Not Configured</p>
-                    <p className="text-sm mt-1">Use the "Create Agent" button above to configure your Domo agent with system prompt, guardrails, and objectives.</p>
-                  </div>
-                )}
-              </div>
-              {uiState === UIState.SERVICE_ERROR && (
-                <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                  <p>An error occurred. Please check the console for details.</p>
-                </div>
-              )}
               {/* Next step button during onboarding */}
               {!isOnboardingComplete && stepStatus.agent && (
                 <div className="mt-6 flex justify-end">
@@ -478,29 +494,23 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     onClick={() => handleStepClick(4)}
                     className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
                   >
-                    Continue to Call-to-Action →
+                    Next →
                   </button>
                 </div>
               )}
             </Tabs.Content>
 
             <Tabs.Content value="cta">
-              <div className="space-y-6">
-                <AdminCTAUrlEditor
-                  currentUrl={demo?.cta_button_url || null}
-                  onSave={handleSaveAdminCTAUrl}
-                />
-                <CTASettings
-                  demo={demo}
-                  ctaTitle={ctaTitle}
-                  setCTATitle={setCTATitle}
-                  ctaMessage={ctaMessage}
-                  setCTAMessage={setCTAMessage}
-                  ctaButtonText={ctaButtonText}
-                  setCTAButtonText={setCTAButtonText}
-                  onSaveCTA={handleSaveCTA}
-                />
-              </div>
+              <CTASettings
+                demo={demo}
+                ctaTitle={ctaTitle}
+                setCTATitle={setCTATitle}
+                ctaMessage={ctaMessage}
+                setCTAMessage={setCTAMessage}
+                ctaButtonText={ctaButtonText}
+                setCTAButtonText={setCTAButtonText}
+                onSaveCTA={handleSaveCTA}
+              />
               {/* Next step button during onboarding */}
               {!isOnboardingComplete && stepStatus.cta && (
                 <div className="mt-6 flex justify-end">
@@ -508,7 +518,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     onClick={() => handleStepClick(5)}
                     className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
                   >
-                    Continue to Embed →
+                    Next →
                   </button>
                 </div>
               )}
@@ -516,11 +526,26 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
             <Tabs.Content value="embed">
               <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
-              {/* Completion message during onboarding */}
-              {!isOnboardingComplete && stepStatus.embed && (
-                <div className="mt-6 p-4 bg-green-100 border border-green-400 rounded-lg">
-                  <p className="text-green-800 font-semibold">Setup Complete!</p>
-                  <p className="text-green-700 text-sm mt-1">Your demo is ready to share! Copy the embed code above and add it to your website.</p>
+              {/* Celebration when all steps complete */}
+              {isOnboardingComplete && (
+                <div className="mt-8 p-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl text-white text-center">
+                  <div className="text-5xl mb-4">🎉</div>
+                  <h3 className="text-2xl font-bold mb-2">Congratulations!</h3>
+                  <p className="text-lg opacity-90 mb-6">Your demo is fully set up and ready to go!</p>
+                  <div className="flex justify-center gap-4">
+                    <a
+                      href={`/demos/${demoId}/experience`}
+                      className="px-6 py-3 bg-white text-green-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      View Demo
+                    </a>
+                    <a
+                      href="/demos"
+                      className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
                 </div>
               )}
             </Tabs.Content>

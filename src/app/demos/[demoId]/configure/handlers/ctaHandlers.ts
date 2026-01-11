@@ -6,15 +6,16 @@ export async function handleSaveCTA(
   ctaTitle: string,
   ctaMessage: string,
   ctaButtonText: string,
+  ctaUrl: string,
   demo: Demo | null,
   demoId: string,
   setDemo: (demo: Demo) => void
 ) {
   try {
-
     const { error } = await supabase
       .from('demos')
       .update({
+        cta_button_url: ctaUrl || null,
         metadata: {
           ...demo?.metadata,
           ctaTitle,
@@ -30,6 +31,7 @@ export async function handleSaveCTA(
     if (demo) {
       setDemo({
         ...demo,
+        cta_button_url: ctaUrl || null,
         metadata: {
           ...demo.metadata,
           ctaTitle,
@@ -38,14 +40,13 @@ export async function handleSaveCTA(
         }
       });
     }
-
-    alert('CTA settings saved successfully!');
   } catch (err: unknown) {
     logError(err, 'Error saving CTA settings');
-    alert('Failed to save CTA settings.');
+    throw err;
   }
 }
 
+// Keep for backwards compatibility
 export async function handleSaveAdminCTAUrl(
   url: string,
   demoId: string,
@@ -68,7 +69,6 @@ export async function handleSaveAdminCTAUrl(
     }
   } catch (err: unknown) {
     logError(err, 'Error saving admin CTA URL');
-    alert('Failed to save Admin CTA URL.');
-    throw err; // rethrow so the editor can display inline error state
+    throw err;
   }
 }

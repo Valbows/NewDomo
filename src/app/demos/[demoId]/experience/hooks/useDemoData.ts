@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { getErrorMessage, logError } from '@/lib/errors';
@@ -42,6 +42,8 @@ interface UseDemoDataResult {
   uiState: UIState;
   setUiState: (state: UIState) => void;
   videoTitles: string[];
+  startConversation: () => Promise<void>;
+  joiningCall: boolean;
 }
 
 export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): UseDemoDataResult {
@@ -51,9 +53,11 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
   const [videoTitles, setVideoTitles] = useState<string[]>([]);
+  const [joiningCall, setJoiningCall] = useState(false);
 
+  // Fetch demo data only (don't start conversation automatically)
   useEffect(() => {
-    const fetchDemoAndStartConversation = async () => {
+    const fetchDemoData = async () => {
       try {
         // E2E mode: provide stub data, avoid network calls
         if (isE2E) {
@@ -102,15 +106,13 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
           try {
             processedDemoData.metadata = JSON.parse(processedDemoData.metadata);
           } catch (e: unknown) {
-            logError(e, '❌ Failed to parse metadata');
+            logError(e, 'Failed to parse metadata');
             processedDemoData.metadata = {};
           }
         }
 
         // Set the demo with properly parsed metadata
         setDemo(processedDemoData);
-
-        // Debug: Log full demo data
 
         // Load available video titles for dropdown debugging
         try {
@@ -119,7 +121,7 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
             .select('title')
             .eq('demo_id', processedDemoData.id);
           if (titlesError) {
-            console.warn('⚠️ Failed to load video titles', titlesError);
+            console.warn('Failed to load video titles', titlesError);
           } else if (Array.isArray(titlesData)) {
             const titles = titlesData
               .map((row: any) => row?.title)
@@ -127,54 +129,7 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
             setVideoTitles(titles);
           }
         } catch (e) {
-          console.warn('⚠️ Unexpected error loading video titles', e);
-        }
-
-        // Always obtain a fresh/validated Daily conversation URL from the server
-        try {
-          // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
-          const win: any = typeof window !== 'undefined' ? window : undefined;
-          if (win) {
-            win.__startConvInflight = win.__startConvInflight || new Map<string, Promise<any>>();
-          }
-          const inflight: Map<string, Promise<any>> | undefined = win?.__startConvInflight;
-          let startPromise = inflight?.get(processedDemoData.id);
-          if (!startPromise) {
-            startPromise = fetch('/api/start-conversation', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ demoId: processedDemoData.id, forceNew }),
-            }).then(async (resp) => {
-              if (!resp.ok) {
-                const err = await resp.json().catch(() => ({}));
-                throw err;
-              }
-              return resp.json();
-            });
-            inflight?.set(processedDemoData.id, startPromise);
-          } else {
-          }
-          let data: any;
-          try {
-            data = await startPromise;
-          } finally {
-            inflight?.delete(processedDemoData.id);
-          }
-          const url = data?.conversation_url as string | undefined;
-          if (url && isDailyRoomUrl(url)) {
-            setConversationUrl(url);
-            setUiState(UIState.CONVERSATION);
-          } else {
-            console.warn('Received non-Daily conversation URL from API:', url);
-            setError('Conversation URL invalid. Please verify Domo configuration.');
-            setLoading(false);
-            return;
-          }
-        } catch (e: any) {
-          console.error('Error starting conversation:', e);
-          setError(e?.error || e?.message || 'Failed to start conversation');
-          setLoading(false);
-          return;
+          console.warn('Unexpected error loading video titles', e);
         }
 
         setLoading(false);
@@ -184,8 +139,62 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
       }
     };
 
-    fetchDemoAndStartConversation();
-  }, [demoId, forceNew, isE2E]);
+    fetchDemoData();
+  }, [demoId, isE2E]);
+
+  // Start conversation - called when user clicks "Join Call"
+  const startConversation = useCallback(async () => {
+    if (!demo) return;
+
+    setJoiningCall(true);
+    setError(null);
+
+    try {
+      // In-flight client-side dedupe (helps with React Strict Mode double-invoke in dev)
+      const win: any = typeof window !== 'undefined' ? window : undefined;
+      if (win) {
+        win.__startConvInflight = win.__startConvInflight || new Map<string, Promise<any>>();
+      }
+      const inflight: Map<string, Promise<any>> | undefined = win?.__startConvInflight;
+      let startPromise = inflight?.get(demo.id);
+
+      if (!startPromise) {
+        startPromise = fetch('/api/start-conversation', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ demoId: demo.id, forceNew }),
+        }).then(async (resp) => {
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw err;
+          }
+          return resp.json();
+        });
+        inflight?.set(demo.id, startPromise);
+      }
+
+      let data: any;
+      try {
+        data = await startPromise;
+      } finally {
+        inflight?.delete(demo.id);
+      }
+
+      const url = data?.conversation_url as string | undefined;
+      if (url && isDailyRoomUrl(url)) {
+        setConversationUrl(url);
+        setUiState(UIState.CONVERSATION);
+      } else {
+        console.warn('Received non-Daily conversation URL from API:', url);
+        setError('Conversation URL invalid. Please verify Domo configuration.');
+      }
+    } catch (e: any) {
+      console.error('Error starting conversation:', e);
+      setError(e?.error || e?.message || 'Failed to start conversation');
+    } finally {
+      setJoiningCall(false);
+    }
+  }, [demo, forceNew]);
 
   return {
     demo,
@@ -195,5 +204,7 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
     uiState,
     setUiState,
     videoTitles,
+    startConversation,
+    joiningCall,
   };
 }

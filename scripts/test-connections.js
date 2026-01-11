@@ -110,26 +110,42 @@ async function testTwelveLabs() {
  */
 async function testElevenLabs() {
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const baseUrl = process.env.ELEVENLABS_URL || 'https://api.elevenlabs.io/v1';
+  // Sanitize URL - remove any trailing non-URL characters
+  const rawUrl = process.env.ELEVENLABS_URL || 'https://api.elevenlabs.io/v1';
+  const baseUrl = rawUrl.replace(/[^a-zA-Z0-9/:._-]/g, '').replace(/\/$/, '');
 
   if (!apiKey) {
-    return { status: 'missing', message: 'ELEVENLABS_API_KEY not configured (optional)' };
+    return { status: 'missing', message: 'ELEVENLABS_API_KEY not configured' };
   }
 
   try {
-    const response = await fetch(`${baseUrl}/voices`, {
+    // Test voices endpoint
+    const voicesResponse = await fetch(`${baseUrl}/voices`, {
       method: 'GET',
       headers: { 'xi-api-key': apiKey },
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      const count = data.voices?.length || 0;
-      return { status: 'valid', message: `Connected (${count} voices)` };
+    if (!voicesResponse.ok) {
+      const errorData = await voicesResponse.json().catch(() => ({}));
+      return { status: 'invalid', message: `${voicesResponse.status}: ${errorData.detail || 'Invalid key'}` };
     }
 
-    const errorData = await response.json().catch(() => ({}));
-    return { status: 'invalid', message: `${response.status}: ${errorData.detail || 'Invalid key'}` };
+    const voicesData = await voicesResponse.json();
+    const voiceCount = voicesData.voices?.length || 0;
+
+    // Test user subscription to verify STT access
+    const userResponse = await fetch(`${baseUrl}/user/subscription`, {
+      method: 'GET',
+      headers: { 'xi-api-key': apiKey },
+    });
+
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      const tier = userData.tier || 'unknown';
+      return { status: 'valid', message: `Connected (${voiceCount} voices, ${tier} tier)` };
+    }
+
+    return { status: 'valid', message: `Connected (${voiceCount} voices)` };
   } catch (error) {
     return { status: 'error', message: error.message };
   }

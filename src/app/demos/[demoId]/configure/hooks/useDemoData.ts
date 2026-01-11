@@ -8,7 +8,7 @@ interface UseDemoDataReturn {
   demo: Demo | null;
   setDemo: (demo: Demo) => void;
   demoVideos: DemoVideo[];
-  setDemoVideos: (videos: DemoVideo[]) => void;
+  setDemoVideos: React.Dispatch<React.SetStateAction<DemoVideo[]>>;
   knowledgeChunks: KnowledgeChunk[];
   setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void;
   loading: boolean;
