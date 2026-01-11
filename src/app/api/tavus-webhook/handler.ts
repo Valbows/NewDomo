@@ -68,7 +68,7 @@ export async function handlePOST(req: NextRequest) {
             .eq('tavus_conversation_id', conversation_id);
 
           if (error) {
-            console.warn(`⚠️ Failed to update conversation_details:`, error);
+            console.warn('Failed to update conversation_details:', error);
           } else {
           }
         }
@@ -100,9 +100,7 @@ export async function handlePOST(req: NextRequest) {
           .eq('tavus_conversation_id', conversation_id);
 
         if (updateError) {
-          console.warn(`⚠️ Failed to mark conversation ${conversation_id} as ended:`, updateError);
-        } else {
-          console.log(`✅ Conversation ${conversation_id} marked as ended`);
+          console.warn(`Failed to mark conversation ${conversation_id} as ended:`, updateError);
         }
 
         // Also do analytics ingestion for the ended event
@@ -238,7 +236,7 @@ async function ensureConversationDetailsRecord(
       .single();
 
     if (demoError || !demo) {
-      console.warn(`⚠️ No demo found for conversation ${conversationId}, cannot create conversation_details record`);
+      console.warn(`No demo found for conversation ${conversationId}, cannot create conversation_details record`);
       return;
     }
 
@@ -254,11 +252,11 @@ async function ensureConversationDetailsRecord(
       });
 
     if (insertError) {
-      console.error(`❌ Failed to create conversation_details record:`, insertError);
+      console.error('Failed to create conversation_details record:', insertError);
     } else {
     }
   } catch (error) {
-    console.error(`❌ Error ensuring conversation_details record:`, error);
+    console.error('Error ensuring conversation_details record:', error);
   }
 }
 
