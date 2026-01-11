@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { getErrorMessage, logError } from '@/lib/errors';
 
 async function handlePOST(req: NextRequest) {
   const supabase = createClient();
+  const serviceSupabase = createServiceClient();
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -61,7 +63,7 @@ async function handlePOST(req: NextRequest) {
         if (demo.tavus_conversation_id) {
           conversationId = demo.tavus_conversation_id;
         } else {
-          console.warn('⚠️ No stored conversation ID in demo, using provided ID');
+          console.warn('No stored conversation ID in demo, using provided ID');
         }
       }
     } else if (!conversationId) {
@@ -71,19 +73,19 @@ async function handlePOST(req: NextRequest) {
 
     // Final validation - ensure we have a conversation ID
     if (!conversationId || conversationId.trim() === '') {
-      console.error('❌ No valid conversation ID found');
+      console.error('No valid conversation ID found');
       return NextResponse.json({ error: 'No valid conversation ID found' }, { status: 400 });
     }
 
     // Additional validation - check if conversation ID looks valid
     if (conversationId === 'null' || conversationId === 'undefined') {
-      console.error('❌ Conversation ID is null or undefined string');
+      console.error('Conversation ID is null or undefined string');
       return NextResponse.json({ error: 'Invalid conversation ID (null/undefined)' }, { status: 400 });
     }
 
     const tavusApiKey = process.env.TAVUS_API_KEY;
     if (!tavusApiKey) {
-      console.error('❌ Tavus API key not configured');
+      console.error('Tavus API key not configured');
       return NextResponse.json({ error: 'Tavus API key not configured' }, { status: 500 });
     }
 
@@ -125,7 +127,7 @@ async function handlePOST(req: NextRequest) {
 
               }
             } catch (clearError) {
-              console.warn('⚠️ Failed to clear stale conversation data:', clearError);
+              console.warn('Failed to clear stale conversation data:', clearError);
             }
           }
           return NextResponse.json({
@@ -134,7 +136,7 @@ async function handlePOST(req: NextRequest) {
             conversationId
           });
         }
-        console.warn(`⚠️ Tavus API error: ${getResponse.status}, proceeding to attempt end anyway`);
+        console.warn(`Tavus API error: ${getResponse.status}, proceeding to attempt end anyway`);
       } else {
         const conversationData = await getResponse.json();
 
@@ -166,7 +168,7 @@ async function handlePOST(req: NextRequest) {
 
               }
             } catch (clearError) {
-              console.warn('⚠️ Failed to clear stale conversation data:', clearError);
+              console.warn('Failed to clear stale conversation data:', clearError);
             }
           }
           return NextResponse.json({
@@ -189,7 +191,7 @@ async function handlePOST(req: NextRequest) {
 
       if (!endResponse.ok) {
         const errorText = await endResponse.text();
-        console.warn(`⚠️ Tavus end conversation error: ${endResponse.status} - ${errorText}`);
+        console.warn(`Tavus end conversation error: ${endResponse.status} - ${errorText}`);
         
         // If it's a 404 or 409 (conflict), the conversation might already be ended
         if (endResponse.status === 404 || endResponse.status === 409) {
@@ -238,15 +240,16 @@ async function handlePOST(req: NextRequest) {
           transcript = transcriptEvent?.properties?.transcript || null;
 
         } else {
-          console.warn('⚠️ Failed to fetch verbose conversation data:', verboseResponse.status);
+          console.warn('Failed to fetch verbose conversation data:', verboseResponse.status);
         }
       } catch (fetchError) {
-        console.warn('⚠️ Error fetching transcript/perception:', fetchError);
+        console.warn('Error fetching transcript/perception:', fetchError);
       }
 
       // Update conversation_details status to 'ended' with transcript and perception
+      // Use service client to bypass RLS
       try {
-        const { error: updateStatusError } = await supabase
+        const { error: updateStatusError } = await serviceSupabase
           .from('conversation_details')
           .update({
             status: 'ended',
@@ -257,11 +260,10 @@ async function handlePOST(req: NextRequest) {
           .eq('tavus_conversation_id', conversationId);
 
         if (updateStatusError) {
-          console.warn('⚠️ Failed to update conversation_details status:', updateStatusError);
-        } else {
+          console.warn('Failed to update conversation_details status:', updateStatusError);
         }
       } catch (statusError) {
-        console.warn('⚠️ Error updating conversation_details status:', statusError);
+        console.warn('Error updating conversation_details status:', statusError);
       }
 
       // Clear the stale conversation URL from the database so next visit creates a fresh conversation
@@ -291,7 +293,7 @@ async function handlePOST(req: NextRequest) {
 
           }
         } catch (clearError) {
-          console.warn('⚠️ Failed to clear stale conversation data:', clearError);
+          console.warn('Failed to clear stale conversation data:', clearError);
           // Don't fail the request for this
         }
       }
@@ -304,7 +306,7 @@ async function handlePOST(req: NextRequest) {
       });
 
     } catch (tavusError) {
-      console.error('❌ Tavus API call failed:', tavusError);
+      console.error('Tavus API call failed:', tavusError);
       logError(tavusError, 'Tavus API call failed during conversation end');
       
       // Even if Tavus API fails, we'll return success since the conversation might have ended
@@ -318,7 +320,7 @@ async function handlePOST(req: NextRequest) {
     }
 
   } catch (error: unknown) {
-    console.error('❌ End conversation error:', error);
+    console.error('End conversation error:', error);
     logError(error, 'End conversation error');
     const message = getErrorMessage(error);
     return NextResponse.json({ 
