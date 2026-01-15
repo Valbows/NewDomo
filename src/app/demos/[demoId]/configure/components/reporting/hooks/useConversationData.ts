@@ -20,6 +20,7 @@ interface UseConversationDataReturn {
   ctaTrackingData: Record<string, CtaTrackingData>;
   loading: boolean;
   error: string | null;
+  hasPendingAnalysis: boolean; // True if any ended conversation is missing perception_analysis
   fetchConversationDetails: () => Promise<void>;
   fetchContactInfo: () => Promise<void>;
   fetchProductInterestData: () => Promise<void>;
@@ -191,26 +192,12 @@ export function useConversationData({
     refreshAllData();
   }, [refreshAllData]);
 
-  // Auto-refresh only for recent conversations missing perception analysis
-  // (Perception analysis comes from Tavus after conversation ends and takes time to process)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-
-      // Only poll if there are recent conversations without perception_analysis
-      const hasPendingAnalysis = conversationDetails.some((c) => {
-        if (c.status !== 'ended' || c.perception_analysis) return false;
-        const endedAt = c.completed_at ? new Date(c.completed_at).getTime() : 0;
-        return endedAt > fiveMinutesAgo;
-      });
-
-      if (hasPendingAnalysis) {
-        fetchConversationDetails();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [conversationDetails, fetchConversationDetails]);
+  // Compute if there are any ended conversations missing perception analysis
+  // This is used by the parent component to trigger Tavus API sync
+  const hasPendingAnalysis = conversationDetails.some((c) => {
+    // Only check ended/completed conversations that don't have perception_analysis
+    return (c.status === 'ended' || c.status === 'completed') && !c.perception_analysis;
+  });
 
   return {
     conversationDetails,
@@ -220,6 +207,7 @@ export function useConversationData({
     ctaTrackingData,
     loading,
     error,
+    hasPendingAnalysis,
     fetchConversationDetails,
     fetchContactInfo,
     fetchProductInterestData,

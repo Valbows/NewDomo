@@ -70,18 +70,36 @@ async function handleGET(req: NextRequest) {
 
     const results = [];
 
-    // Process each demo's conversation
+    // Process each demo - sync ALL conversations that are missing perception_analysis
     for (const demo of demos) {
       try {
-        const conversationId = demo.tavus_conversation_id;
-        if (!conversationId) continue;
-
-        // Check if we already have this conversation in our database
-        const { data: existingConversation } = await supabase
+        // Get all conversations for this demo that are missing perception_analysis
+        const { data: conversationsToSync, error: convError } = await supabase
           .from('conversation_details')
-          .select('id, updated_at')
-          .eq('tavus_conversation_id', conversationId)
-          .single();
+          .select('id, tavus_conversation_id, perception_analysis')
+          .eq('demo_id', demo.id)
+          .or('status.eq.ended,status.eq.completed');
+
+        if (convError) {
+          console.error(`Failed to fetch conversations for demo ${demo.id}:`, convError);
+          continue;
+        }
+
+        // Filter to only conversations missing perception_analysis
+        const conversationsMissingAnalysis = (conversationsToSync || []).filter(
+          (c) => !c.perception_analysis
+        );
+
+        if (conversationsMissingAnalysis.length === 0) {
+          continue; // No conversations need syncing for this demo
+        }
+
+        // Sync each conversation that's missing perception analysis
+        for (const conv of conversationsMissingAnalysis) {
+          const conversationId = conv.tavus_conversation_id;
+          if (!conversationId) continue;
+
+          const existingConversation = conv;
 
         // Fetch conversation details from Tavus API with verbose=true to get transcript and perception data
         const conversationResponse = await fetch(
@@ -247,19 +265,19 @@ async function handleGET(req: NextRequest) {
             has_perception: !!perceptionAnalysis
           });
         }
-
-              } catch (error) {
-          console.error(`💥 Failed to sync conversation for demo ${demo.id}:`, error);
-          logError(error, `Failed to sync conversation for demo ${demo.id}`);
-          results.push({
-            demo_id: demo.id,
-            demo_name: demo.name,
-            conversation_id: demo.tavus_conversation_id,
-            action: 'failed',
-            error: getErrorMessage(error, 'Unknown error')
-          });
-        }
-    }
+        } // End of inner for loop (conversations)
+      } catch (error) {
+        console.error(`Failed to sync conversations for demo ${demo.id}:`, error);
+        logError(error, `Failed to sync conversations for demo ${demo.id}`);
+        results.push({
+          demo_id: demo.id,
+          demo_name: demo.name,
+          conversation_id: 'multiple',
+          action: 'failed',
+          error: getErrorMessage(error, 'Unknown error')
+        });
+      }
+    } // End of outer for loop (demos)
 
     return NextResponse.json({
       message: 'Conversation sync completed',

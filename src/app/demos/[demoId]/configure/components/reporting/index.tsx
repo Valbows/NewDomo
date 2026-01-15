@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { ReportingProps } from "./types";
 import { useConversationData } from "./hooks/useConversationData";
@@ -21,6 +21,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
     ctaTrackingData,
     loading,
     error: dataError,
+    hasPendingAnalysis,
     refreshAllData,
   } = useConversationData({ demoId: demo?.id });
 
@@ -29,6 +30,67 @@ export const Reporting = ({ demo }: ReportingProps) => {
     onSyncComplete: refreshAllData,
     autoSync: true, // Auto-sync when page loads
   });
+
+  // Track auto-sync state with retry limits
+  const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSyncAttemptsRef = useRef<number>(0);
+  const autoSyncStartTimeRef = useRef<number | null>(null);
+  const MAX_AUTO_SYNC_ATTEMPTS = 10;
+  const MAX_AUTO_SYNC_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+  // Auto-sync from Tavus API when there are conversations missing perception analysis
+  useEffect(() => {
+    // Only start auto-sync if initial sync is complete and there are pending analyses
+    if (!initialSyncComplete || !hasPendingAnalysis) {
+      // Reset counters when no pending analysis
+      if (!hasPendingAnalysis) {
+        autoSyncAttemptsRef.current = 0;
+        autoSyncStartTimeRef.current = null;
+      }
+      if (autoSyncIntervalRef.current) {
+        clearInterval(autoSyncIntervalRef.current);
+        autoSyncIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Initialize start time on first run
+    if (!autoSyncStartTimeRef.current) {
+      autoSyncStartTimeRef.current = Date.now();
+    }
+
+    // Check if we've exceeded limits
+    const hasExceededAttempts = autoSyncAttemptsRef.current >= MAX_AUTO_SYNC_ATTEMPTS;
+    const hasExceededTime = Date.now() - (autoSyncStartTimeRef.current || Date.now()) > MAX_AUTO_SYNC_DURATION_MS;
+
+    if (hasExceededAttempts || hasExceededTime) {
+      if (autoSyncIntervalRef.current) {
+        clearInterval(autoSyncIntervalRef.current);
+        autoSyncIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Start polling Tavus API every 30 seconds for perception analysis
+    const syncInterval = () => {
+      if (!syncing) {
+        autoSyncAttemptsRef.current += 1;
+        syncConversations();
+      }
+    };
+
+    // Start interval if not already running
+    if (!autoSyncIntervalRef.current) {
+      autoSyncIntervalRef.current = setInterval(syncInterval, 30000);
+    }
+
+    return () => {
+      if (autoSyncIntervalRef.current) {
+        clearInterval(autoSyncIntervalRef.current);
+        autoSyncIntervalRef.current = null;
+      }
+    };
+  }, [initialSyncComplete, hasPendingAnalysis, syncing, syncConversations]);
 
   // Combine errors
   const error = dataError || syncError;
@@ -101,15 +163,15 @@ export const Reporting = ({ demo }: ReportingProps) => {
         <button
           onClick={syncConversations}
           disabled={syncing || !demo?.tavus_conversation_id}
-          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-          title="Manually refresh conversation data"
+          className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-purple-300 disabled:cursor-not-allowed transition-colors"
+          title="Fetch perception analysis from Domo"
         >
           {syncing ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <RefreshCw className="w-4 h-4 mr-2" />
           )}
-          {syncing ? "Syncing..." : "Refresh"}
+          {syncing ? "Fetching..." : "Fetch Domo"}
         </button>
       </div>
 

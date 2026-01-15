@@ -170,7 +170,7 @@ export function ConversationListItem({
 
             {!conversation.perception_analysis && !conversation.transcript && (
               <div className="text-sm text-gray-500 bg-gray-50 rounded p-4">
-                No detailed data available for this conversation. Try syncing again later.
+                No detailed data available for this conversation. Click "Fetch Missing Analysis" above to retrieve it.
               </div>
             )}
           </div>
