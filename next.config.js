@@ -28,10 +28,12 @@ const nextConfig = {
     ];
     if (process.env.NODE_ENV === 'production') {
       // Add CSP for non-embed routes only
+      // Note: 'unsafe-inline' is required for Next.js inline scripts
+      // wss://*.supabase.co is required for Supabase realtime WebSocket connections
       headers[1].headers.push({
         key: 'Content-Security-Policy-Report-Only',
         value:
-          "default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co https://api.elevenlabs.io https://tavusapi.com https://*.sentry.io; img-src 'self' data: blob:; media-src 'self' blob: https://*.supabase.co; frame-ancestors 'none'",
+          "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.elevenlabs.io https://tavusapi.com https://*.sentry.io https://*.daily.co wss://*.daily.co; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; frame-ancestors 'none'; style-src 'self' 'unsafe-inline'",
       });
     }
     return headers;
