@@ -59,17 +59,17 @@ export const AdminCTAUrlEditor: React.FC<AdminCTAUrlEditorProps> = ({ currentUrl
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow space-y-3">
+    <div className="bg-domo-bg-card border border-domo-border p-6 rounded-xl space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">Admin CTA URL</h3>
-          <p className="text-sm text-gray-500">This URL is used for the primary CTA button across this demo and overrides any legacy metadata URL.</p>
+          <h3 className="text-base font-semibold text-white">Admin CTA URL</h3>
+          <p className="text-sm text-domo-text-secondary">This URL is used for the primary CTA button across this demo and overrides any legacy metadata URL.</p>
         </div>
         {!isEditing && (
           <button
             type="button"
             onClick={beginEdit}
-            className="text-sm text-indigo-600 hover:text-indigo-700 underline"
+            className="text-sm text-domo-primary hover:text-domo-secondary underline transition-colors"
             data-testid="admin-cta-edit"
           >
             Edit URL
@@ -78,14 +78,14 @@ export const AdminCTAUrlEditor: React.FC<AdminCTAUrlEditorProps> = ({ currentUrl
       </div>
 
       {!isEditing && (
-        <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 break-all" data-testid="admin-cta-current-url">
+        <div className="w-full px-3 py-2.5 border border-domo-border rounded-lg bg-domo-bg-dark text-domo-text-secondary break-all" data-testid="admin-cta-current-url">
           {currentUrl || 'Not configured'}
         </div>
       )}
 
       {isEditing && (
         <div className="space-y-2">
-          <label htmlFor="admin-cta-url" className="block text-sm font-medium text-gray-700">Primary Button URL</label>
+          <label htmlFor="admin-cta-url" className="block text-sm font-medium text-domo-text-secondary">Primary Button URL</label>
           <input
             id="admin-cta-url"
             data-testid="admin-cta-url-input"
@@ -93,15 +93,15 @@ export const AdminCTAUrlEditor: React.FC<AdminCTAUrlEditorProps> = ({ currentUrl
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="https://your.site/path"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-3 py-2.5 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary"
           />
-          {error && <p className="text-xs text-red-600" data-testid="admin-cta-url-error">{error}</p>}
+          {error && <p className="text-xs text-domo-error" data-testid="admin-cta-url-error">{error}</p>}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+              className="px-4 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
               data-testid="admin-cta-save"
             >
               {saving ? 'Saving…' : 'Save URL'}
@@ -109,7 +109,7 @@ export const AdminCTAUrlEditor: React.FC<AdminCTAUrlEditorProps> = ({ currentUrl
             <button
               type="button"
               onClick={cancelEdit}
-              className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+              className="px-4 py-2 border border-domo-border text-domo-text-secondary font-medium rounded-lg hover:bg-domo-bg-elevated hover:text-white transition-colors"
               data-testid="admin-cta-cancel"
             >
               Cancel

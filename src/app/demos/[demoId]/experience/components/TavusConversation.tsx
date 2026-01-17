@@ -286,12 +286,12 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
   return (
     <div className="relative">
       {/* Daily.co will inject the video call here */}
-      <div id="daily-call-container" className="w-full h-96 bg-gray-100 rounded-lg overflow-hidden">
+      <div id="daily-call-container" className="w-full h-96 bg-domo-bg-elevated rounded-lg overflow-hidden">
         {!isConnected && (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
-              <p className="text-gray-500">Connecting to AI assistant...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-domo-primary mx-auto mb-2"></div>
+              <p className="text-domo-text-muted">Connecting to AI assistant...</p>
             </div>
           </div>
         )}
@@ -299,15 +299,15 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
 
       {/* Status Indicators - Minimal overlay at bottom corners */}
       {isConnected && (
-        <div className="absolute top-2 right-2 bg-green-100 border border-green-300 rounded-md px-2 py-1 z-10 max-w-xs">
-          <p className="text-green-800 text-xs font-medium">✅ Connected</p>
+        <div className="absolute top-2 right-2 bg-domo-success/10 border border-domo-success/20 rounded-md px-2 py-1 z-10 max-w-xs">
+          <p className="text-domo-success text-xs font-medium">✅ Connected</p>
         </div>
       )}
       
       {isMonitoring && (
-        <div className="absolute bottom-2 left-2 bg-blue-100 border border-blue-300 rounded-md px-2 py-1 z-10 max-w-xs">
+        <div className="absolute bottom-2 left-2 bg-domo-primary/10 border border-domo-primary/20 rounded-md px-2 py-1 z-10 max-w-xs">
           <div className="flex justify-between items-center">
-            <p className="text-blue-800 text-xs font-medium">🔍 Listening for real-time tool calls...</p>
+            <p className="text-domo-primary text-xs font-medium">🔍 Listening for real-time tool calls...</p>
             <button
               onClick={() => {
                 const title = window.prompt('Enter exact video title to fetch:');
@@ -316,7 +316,7 @@ export function TavusConversation({ conversationUrl, onToolCall, isMonitoring }:
                 } else {
                 }
               }}
-              className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+              className="px-2 py-1 bg-domo-primary text-white text-xs rounded hover:bg-domo-secondary"
             >
               Test Tool Call
             </button>

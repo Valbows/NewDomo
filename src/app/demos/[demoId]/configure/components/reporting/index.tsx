@@ -35,15 +35,27 @@ export const Reporting = ({ demo }: ReportingProps) => {
   const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoSyncAttemptsRef = useRef<number>(0);
   const autoSyncStartTimeRef = useRef<number | null>(null);
-  const MAX_AUTO_SYNC_ATTEMPTS = 10;
-  const MAX_AUTO_SYNC_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+  const MAX_AUTO_SYNC_ATTEMPTS = 3; // Reduced from 10
+  const MAX_AUTO_SYNC_DURATION_MS = 1 * 60 * 1000; // 1 minute (changed from 5 minutes)
 
-  // Auto-sync from Tavus API when there are conversations missing perception analysis
+  // Check if any conversation ended recently (within 1 minute)
+  const hasRecentlyEndedConversation = conversationDetails.some((c) => {
+    if (c.status !== 'ended' && c.status !== 'completed') return false;
+    if (!c.completed_at) return false;
+    const completedTime = new Date(c.completed_at).getTime();
+    const oneMinuteAgo = Date.now() - 60 * 1000;
+    return completedTime > oneMinuteAgo;
+  });
+
+  // Auto-sync from Tavus API ONLY when:
+  // 1. Initial sync is complete
+  // 2. There are pending analyses
+  // 3. A conversation ended recently (within 1 minute)
   useEffect(() => {
-    // Only start auto-sync if initial sync is complete and there are pending analyses
-    if (!initialSyncComplete || !hasPendingAnalysis) {
-      // Reset counters when no pending analysis
-      if (!hasPendingAnalysis) {
+    // Only start auto-sync if initial sync is complete, there are pending analyses, AND a conversation ended recently
+    if (!initialSyncComplete || !hasPendingAnalysis || !hasRecentlyEndedConversation) {
+      // Reset counters when conditions not met
+      if (!hasPendingAnalysis || !hasRecentlyEndedConversation) {
         autoSyncAttemptsRef.current = 0;
         autoSyncStartTimeRef.current = null;
       }
@@ -71,7 +83,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
       return;
     }
 
-    // Start polling Tavus API every 30 seconds for perception analysis
+    // Start polling Tavus API every 20 seconds for perception analysis (reduced from 30)
     const syncInterval = () => {
       if (!syncing) {
         autoSyncAttemptsRef.current += 1;
@@ -81,7 +93,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
 
     // Start interval if not already running
     if (!autoSyncIntervalRef.current) {
-      autoSyncIntervalRef.current = setInterval(syncInterval, 30000);
+      autoSyncIntervalRef.current = setInterval(syncInterval, 20000);
     }
 
     return () => {
@@ -90,7 +102,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
         autoSyncIntervalRef.current = null;
       }
     };
-  }, [initialSyncComplete, hasPendingAnalysis, syncing, syncConversations]);
+  }, [initialSyncComplete, hasPendingAnalysis, hasRecentlyEndedConversation, syncing, syncConversations]);
 
   // Combine errors
   const error = dataError || syncError;
@@ -133,37 +145,28 @@ export const Reporting = ({ demo }: ReportingProps) => {
     setExpandedConversation(expandedConversation === conversationId ? null : conversationId);
   };
 
-  // Show loading state during initial sync
-  if (!initialSyncComplete && syncing) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-200 rounded-full"></div>
-          <div className="w-16 h-16 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
-        </div>
-        <h3 className="mt-6 text-lg font-semibold text-gray-900">Loading Conversation Data</h3>
-        <p className="mt-2 text-gray-600 text-center max-w-md">
-          Syncing your latest conversations and generating perception analysis...
-        </p>
-        <p className="mt-1 text-sm text-gray-500">This may take a few moments</p>
-      </div>
-    );
-  }
+  // Note: We no longer block the UI during initial sync - content loads seamlessly
 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-semibold">Reporting & Analytics</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-xl font-semibold text-white font-heading">Reporting & Analytics</h2>
+          <p className="text-domo-text-secondary mt-1">
             View detailed conversation transcripts and perception analysis from Domo.
+            {syncing && (
+              <span className="ml-2 inline-flex items-center text-domo-primary">
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                <span className="text-xs">Syncing...</span>
+              </span>
+            )}
           </p>
         </div>
         <button
           onClick={syncConversations}
           disabled={syncing || !demo?.tavus_conversation_id}
-          className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-purple-300 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-domo-primary text-white rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
           title="Fetch perception analysis from Domo"
         >
           {syncing ? (
@@ -177,7 +180,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-md">
+        <div className="mb-6 p-4 bg-domo-error/10 border border-domo-error/20 text-domo-error rounded-xl">
           {error}
         </div>
       )}
@@ -205,7 +208,7 @@ export const Reporting = ({ demo }: ReportingProps) => {
       />
 
       {/* Privacy Notice */}
-      <div className="mt-6 text-xs text-gray-500">
+      <div className="mt-6 text-xs text-domo-text-muted">
         <p className="mb-1 font-medium">Privacy Notice</p>
         <p>
           Conversation data is stored securely with appropriate privacy controls. Personal

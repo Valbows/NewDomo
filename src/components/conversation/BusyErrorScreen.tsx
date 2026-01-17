@@ -26,20 +26,20 @@ export function BusyErrorScreen({
 
   if (isBusyError) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center">
         <div className="text-center px-6">
           <div className="text-6xl mb-4">🙏</div>
           <div className="text-white text-xl font-semibold mb-2">
             Demo is Currently Busy
           </div>
-          <div className="text-gray-400 mb-6">
+          <div className="text-domo-text-secondary mb-6">
             We're chatting with other customers right now.
             <br />
             Please try again in a few minutes.
           </div>
           <button
             onClick={onRetry || (() => window.location.reload())}
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
+            className="px-6 py-3 bg-domo-primary hover:bg-domo-secondary text-white font-semibold rounded-lg transition-colors"
           >
             Try Again
           </button>
@@ -49,13 +49,13 @@ export function BusyErrorScreen({
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+    <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center">
       <div className="text-center px-6">
-        <div className="text-red-400 text-lg mb-4">{error}</div>
+        <div className="text-domo-error text-lg mb-4">{error}</div>
         {onBack && (
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-domo-bg-elevated hover:bg-domo-bg-elevated/80 text-white rounded-lg transition-colors border border-domo-border"
           >
             {backLabel}
           </button>

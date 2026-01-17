@@ -53,7 +53,7 @@ function DemosPage() {
     return (
       <DashboardLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Loading demos...</div>
+          <div className="text-lg text-domo-text-secondary">Loading demos...</div>
         </div>
       </DashboardLayout>
     );
@@ -62,7 +62,7 @@ function DemosPage() {
   if (error) {
     return (
       <DashboardLayout>
-        <div className="text-red-600">{error}</div>
+        <div className="text-domo-error">{error}</div>
       </DashboardLayout>
     );
   }
@@ -71,9 +71,9 @@ function DemosPage() {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-full p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-domo-dark-text">No Demos Found</h2>
-          <p className="text-domo-light-text mb-6">You haven't created any demos yet. Let's get started!</p>
-          <Link href="/demos/create" className="bg-domo-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">
+          <h2 className="text-2xl font-semibold mb-4 text-white font-heading">No Demos Found</h2>
+          <p className="text-domo-text-secondary mb-6">You haven't created any demos yet. Let's get started!</p>
+          <Link href="/demos/create" className="bg-domo-primary hover:bg-domo-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors">
             Create Your First Demo
           </Link>
         </div>
@@ -84,17 +84,17 @@ function DemosPage() {
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-domo-dark-text">Your Demos</h1>
-        <Link href="/demos/create" className="bg-domo-green hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">
+        <h1 className="text-3xl font-bold text-white font-heading">Your Demos</h1>
+        <Link href="/demos/create" className="bg-domo-primary hover:bg-domo-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors">
           + New Demo
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {demos.map((demo) => (
           <Link href={`/demos/${demo.id}/configure`} key={demo.id}>
-            <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 transition-colors">
-              <h5 className="mb-2 text-xl font-bold tracking-tight text-domo-dark-text">{demo.name}</h5>
-              <p className="font-normal text-domo-light-text">
+            <div className="block p-6 bg-domo-bg-card border border-domo-border rounded-xl shadow hover:bg-domo-bg-elevated transition-colors">
+              <h5 className="mb-2 text-xl font-bold tracking-tight text-white">{demo.name}</h5>
+              <p className="font-normal text-domo-text-secondary">
                 Created on: {new Date(demo.created_at).toLocaleDateString()}
               </p>
             </div>

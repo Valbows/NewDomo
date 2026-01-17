@@ -1,3 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Figtree:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --domo-primary: #248BFB;
+  --domo-secondary: #6FB3FC;
+  --domo-light: #DAEAFB;
+  --domo-alert: #FF6F61;
+  --domo-bg-dark: #0A0A0F;
+  --domo-bg-card: #12121A;
+  --domo-bg-elevated: #1A1A24;
+  --domo-border: #2A2A3A;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Figtree', sans-serif;
+}
+
+body {
+  background-color: #0A0A0F;
+  color: #FFFFFF;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #12121A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A2A3A;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3A3A4A;
+}
+
+/* Focus states */
+*:focus-visible {
+  outline: 2px solid #248BFB;
+  outline-offset: 2px;
+}
+
+/* Input styling */
+input, textarea, select {
+  font-family: 'Figtree', sans-serif;
+}
+
+/* Button transitions */
+button {
+  transition: all 0.2s ease;
+}

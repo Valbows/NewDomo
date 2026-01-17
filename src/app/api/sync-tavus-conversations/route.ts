@@ -1,3 +1,20 @@
+/**
+ * ============================================================================
+ * ⚠️  DOMO SCORE DEPENDENCY - DO NOT MODIFY WITHOUT TESTING SCORE ⚠️
+ * ============================================================================
+ *
+ * This API endpoint updates the `conversation_details` table with perception_analysis
+ * data which directly affects the "Perception Analysis" criterion of the Domo Score.
+ *
+ * Before modifying this file:
+ *   1. Run existing tests: npm run test:all
+ *   2. After changes, verify Domo Score still calculates correctly
+ *   3. Test perception analysis sync with a completed conversation
+ *
+ * See: src/lib/domo-score/index.ts for centralized Domo Score documentation
+ * ============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { wrapRouteHandlerWithSentry } from '@/lib/sentry-utils';
 import { createClient } from '@/utils/supabase/server';
@@ -189,7 +206,7 @@ async function handleGET(req: NextRequest) {
               const perceptionModel = personaData.perception_model;
               
               if (perceptionModel !== 'raven-0') {
-                console.warn(`⚠️ Perception analysis requires perception_model to be set to 'raven-0'. Current: ${perceptionModel || 'not set'}`);
+                console.warn(`Perception analysis requires perception_model to be set to 'raven-0'. Current: ${perceptionModel || 'not set'}`);
               }
             }
           } catch (personaError) {

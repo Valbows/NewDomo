@@ -39,6 +39,7 @@ interface UseDemoDataResult {
   loading: boolean;
   error: string | null;
   conversationUrl: string | null;
+  conversationId: string | null; // Current session's conversation ID (not shared)
   uiState: UIState;
   setUiState: (state: UIState) => void;
   videoTitles: string[];
@@ -51,6 +52,7 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null); // Session-specific, not shared
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
   const [videoTitles, setVideoTitles] = useState<string[]>([]);
   const [joiningCall, setJoiningCall] = useState(false);
@@ -181,8 +183,10 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
       }
 
       const url = data?.conversation_url as string | undefined;
+      const convId = data?.conversation_id as string | undefined;
       if (url && isDailyRoomUrl(url)) {
         setConversationUrl(url);
+        setConversationId(convId || null); // Store session-specific conversation ID
         setUiState(UIState.CONVERSATION);
       } else {
         console.warn('Received non-Daily conversation URL from API:', url);
@@ -201,6 +205,7 @@ export function useDemoData(demoId: string, forceNew: boolean, isE2E: boolean): 
     loading,
     error,
     conversationUrl,
+    conversationId, // Session-specific conversation ID (not from shared database)
     uiState,
     setUiState,
     videoTitles,

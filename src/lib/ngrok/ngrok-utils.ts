@@ -11,7 +11,7 @@ export async function getCurrentNgrokUrl(): Promise<string | null> {
     const response = await fetch('http://127.0.0.1:4040/api/tunnels');
     
     if (!response.ok) {
-      console.warn('⚠️ Could not connect to ngrok API - is ngrok running?');
+      console.warn('Could not connect to ngrok API - is ngrok running?');
       return null;
     }
     
@@ -26,10 +26,10 @@ export async function getCurrentNgrokUrl(): Promise<string | null> {
       return httpsTunnel.public_url;
     }
     
-    console.warn('⚠️ No HTTPS tunnel found for localhost:3000');
+    console.warn('No HTTPS tunnel found for localhost:3000');
     return null;
   } catch (error) {
-    console.warn('⚠️ Error getting ngrok URL:', error);
+    console.warn('Error getting ngrok URL:', error);
     return null;
   }
 }

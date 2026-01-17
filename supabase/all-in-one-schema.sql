@@ -113,12 +113,14 @@ alter table public.demos
   add column if not exists cta_title text,
   add column if not exists cta_message text,
   add column if not exists cta_button_text text,
-  add column if not exists cta_button_url text;
+  add column if not exists cta_button_url text,
+  add column if not exists cta_return_url text;
 
 comment on column public.demos.cta_title is 'Per-demo CTA title';
 comment on column public.demos.cta_message is 'Per-demo CTA message/body';
 comment on column public.demos.cta_button_text is 'Per-demo CTA button label';
 comment on column public.demos.cta_button_url is 'Per-demo CTA button URL';
+comment on column public.demos.cta_return_url is 'URL to redirect users back to after conversation ends';
 
 -- RLS for demos
 alter table public.demos enable row level security;

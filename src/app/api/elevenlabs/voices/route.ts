@@ -7,7 +7,11 @@ async function handleGET() {
   const ELEVENLABS_URL = process.env.ELEVENLABS_URL || 'https://api.elevenlabs.io/v1';
 
   if (!ELEVENLABS_API_KEY) {
-    return NextResponse.json({ error: 'ElevenLabs API key is not configured' }, { status: 500 });
+    return NextResponse.json({
+      error: process.env.NODE_ENV !== 'production'
+        ? 'ElevenLabs API key is not configured'
+        : 'Voice service is not configured'
+    }, { status: 500 });
   }
 
   try {
@@ -20,7 +24,12 @@ async function handleGET() {
     const data = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to fetch voices from ElevenLabs', details: data }, { status: response.status });
+      return NextResponse.json({
+        error: process.env.NODE_ENV !== 'production'
+          ? 'Failed to fetch voices from ElevenLabs'
+          : 'Failed to fetch voices',
+        details: process.env.NODE_ENV !== 'production' ? data : undefined
+      }, { status: response.status });
     }
 
     return NextResponse.json(data.voices);

@@ -1,3 +1,22 @@
+/**
+ * ============================================================================
+ * ⚠️  DOMO SCORE DEPENDENCY - DO NOT MODIFY WITHOUT TESTING SCORE ⚠️
+ * ============================================================================
+ *
+ * This webhook handler processes events that affect multiple Domo Score criteria:
+ *   - Objective completions → qualification_data, product_interest_data
+ *   - Tool calls (fetch_video, show_trial_cta) → video_showcase_data, cta_tracking
+ *   - Perception analysis → conversation_details
+ *
+ * Before modifying this handler:
+ *   1. Run existing tests: npm run test:all
+ *   2. After changes, verify Domo Score still calculates correctly
+ *   3. Test with real Tavus webhook events
+ *
+ * See: src/lib/domo-score/index.ts for centralized Domo Score documentation
+ * ============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getErrorMessage, logError } from '@/lib/errors';
@@ -68,7 +87,7 @@ export async function handlePOST(req: NextRequest) {
             .eq('tavus_conversation_id', conversation_id);
 
           if (error) {
-            console.warn(`⚠️ Failed to update conversation_details:`, error);
+            console.warn(`Failed to update conversation_details:`, error);
           } else {
           }
         }
@@ -100,9 +119,7 @@ export async function handlePOST(req: NextRequest) {
           .eq('tavus_conversation_id', conversation_id);
 
         if (updateError) {
-          console.warn(`⚠️ Failed to mark conversation ${conversation_id} as ended:`, updateError);
-        } else {
-          console.log(`✅ Conversation ${conversation_id} marked as ended`);
+          console.warn(`Failed to mark conversation ${conversation_id} as ended:`, updateError);
         }
 
         // Also do analytics ingestion for the ended event
@@ -238,7 +255,7 @@ async function ensureConversationDetailsRecord(
       .single();
 
     if (demoError || !demo) {
-      console.warn(`⚠️ No demo found for conversation ${conversationId}, cannot create conversation_details record`);
+      console.warn(`No demo found for conversation ${conversationId}, cannot create conversation_details record`);
       return;
     }
 

@@ -29,16 +29,16 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
   const checkStatus = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/fix-raven-config', {
         method: 'GET',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to check status');
       }
-      
+
       const data = await response.json();
       setStatus(data.demos);
       setLastCheck(new Date());
@@ -52,7 +52,7 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
   const fixConfiguration = async (targetDemoId?: string, fixAll = false) => {
     setFixing(true);
     setError(null);
-    
+
     try {
       const body: any = {};
       if (fixAll) {
@@ -70,13 +70,13 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
         },
         body: JSON.stringify(body),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fix configuration');
       }
-      
+
       const data = await response.json();
-      
+
       // Refresh status after fixing
       await checkStatus();
     } catch (err) {
@@ -88,12 +88,12 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
 
   const getStatusIcon = (persona: PersonaStatus) => {
     if (persona.error) {
-      return <XCircle className="w-5 h-5 text-red-500" />;
+      return <XCircle className="w-5 h-5 text-domo-error" />;
     }
     if (persona.raven_enabled) {
-      return <CheckCircle className="w-5 h-5 text-green-500" />;
+      return <CheckCircle className="w-5 h-5 text-domo-success" />;
     }
-    return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+    return <AlertTriangle className="w-5 h-5 text-amber-400" />;
   };
 
   const getStatusText = (persona: PersonaStatus) => {
@@ -114,11 +114,11 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
   } : null;
 
   return (
-    <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
+    <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold">Raven-0 Configuration Debug</h3>
-          <p className="text-sm text-gray-600 mt-1">
+          <h3 className="text-lg font-semibold text-white">Raven-0 Configuration Debug</h3>
+          <p className="text-sm text-domo-text-secondary mt-1">
             Check and fix persona configurations for perception analysis
           </p>
         </div>
@@ -126,7 +126,7 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
           <button
             onClick={checkStatus}
             disabled={loading}
-            className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+            className="inline-flex items-center px-3 py-2 bg-domo-primary text-white rounded-md hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:cursor-not-allowed transition-colors text-sm"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -139,53 +139,53 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm">
+        <div className="mb-4 p-3 bg-domo-error/10 border border-domo-error/20 text-domo-error rounded-md text-sm">
           {error}
         </div>
       )}
 
       {lastCheck && (
-        <div className="mb-4 text-xs text-gray-500">
+        <div className="mb-4 text-xs text-domo-text-muted">
           Last checked: {lastCheck.toLocaleString()}
         </div>
       )}
 
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-50 p-3 rounded">
-            <div className="text-xs text-gray-600 font-medium">Total Demos</div>
-            <div className="text-lg font-bold text-gray-900">{summary.total}</div>
+          <div className="bg-domo-bg-elevated p-3 rounded">
+            <div className="text-xs text-domo-text-muted font-medium">Total Demos</div>
+            <div className="text-lg font-bold text-white">{summary.total}</div>
           </div>
-          <div className="bg-green-50 p-3 rounded">
-            <div className="text-xs text-green-600 font-medium">Raven-0 Enabled</div>
-            <div className="text-lg font-bold text-green-800">{summary.enabled}</div>
+          <div className="bg-domo-success/10 p-3 rounded">
+            <div className="text-xs text-domo-success font-medium">Raven-0 Enabled</div>
+            <div className="text-lg font-bold text-domo-success">{summary.enabled}</div>
           </div>
-          <div className="bg-yellow-50 p-3 rounded">
-            <div className="text-xs text-yellow-600 font-medium">Needs Fix</div>
-            <div className="text-lg font-bold text-yellow-800">{summary.needsFix}</div>
+          <div className="bg-amber-500/10 p-3 rounded">
+            <div className="text-xs text-amber-400 font-medium">Needs Fix</div>
+            <div className="text-lg font-bold text-amber-400">{summary.needsFix}</div>
           </div>
-          <div className="bg-red-50 p-3 rounded">
-            <div className="text-xs text-red-600 font-medium">Errors</div>
-            <div className="text-lg font-bold text-red-800">{summary.errors}</div>
+          <div className="bg-domo-error/10 p-3 rounded">
+            <div className="text-xs text-domo-error font-medium">Errors</div>
+            <div className="text-lg font-bold text-domo-error">{summary.errors}</div>
           </div>
         </div>
       )}
 
       {summary && summary.needsFix > 0 && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-yellow-800">
+              <div className="text-sm font-medium text-amber-400">
                 {summary.needsFix} persona(s) need raven-0 configuration
               </div>
-              <div className="text-xs text-yellow-700 mt-1">
+              <div className="text-xs text-amber-400/80 mt-1">
                 Perception analysis requires perception_model to be set to 'raven-0'
               </div>
             </div>
             <button
               onClick={() => fixConfiguration(undefined, true)}
               disabled={fixing}
-              className="inline-flex items-center px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+              className="inline-flex items-center px-3 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 disabled:bg-domo-bg-elevated disabled:cursor-not-allowed transition-colors text-sm"
             >
               {fixing ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -200,38 +200,38 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
 
       {status && status.length > 0 && (
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-900">Demo Status</h4>
+          <h4 className="font-medium text-white">Demo Status</h4>
           {status.map((persona) => (
-            <div key={persona.demo_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+            <div key={persona.demo_id} className="flex items-center justify-between p-3 bg-domo-bg-elevated rounded-md">
               <div className="flex items-center gap-3">
                 {getStatusIcon(persona)}
                 <div>
-                  <div className="font-medium text-sm">{persona.demo_name}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="font-medium text-sm text-white">{persona.demo_name}</div>
+                  <div className="text-xs text-domo-text-muted">
                     {persona.persona_name || persona.persona_id}
                   </div>
                   {persona.error && (
-                    <div className="text-xs text-red-600 mt-1">{persona.error}</div>
+                    <div className="text-xs text-domo-error mt-1">{persona.error}</div>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-xs font-medium text-gray-700">
+                  <div className="text-xs font-medium text-domo-text-secondary">
                     {getStatusText(persona)}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-domo-text-muted">
                     Model: {persona.perception_model || 'not set'}
                   </div>
                   {persona.has_conversation && (
-                    <div className="text-xs text-blue-600">Has conversation</div>
+                    <div className="text-xs text-domo-primary">Has conversation</div>
                   )}
                 </div>
                 {persona.needs_fix && !persona.error && (
                   <button
                     onClick={() => fixConfiguration(persona.demo_id)}
                     disabled={fixing}
-                    className="inline-flex items-center px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center px-2 py-1 bg-domo-primary text-white rounded text-xs hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:cursor-not-allowed transition-colors"
                   >
                     {fixing ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -247,8 +247,8 @@ const RavenDebugPanel: React.FC<RavenDebugPanelProps> = ({ demoId }) => {
       )}
 
       {status && status.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+        <div className="text-center py-8 text-domo-text-muted">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-domo-border" />
           <div className="text-sm">No demos with personas found</div>
           <div className="text-xs mt-1">Create a demo with a Domo persona to see status here</div>
         </div>

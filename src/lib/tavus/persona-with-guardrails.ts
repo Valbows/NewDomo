@@ -3,6 +3,7 @@
  */
 
 import { createGuardrailsManager } from './guardrails-manager';
+import { DOMO_AI_TOOLS } from './tool-definitions';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -43,12 +44,18 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
     systemPrompt = fs.readFileSync(promptPath, 'utf-8');
   }
 
-  // Create persona with guardrails and raven-0 perception analysis
+  // Create persona with guardrails, tools (in layers.llm), and raven-0 perception analysis
   const personaConfig: PersonaConfig = {
     ...config,
     system_prompt: systemPrompt,
     guardrails_id: guardrailsId,
-    perception_model: 'raven-0' // Enable perception analysis by default
+    perception_model: 'raven-0', // Enable perception analysis by default
+    layers: {
+      llm: {
+        model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+        tools: DOMO_AI_TOOLS, // Include all standard tools for video playback and CTA
+      }
+    },
   };
 
   // Debug logging removed for production

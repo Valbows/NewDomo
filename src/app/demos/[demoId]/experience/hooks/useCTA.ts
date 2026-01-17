@@ -62,7 +62,7 @@ export function useCTA({ demo, conversationUrl }: UseCTAParams): UseCTAResult {
           })
         });
       } catch (error) {
-        console.warn('⚠️ Failed to track CTA click:', error);
+        console.warn('Failed to track CTA click:', error);
       }
     }
   }, [conversationUrl, demo?.tavus_conversation_id, demo?.id, ctaButtonUrl]);

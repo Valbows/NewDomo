@@ -77,6 +77,7 @@ async function handlePOST(
       .from('demos')
       .select(`
         id,
+        name,
         tavus_persona_id,
         tavus_conversation_id,
         metadata,
@@ -229,7 +230,7 @@ async function handlePOST(
         .upsert({
           tavus_conversation_id: conversationData.conversation_id,
           demo_id: demoId,
-          conversation_name: conversationData.conversation_name || `Embed Conversation ${new Date().toLocaleString()}`,
+          conversation_name: `${demo.name || 'Demo'} - ${new Date().toLocaleString()}`,
           status: 'active',
           started_at: new Date().toISOString(),
         }, {
@@ -265,6 +266,9 @@ async function handlePOST(
 
 function createCorsResponse(data: any, origin: string | null, status: number = 200): NextResponse {
   const response = NextResponse.json(data, { status });
+  // SECURITY: Prevent caching of conversation URLs - each user must get unique conversation
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
   if (origin) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');

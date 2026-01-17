@@ -41,11 +41,11 @@ export function OnboardingStepper({ currentStep, stepStatus, onStepClick }: Onbo
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div className="bg-domo-bg-card border border-domo-border rounded-xl p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Setup Your Demo</h2>
+        <h2 className="text-lg font-semibold text-white font-heading">Setup Your Demo</h2>
         {allComplete && (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-domo-success/10 text-domo-success border border-domo-success/20">
             <CheckCircle2 className="w-4 h-4 mr-1" />
             Setup Complete!
           </span>
@@ -72,12 +72,12 @@ export function OnboardingStepper({ currentStep, stepStatus, onStepClick }: Onbo
                   className={`
                     relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
                     ${isComplete
-                      ? 'bg-green-500 border-green-500 text-white'
+                      ? 'bg-domo-success border-domo-success text-white'
                       : isCurrent
-                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                        ? 'bg-domo-primary border-domo-primary text-white'
                         : isAccessible
-                          ? 'bg-white border-gray-300 text-gray-500 group-hover:border-indigo-400'
-                          : 'bg-gray-100 border-gray-200 text-gray-400'
+                          ? 'bg-domo-bg-dark border-domo-border text-domo-text-muted group-hover:border-domo-primary/50'
+                          : 'bg-domo-bg-dark border-domo-border/50 text-domo-text-muted/50'
                     }
                   `}
                 >
@@ -92,12 +92,12 @@ export function OnboardingStepper({ currentStep, stepStatus, onStepClick }: Onbo
                 <div className="ml-3 text-left">
                   <p
                     className={`text-sm font-medium ${
-                      isCurrent ? 'text-indigo-600' : isComplete ? 'text-green-600' : isAccessible ? 'text-gray-700' : 'text-gray-400'
+                      isCurrent ? 'text-domo-primary' : isComplete ? 'text-domo-success' : isAccessible ? 'text-white' : 'text-domo-text-muted'
                     }`}
                   >
                     {step.label}
                   </p>
-                  <p className={`text-xs ${isAccessible ? 'text-gray-500' : 'text-gray-400'}`}>{step.description}</p>
+                  <p className={`text-xs ${isAccessible ? 'text-domo-text-secondary' : 'text-domo-text-muted'}`}>{step.description}</p>
                 </div>
               </button>
 
@@ -106,7 +106,7 @@ export function OnboardingStepper({ currentStep, stepStatus, onStepClick }: Onbo
                 <div className="flex-1 mx-4">
                   <div
                     className={`h-0.5 ${
-                      isComplete ? 'bg-green-500' : 'bg-gray-200'
+                      isComplete ? 'bg-domo-success' : 'bg-domo-border'
                     }`}
                   />
                 </div>
@@ -117,20 +117,20 @@ export function OnboardingStepper({ currentStep, stepStatus, onStepClick }: Onbo
       </div>
 
       {/* Progress indicator */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-domo-border">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">
+          <span className="text-domo-text-secondary">
             {Object.values(stepStatus).filter(Boolean).length} of {STEPS.length} steps completed
           </span>
-          <div className="flex-1 mx-4 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="flex-1 mx-4 h-2 bg-domo-bg-dark rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 transition-all duration-300"
+              className="h-full bg-domo-success transition-all duration-300"
               style={{
                 width: `${(Object.values(stepStatus).filter(Boolean).length / STEPS.length) * 100}%`,
               }}
             />
           </div>
-          <span className="text-gray-600 font-medium">
+          <span className="text-white font-medium">
             {Math.round((Object.values(stepStatus).filter(Boolean).length / STEPS.length) * 100)}%
           </span>
         </div>

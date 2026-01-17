@@ -1,9 +1,10 @@
-import { Plus, Trash2, Upload, Link, FileText } from 'lucide-react';
-import { KnowledgeChunk } from '@/app/demos/[demoId]/configure/types';
-import React from 'react';
+import { Plus, Trash2, Upload, Link, FileText, Loader2, AlertCircle, Video, Globe, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { KnowledgeChunk, DemoVideo } from '@/app/demos/[demoId]/configure/types';
+import React, { useState, useMemo } from 'react';
 
 interface KnowledgeBaseManagementProps {
   knowledgeChunks: KnowledgeChunk[];
+  demoVideos?: DemoVideo[];
   newQuestion: string;
   setNewQuestion: (question: string) => void;
   newAnswer: string;
@@ -20,8 +21,99 @@ interface KnowledgeBaseManagementProps {
   isUploadingUrl?: boolean;
 }
 
+interface GroupedKnowledge {
+  key: string;
+  type: 'video' | 'url' | 'document' | 'qa';
+  label: string;
+  icon: React.ReactNode;
+  link?: string;
+  chunks: KnowledgeChunk[];
+}
+
+// Group knowledge chunks by source
+function groupKnowledgeChunks(chunks: KnowledgeChunk[], demoVideos: DemoVideo[]): GroupedKnowledge[] {
+  const groups: Map<string, GroupedKnowledge> = new Map();
+
+  chunks.forEach(chunk => {
+    const source = chunk.source || '';
+    let groupKey: string;
+    let groupData: Omit<GroupedKnowledge, 'key' | 'chunks'>;
+
+    // Video transcript
+    if (source.startsWith('video:') || chunk.chunk_type === 'transcript') {
+      const videoId = source.replace('video:', '');
+      const video = demoVideos.find(v => v.id === videoId);
+      groupKey = `video:${videoId || 'unknown'}`;
+      groupData = {
+        type: 'video',
+        label: video?.title || 'Video Transcript',
+        icon: <Video className="h-4 w-4" />
+      };
+    }
+    // URL import
+    else if (source.startsWith('http://') || source.startsWith('https://')) {
+      groupKey = `url:${source}`;
+      try {
+        const url = new URL(source);
+        groupData = {
+          type: 'url',
+          label: url.hostname + (url.pathname !== '/' ? url.pathname : ''),
+          icon: <Globe className="h-4 w-4" />,
+          link: source
+        };
+      } catch {
+        groupData = {
+          type: 'url',
+          label: source,
+          icon: <Globe className="h-4 w-4" />
+        };
+      }
+    }
+    // Document
+    else if (source && chunk.chunk_type === 'document') {
+      groupKey = `document:${source}`;
+      groupData = {
+        type: 'document',
+        label: source,
+        icon: <FileText className="h-4 w-4" />
+      };
+    }
+    // Q&A pair - each is its own group
+    else if (chunk.chunk_type === 'qa') {
+      groupKey = `qa:${chunk.id}`;
+      groupData = {
+        type: 'qa',
+        label: 'Q&A Pair',
+        icon: <MessageSquare className="h-4 w-4" />
+      };
+    }
+    // Fallback
+    else {
+      groupKey = `other:${chunk.id}`;
+      groupData = {
+        type: 'document',
+        label: source || 'Unknown Source',
+        icon: <FileText className="h-4 w-4" />
+      };
+    }
+
+    if (groups.has(groupKey)) {
+      groups.get(groupKey)!.chunks.push(chunk);
+    } else {
+      groups.set(groupKey, {
+        key: groupKey,
+        ...groupData,
+        chunks: [chunk]
+      });
+    }
+  });
+
+  return Array.from(groups.values());
+}
+
 export const KnowledgeBaseManagement = ({
   knowledgeChunks,
+  demoVideos = [],
   newQuestion,
   setNewQuestion,
   newAnswer,
@@ -37,159 +129,283 @@ export const KnowledgeBaseManagement = ({
   isUploadingFile = false,
   isUploadingUrl = false,
 }: KnowledgeBaseManagementProps) => {
+  // Track expanded groups
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Filter videos that are pending/processing transcription
+  const pendingVideos = demoVideos.filter(
+    v => v.processing_status === 'pending' || v.processing_status === 'processing'
+  );
+  const failedVideos = demoVideos.filter(v => v.processing_status === 'failed');
+
+  // Group knowledge chunks by source
+  const groupedKnowledge = useMemo(
+    () => groupKnowledgeChunks(knowledgeChunks, demoVideos),
+    [knowledgeChunks, demoVideos]
+  );
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const handleDeleteGroup = (group: GroupedKnowledge) => {
+    // Delete all chunks in the group
+    group.chunks.forEach(chunk => {
+      handleDeleteKnowledgeChunk(chunk.id);
+    });
+  };
+
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Knowledge Base</h2>
-      <p className="text-gray-600 mb-6">Review transcripts, upload documents, and add custom Q&A pairs to train your agent.</p>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-4">Existing Knowledge</h3>
-          <ul className="space-y-3 h-96 overflow-y-auto">
-            {knowledgeChunks.map(chunk => {
-              let content;
-              if (chunk.chunk_type === 'qa' && typeof chunk.content === 'string') {
-                // Q&A content is stored as "Q: question\nA: answer" format
-                content = <p className="whitespace-pre-wrap">{chunk.content}</p>;
-              } else {
-                content = <p className="whitespace-pre-wrap">{chunk.content}</p>;
-              }
-              return (
-                <li key={chunk.id} className="p-3 rounded-md border border-gray-200 flex items-start justify-between">
-                  <div className="text-sm flex-grow">
-                    <span className="font-bold capitalize">{chunk.chunk_type.replace('_', ' ')}:</span>
-                    {content}
-                  </div>
-                  <button onClick={() => handleDeleteKnowledgeChunk(chunk.id)} className="text-red-500 hover:text-red-700 ml-4 flex-shrink-0">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </li>
-              );
-            })}
-            {knowledgeChunks.length === 0 && (
-              <li className="text-center text-sm text-gray-500 p-4">No knowledge chunks yet.</li>
-            )}
-          </ul>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2 font-heading">Knowledge Base</h2>
+        <p className="text-domo-text-secondary">Upload documents, import URLs, and add Q&A pairs to train your agent.</p>
+      </div>
+
+      {/* Add Knowledge section - Three columns at TOP */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Upload Document */}
+        <div className="bg-domo-bg-card border border-domo-border p-4 rounded-xl">
+          <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-domo-text-muted" />
+            Upload Document
+          </h3>
+          <div className="space-y-3">
+            <div className="flex justify-center px-3 py-3 border-2 border-domo-border border-dashed rounded-lg hover:border-domo-primary/50 transition-colors">
+              <div className="text-center">
+                <label htmlFor="doc-upload" className="cursor-pointer text-sm font-medium text-domo-primary hover:text-domo-secondary transition-colors">
+                  Choose file
+                  <input id="doc-upload" name="doc-upload" type="file" className="sr-only" onChange={(e) => setKnowledgeDoc(e.target.files ? e.target.files[0] : null)} accept=".pdf,.docx,.txt" />
+                </label>
+                <p className="text-xs text-domo-text-muted mt-1">PDF, DOCX, TXT</p>
+                {knowledgeDoc && <p className="text-xs text-white mt-1 truncate max-w-[150px]">{knowledgeDoc.name}</p>}
+              </div>
+            </div>
+            <button
+              onClick={handleKnowledgeDocUpload}
+              disabled={!knowledgeDoc || isUploadingFile}
+              className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+            >
+              {isUploadingFile ? (
+                <>
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Upload className="-ml-1 mr-2 h-4 w-4" />
+                  Upload
+                </>
+              )}
+            </button>
+          </div>
         </div>
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium mb-4">Upload Document</h3>
-            <div className="space-y-4">
+
+        {/* Import from URL */}
+        {setKnowledgeUrl && handleUrlImport && (
+          <div className="bg-domo-bg-card border border-domo-border p-4 rounded-xl">
+            <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+              <Globe className="h-4 w-4 text-domo-text-muted" />
+              Import from URL
+            </h3>
+            <div className="space-y-3">
               <div>
-                <label htmlFor="doc-upload" className="block text-sm font-medium text-gray-700">Upload a document</label>
-                <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="flex text-sm text-gray-600">
-                      <label htmlFor="doc-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
-                        <span>Upload a file</span>
-                        <input id="doc-upload" name="doc-upload" type="file" className="sr-only" onChange={(e) => setKnowledgeDoc(e.target.files ? e.target.files[0] : null)} accept=".pdf,.docx,.txt" />
-                      </label>
-                    </div>
-                    <p className="text-xs text-gray-500">PDF, DOCX, or TXT files supported</p>
-                    {knowledgeDoc && <p className="text-sm text-gray-900 mt-2">Selected: {knowledgeDoc.name}</p>}
-                  </div>
+                <div className="flex rounded-lg overflow-hidden">
+                  <span className="inline-flex items-center px-2.5 border border-r-0 border-domo-border bg-domo-bg-dark text-domo-text-muted">
+                    <Link className="h-3.5 w-3.5" />
+                  </span>
+                  <input
+                    type="url"
+                    id="url-input"
+                    value={knowledgeUrl}
+                    onChange={(e) => setKnowledgeUrl(e.target.value)}
+                    className="flex-1 block w-full px-3 py-2 bg-domo-bg-dark border border-domo-border text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary text-sm"
+                    placeholder="https://example.com"
+                  />
                 </div>
               </div>
               <button
-                onClick={handleKnowledgeDocUpload}
-                disabled={!knowledgeDoc || isUploadingFile}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
+                onClick={handleUrlImport}
+                disabled={!knowledgeUrl.trim() || isUploadingUrl}
+                className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
               >
-                {isUploadingFile ? (
+                {isUploadingUrl ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing...
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                    Importing...
                   </>
                 ) : (
                   <>
-                    <Upload className="-ml-1 mr-2 h-5 w-5" />
-                    Upload Document
+                    <Globe className="-ml-1 mr-2 h-4 w-4" />
+                    Import
                   </>
                 )}
               </button>
             </div>
           </div>
-          {setKnowledgeUrl && handleUrlImport && (
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium mb-4">Import from URL</h3>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="url-input" className="block text-sm font-medium text-gray-700">Website URL</label>
-                  <div className="mt-1 flex rounded-md shadow-sm">
-                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                      <Link className="h-4 w-4" />
-                    </span>
-                    <input
-                      type="url"
-                      id="url-input"
-                      value={knowledgeUrl}
-                      onChange={(e) => setKnowledgeUrl(e.target.value)}
-                      className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      placeholder="https://example.com/page"
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">Import text content from any webpage</p>
+        )}
+
+        {/* Add Q&A Pair */}
+        <div className="bg-domo-bg-card border border-domo-border p-4 rounded-xl">
+          <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-domo-text-muted" />
+            Add Q&A Pair
+          </h3>
+          <div className="space-y-2">
+            <input
+              type="text"
+              id="question"
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              className="block w-full px-3 py-1.5 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary text-sm"
+              placeholder="Question..."
+            />
+            <textarea
+              id="answer"
+              value={newAnswer}
+              onChange={(e) => setNewAnswer(e.target.value)}
+              rows={2}
+              className="block w-full px-3 py-1.5 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary text-sm"
+              placeholder="Answer..."
+            ></textarea>
+            <button
+              onClick={handleAddQAPair}
+              disabled={!newQuestion.trim() || !newAnswer.trim()}
+              className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+            >
+              <Plus className="-ml-1 mr-2 h-4 w-4" />
+              Add Q&A
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Existing Knowledge section */}
+      <div className="bg-domo-bg-card border border-domo-border p-6 rounded-xl">
+        <h3 className="text-lg font-medium text-white mb-4">Existing Knowledge</h3>
+        <div className="space-y-3 max-h-[600px] overflow-y-auto">
+          {/* Show pending transcriptions at the top */}
+          {pendingVideos.map(video => (
+            <div key={`pending-${video.id}`} className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
+              <Loader2 className="h-5 w-5 text-amber-400 animate-spin flex-shrink-0 mt-0.5" />
+              <div className="flex-grow min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Video className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-medium text-amber-400">{video.title}</span>
                 </div>
-                <button
-                  onClick={handleUrlImport}
-                  disabled={!knowledgeUrl.trim() || isUploadingUrl}
-                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
-                >
-                  {isUploadingUrl ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Importing...
-                    </>
-                  ) : (
-                    <>
-                      <Link className="-ml-1 mr-2 h-5 w-5" />
-                      Import from URL
-                    </>
-                  )}
-                </button>
+                <p className="text-xs text-amber-400/70">Transcribing... This will appear here once complete.</p>
               </div>
+            </div>
+          ))}
+
+          {/* Show failed transcriptions */}
+          {failedVideos.map(video => (
+            <div key={`failed-${video.id}`} className="p-4 rounded-lg border border-domo-error/30 bg-domo-error/10 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-domo-error flex-shrink-0 mt-0.5" />
+              <div className="flex-grow min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Video className="h-4 w-4 text-domo-error" />
+                  <span className="text-sm font-medium text-domo-error">{video.title}</span>
+                </div>
+                <p className="text-xs text-domo-error/70">Transcription failed - retry from Video Segments tab</p>
+              </div>
+            </div>
+          ))}
+
+          {/* Show grouped knowledge chunks */}
+          {groupedKnowledge.map(group => {
+            const isExpanded = expandedGroups.has(group.key);
+            const hasMultipleChunks = group.chunks.length > 1;
+
+            return (
+              <div key={group.key} className="rounded-lg border border-domo-border bg-domo-bg-dark overflow-hidden">
+                {/* Group Header - Always clickable to expand/collapse */}
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-domo-bg-elevated/50 transition-colors"
+                  onClick={() => toggleGroup(group.key)}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-grow">
+                    <span className="text-domo-text-muted flex-shrink-0">
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </span>
+                    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-domo-bg-elevated text-sm font-medium text-domo-text-secondary flex-shrink-0">
+                      {group.icon}
+                      {group.link ? (
+                        <a
+                          href={group.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-domo-primary transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          title={group.link}
+                        >
+                          {group.label}
+                        </a>
+                      ) : (
+                        <span>{group.label}</span>
+                      )}
+                    </span>
+                    {hasMultipleChunks && (
+                      <span className="text-xs text-domo-text-muted">
+                        {group.chunks.length} segments
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteGroup(group);
+                    }}
+                    className="text-domo-error hover:text-domo-error/80 flex-shrink-0 transition-colors p-1 ml-2"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Group Content - Only shown when expanded */}
+                {isExpanded && (
+                  <div className="border-t border-domo-border">
+                    {group.chunks.map((chunk, index) => (
+                      <div
+                        key={chunk.id}
+                        className={`p-4 ${index > 0 ? 'border-t border-domo-border/50' : ''}`}
+                      >
+                        {hasMultipleChunks && (
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-domo-text-muted">Segment {index + 1}</span>
+                            <button
+                              onClick={() => handleDeleteKnowledgeChunk(chunk.id)}
+                              className="text-domo-error/60 hover:text-domo-error text-xs transition-colors"
+                            >
+                              Remove segment
+                            </button>
+                          </div>
+                        )}
+                        <p className="text-sm text-domo-text-secondary whitespace-pre-wrap break-words">
+                          {chunk.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {knowledgeChunks.length === 0 && pendingVideos.length === 0 && failedVideos.length === 0 && (
+            <div className="text-center text-sm text-domo-text-muted py-8">
+              No knowledge added yet. Use the options above to add content.
             </div>
           )}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium mb-4">Add Q&A Pair</h3>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="question" className="block text-sm font-medium text-gray-700">Question</label>
-                <input
-                  type="text"
-                  id="question"
-                  value={newQuestion}
-                  onChange={(e) => setNewQuestion(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="e.g., What is the pricing?"
-                />
-              </div>
-              <div>
-                <label htmlFor="answer" className="block text-sm font-medium text-gray-700">Answer</label>
-                <textarea
-                  id="answer"
-                  value={newAnswer}
-                  onChange={(e) => setNewAnswer(e.target.value)}
-                  rows={4}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Provide a detailed answer..."
-                ></textarea>
-              </div>
-              <button
-                onClick={handleAddQAPair}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <Plus className="-ml-1 mr-2 h-5 w-5" />
-                Add Q&A Pair
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

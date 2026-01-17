@@ -1,5 +1,5 @@
-import HomePageClient from './HomePageClient';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return <HomePageClient />;
+  redirect('/login');
 }

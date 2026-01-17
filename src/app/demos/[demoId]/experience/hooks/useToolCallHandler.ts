@@ -101,7 +101,7 @@ export function useToolCallHandler({
       .single();
 
     if (videoError || !videoData) {
-      console.warn(`❌ Video not found: "${finalTitle}"`, videoError);
+      console.warn(`Video not found: "${finalTitle}"`, videoError);
       // Try exact match as fallback
       const { data: exactData, error: exactError } = await supabase
         .from('demo_videos')
@@ -111,7 +111,7 @@ export function useToolCallHandler({
         .single();
 
       if (exactError || !exactData) {
-        console.warn(`❌ Video not found (exact): "${finalTitle}"`, exactError);
+        console.warn(`Video not found (exact): "${finalTitle}"`, exactError);
         setAlert({ type: 'error', message: `Video "${videoTitle}" not found.` });
         return;
       }
@@ -144,7 +144,7 @@ export function useToolCallHandler({
             })
           });
         } catch (error) {
-          console.warn('⚠️ Failed to track video view:', error);
+          console.warn('Failed to track video view:', error);
         }
       }
 
@@ -162,14 +162,23 @@ export function useToolCallHandler({
 
     // Found video with ilike match
     const storagePath = videoData.storage_url;
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('demo-videos')
-      .createSignedUrl(storagePath, 3600);
+    let finalVideoUrl: string;
 
-    if (signedUrlError || !signedUrlData) {
-      logError(signedUrlError, 'Failed to create signed URL');
-      setAlert({ type: 'error', message: 'Could not generate a signed URL for this video.' });
-      return;
+    // If storage_url is already a full URL, use it directly
+    if (/^https?:\/\//i.test(storagePath)) {
+      finalVideoUrl = storagePath;
+    } else {
+      // Get signed URL for storage path
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('demo-videos')
+        .createSignedUrl(storagePath, 3600);
+
+      if (signedUrlError || !signedUrlData) {
+        logError(signedUrlError, 'Failed to create signed URL');
+        setAlert({ type: 'error', message: 'Could not generate a signed URL for this video.' });
+        return;
+      }
+      finalVideoUrl = signedUrlData.signedUrl;
     }
 
     // Track video viewing for Domo Score
@@ -188,13 +197,13 @@ export function useToolCallHandler({
           })
         });
       } catch (error) {
-        console.warn('⚠️ Failed to track video view:', error);
+        console.warn('Failed to track video view:', error);
       }
     }
 
     // New video source: reset any saved paused position
     pausedPositionRef.current = 0;
-    setPlayingVideoUrl(signedUrlData.signedUrl);
+    setPlayingVideoUrl(finalVideoUrl);
     setUiState(UIState.VIDEO_PLAYING);
     setCurrentVideoTitle(videoData.title);
     if (Array.isArray(videoTitles) && videoTitles.length > 0) {
@@ -221,7 +230,7 @@ export function useToolCallHandler({
       }
       const videoTitle = args?.title || args?.video_title || args?.video_name;
       if (!videoTitle) {
-        console.warn('❌ No video title provided');
+        console.warn('No video title provided');
         return;
       }
 

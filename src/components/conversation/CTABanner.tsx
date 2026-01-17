@@ -24,14 +24,14 @@ export function CTABanner({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 shadow-lg" data-testid="cta-banner">
-      <div className="bg-gradient-to-r from-green-400 to-blue-500">
+      <div className="bg-gradient-to-r from-domo-success to-domo-primary">
         <div className="mx-auto max-w-7xl py-4 px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="text-xl mr-3">✅</div>
               <div>
                 <h3 className="text-lg font-bold text-white">{title}</h3>
-                <p className="text-sm text-green-100">{message}</p>
+                <p className="text-sm text-white/80">{message}</p>
               </div>
             </div>
 
@@ -41,7 +41,7 @@ export function CTABanner({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onButtonClick}
-                className="inline-flex items-center justify-center px-6 py-2 bg-white text-green-600 font-semibold rounded-lg shadow hover:bg-gray-50 transition-colors duration-200 text-sm"
+                className="inline-flex items-center justify-center px-6 py-2 bg-white text-domo-primary font-semibold rounded-lg shadow hover:bg-white/90 transition-colors duration-200 text-sm"
               >
                 {buttonText}
               </a>

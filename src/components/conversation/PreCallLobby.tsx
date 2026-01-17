@@ -49,15 +49,15 @@ export function PreCallLobby({
   const getPermissionIcon = (permission: 'granted' | 'denied' | 'prompt', type: 'camera' | 'mic') => {
     if (type === 'camera') {
       return permission === 'denied' ? (
-        <VideoOff className="w-5 h-5 text-red-500" />
+        <VideoOff className="w-5 h-5 text-domo-error" />
       ) : (
-        <Video className={`w-5 h-5 ${permission === 'granted' ? 'text-green-500' : 'text-gray-400'}`} />
+        <Video className={`w-5 h-5 ${permission === 'granted' ? 'text-domo-success' : 'text-domo-text-muted'}`} />
       );
     }
     return permission === 'denied' ? (
-      <MicOff className="w-5 h-5 text-red-500" />
+      <MicOff className="w-5 h-5 text-domo-error" />
     ) : (
-      <Mic className={`w-5 h-5 ${permission === 'granted' ? 'text-green-500' : 'text-gray-400'}`} />
+      <Mic className={`w-5 h-5 ${permission === 'granted' ? 'text-domo-success' : 'text-domo-text-muted'}`} />
     );
   };
 
@@ -73,13 +73,13 @@ export function PreCallLobby({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+    <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center p-4">
+      <div className="bg-domo-bg-card border border-domo-border rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8 text-center">
+        <div className="bg-gradient-to-r from-domo-primary to-domo-secondary px-6 py-8 text-center">
           {/* Agent Avatar */}
-          <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-lg mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center">
+          <div className="w-24 h-24 mx-auto bg-domo-bg-card rounded-full flex items-center justify-center shadow-lg mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-domo-primary to-domo-secondary rounded-full flex items-center justify-center">
               <svg
                 className="w-12 h-12 text-white"
                 fill="none"
@@ -96,10 +96,10 @@ export function PreCallLobby({
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-1">
+          <h1 className="text-2xl font-bold text-white mb-1 font-heading">
             Meet {agentName}
           </h1>
-          <p className="text-indigo-200 text-sm">
+          <p className="text-white/80 text-sm">
             Your AI Demo Assistant
           </p>
         </div>
@@ -107,16 +107,16 @@ export function PreCallLobby({
         {/* Content */}
         <div className="px-6 py-6">
           <div className="text-center mb-6">
-            <p className="text-gray-600 leading-relaxed">
-              Ready to explore <span className="font-semibold text-gray-900">{demoName}</span>?
+            <p className="text-domo-text-secondary leading-relaxed">
+              Ready to explore <span className="font-semibold text-white">{demoName}</span>?
               I'll guide you through the features and answer any questions you have.
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm text-center">{error}</p>
+            <div className="mb-4 p-3 bg-domo-error/10 border border-domo-error/20 rounded-lg">
+              <p className="text-domo-error text-sm text-center">{error}</p>
             </div>
           )}
 
@@ -124,7 +124,7 @@ export function PreCallLobby({
           <button
             onClick={onJoinCall}
             disabled={loading}
-            className="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full py-4 px-6 bg-gradient-to-r from-domo-primary to-domo-secondary text-white font-semibold rounded-xl hover:from-domo-primary/90 hover:to-domo-secondary/90 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
             {loading ? (
               <>
@@ -147,13 +147,13 @@ export function PreCallLobby({
             <div className="mt-4 flex justify-center gap-6">
               <div className="flex items-center gap-2 text-sm">
                 {getPermissionIcon(cameraPermission, 'camera')}
-                <span className={`${cameraPermission === 'denied' ? 'text-red-600' : 'text-gray-500'}`}>
+                <span className={`${cameraPermission === 'denied' ? 'text-domo-error' : 'text-domo-text-secondary'}`}>
                   Camera: {getPermissionText(cameraPermission)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 {getPermissionIcon(micPermission, 'mic')}
-                <span className={`${micPermission === 'denied' ? 'text-red-600' : 'text-gray-500'}`}>
+                <span className={`${micPermission === 'denied' ? 'text-domo-error' : 'text-domo-text-secondary'}`}>
                   Mic: {getPermissionText(micPermission)}
                 </span>
               </div>
@@ -162,16 +162,16 @@ export function PreCallLobby({
 
           {/* Permission Warning */}
           {(cameraPermission === 'denied' || micPermission === 'denied') && (
-            <p className="mt-3 text-xs text-center text-amber-600">
+            <p className="mt-3 text-xs text-center text-amber-400">
               Please enable camera and microphone in your browser settings for the best experience.
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-          <p className="text-xs text-center text-gray-400">
-            Powered by <span className="font-medium text-gray-500">Domo</span>
+        <div className="px-6 py-4 bg-domo-bg-elevated border-t border-domo-border">
+          <p className="text-xs text-center text-domo-text-muted">
+            Powered by <span className="font-medium text-domo-text-secondary">Domo</span>
           </p>
         </div>
       </div>

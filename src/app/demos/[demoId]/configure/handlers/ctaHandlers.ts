@@ -7,6 +7,7 @@ export async function handleSaveCTA(
   ctaMessage: string,
   ctaButtonText: string,
   ctaUrl: string,
+  ctaReturnUrl: string,
   demo: Demo | null,
   demoId: string,
   setDemo: (demo: Demo) => void
@@ -16,6 +17,7 @@ export async function handleSaveCTA(
       .from('demos')
       .update({
         cta_button_url: ctaUrl || null,
+        cta_return_url: ctaReturnUrl || null,
         metadata: {
           ...demo?.metadata,
           ctaTitle,
@@ -32,6 +34,7 @@ export async function handleSaveCTA(
       setDemo({
         ...demo,
         cta_button_url: ctaUrl || null,
+        cta_return_url: ctaReturnUrl || null,
         metadata: {
           ...demo.metadata,
           ctaTitle,

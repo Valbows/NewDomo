@@ -346,9 +346,16 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     try {
       const result = await p;
       if (result instanceof NextResponse) {
+        // Add no-cache headers to prevent any caching of conversation URLs
+        result.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        result.headers.set('Pragma', 'no-cache');
         return result;
       }
-      return NextResponse.json(result);
+      // SECURITY: Each conversation URL is unique and must never be cached or shared
+      const response = NextResponse.json(result);
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      response.headers.set('Pragma', 'no-cache');
+      return response;
     } finally {
       startLocks.delete(sessionId);
     }

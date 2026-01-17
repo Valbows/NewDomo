@@ -94,7 +94,7 @@ export async function validateWebhookUrl(url?: string): Promise<boolean> {
     
     return response.status === 200 || response.status === 405; // 405 is OK (method not allowed for HEAD)
   } catch (error) {
-    console.warn(`⚠️ Webhook URL validation failed: ${error}`);
+    console.warn(`Webhook URL validation failed: ${error}`);
     return false;
   }
 }

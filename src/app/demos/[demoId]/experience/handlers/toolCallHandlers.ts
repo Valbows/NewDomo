@@ -149,14 +149,14 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
   if (toolName === 'next_video') {
     // Only advance to next video if a video is currently playing
     if (!currentVideoTitle) {
-      console.warn('⚠️  next_video called but no video is currently playing - ignoring');
+      console.warn('next_video called but no video is currently playing - ignoring');
       return;
     }
 
     if (Array.isArray(videoTitles) && videoTitles.length > 0) {
       const idx = videoTitles.indexOf(currentVideoTitle);
       if (idx === -1) {
-        console.warn('⚠️  Current video not found in videoTitles - cannot advance');
+        console.warn('Current video not found in videoTitles - cannot advance');
         return;
       }
       const nextIdx = (idx + 1) % videoTitles.length;

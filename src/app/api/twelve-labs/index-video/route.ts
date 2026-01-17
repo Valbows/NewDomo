@@ -12,6 +12,15 @@ function getSupabaseAdmin() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Twelve Labs is configured
+    if (!process.env.TWELVE_LABS_API_KEY?.trim()) {
+      return NextResponse.json({
+        success: false,
+        skipped: true,
+        message: 'Twelve Labs API key not configured. Video indexing skipped.',
+      });
+    }
+
     const { demoVideoId } = await request.json();
 
     if (!demoVideoId) {
@@ -73,17 +82,29 @@ export async function POST(request: NextRequest) {
       message: 'Video indexing started. This may take a few minutes.',
     });
   } catch (error: any) {
+    // Log the error but return 200 with error flag (optional feature shouldn't cause 500s)
     console.error('[TwelveLabs] Index video error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to index video' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      skipped: true,
+      message: 'Twelve Labs indexing failed (optional feature). Your video transcription still works.',
+      error: error.message,
+    });
   }
 }
 
 // Check indexing status
 export async function GET(request: NextRequest) {
   try {
+    // Check if Twelve Labs is configured
+    if (!process.env.TWELVE_LABS_API_KEY) {
+      return NextResponse.json({
+        indexed: false,
+        skipped: true,
+        message: 'Twelve Labs API key not configured.',
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const demoVideoId = searchParams.get('demoVideoId');
 

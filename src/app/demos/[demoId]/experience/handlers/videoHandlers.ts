@@ -74,7 +74,7 @@ export async function playVideoByTitle(params: PlayVideoByTitleParams) {
     // Guard: ensure we have a demo id available for queries even if state hasn't settled yet
     const demoKey = demo?.id ?? demoId;
     if (!demoKey) {
-      console.warn('⚠️ Demo id unavailable at tool call time; delaying fetch_video', {
+      console.warn('Demo id unavailable at tool call time; delaying fetch_video', {
         demo,
         demoId,
         title: normalizedTitle,

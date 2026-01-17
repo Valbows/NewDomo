@@ -17,31 +17,31 @@ export function CtaTrackingCard({ ctaTracking }: CtaTrackingCardProps) {
 
   return (
     <div
-      className={`mb-6 p-4 border rounded-lg ${
+      className={`mb-6 p-4 border rounded-xl ${
         ctaClicked
-          ? "bg-green-50 border-green-200"
+          ? "bg-domo-success/10 border-domo-success/20"
           : ctaShown
-          ? "bg-yellow-50 border-yellow-200"
-          : "bg-gray-50 border-gray-200"
+          ? "bg-amber-500/10 border-amber-500/20"
+          : "bg-domo-bg-elevated border-domo-border"
       }`}
     >
       <h5
         className={`font-medium mb-3 flex items-center gap-2 ${
           ctaClicked
-            ? "text-green-900"
+            ? "text-domo-success"
             : ctaShown
-            ? "text-yellow-900"
-            : "text-gray-700"
+            ? "text-amber-400"
+            : "text-domo-text-secondary"
         }`}
       >
         🎯 Execute CTA?
         <span
           className={`text-xs px-2 py-1 rounded-full ${
             ctaClicked
-              ? "bg-green-100 text-green-700"
+              ? "bg-domo-success/20 text-domo-success"
               : ctaShown
-              ? "bg-yellow-100 text-yellow-700"
-              : "bg-gray-100 text-gray-700"
+              ? "bg-amber-500/20 text-amber-400"
+              : "bg-domo-bg-dark text-domo-text-muted"
           }`}
         >
           {ctaClicked ? "Yes - Clicked" : ctaShown ? "Shown - Not Clicked" : "No Activity"}
@@ -53,14 +53,14 @@ export function CtaTrackingCard({ ctaTracking }: CtaTrackingCardProps) {
           <div>
             <span
               className={`text-xs font-medium ${
-                ctaClicked ? "text-green-700" : ctaShown ? "text-yellow-700" : "text-gray-700"
+                ctaClicked ? "text-domo-success" : ctaShown ? "text-amber-400" : "text-domo-text-muted"
               }`}
             >
               CTA Shown:
             </span>
             <p
               className={`text-sm font-medium ${
-                ctaClicked ? "text-green-900" : ctaShown ? "text-yellow-900" : "text-gray-900"
+                ctaClicked ? "text-white" : ctaShown ? "text-white" : "text-domo-text-secondary"
               }`}
             >
               {ctaShown ? "Yes" : "No"}
@@ -68,7 +68,7 @@ export function CtaTrackingCard({ ctaTracking }: CtaTrackingCardProps) {
             {ctaShown && (
               <p
                 className={`text-xs ${
-                  ctaClicked ? "text-green-600" : "text-yellow-600"
+                  ctaClicked ? "text-domo-success/80" : "text-amber-400/80"
                 }`}
               >
                 {formatDate(ctaTracking.cta_shown_at || undefined)}
@@ -79,20 +79,20 @@ export function CtaTrackingCard({ ctaTracking }: CtaTrackingCardProps) {
           <div>
             <span
               className={`text-xs font-medium ${
-                ctaClicked ? "text-green-700" : ctaShown ? "text-yellow-700" : "text-gray-700"
+                ctaClicked ? "text-domo-success" : ctaShown ? "text-amber-400" : "text-domo-text-muted"
               }`}
             >
               CTA Clicked:
             </span>
             <p
               className={`text-sm font-medium ${
-                ctaClicked ? "text-green-900" : ctaShown ? "text-yellow-900" : "text-gray-900"
+                ctaClicked ? "text-white" : ctaShown ? "text-white" : "text-domo-text-secondary"
               }`}
             >
               {ctaClicked ? "Yes" : "No"}
             </p>
             {ctaClicked && (
-              <p className="text-xs text-green-600">
+              <p className="text-xs text-domo-success/80">
                 {formatDate(ctaTracking.cta_clicked_at || undefined)}
               </p>
             )}
@@ -103,14 +103,14 @@ export function CtaTrackingCard({ ctaTracking }: CtaTrackingCardProps) {
           <div>
             <span
               className={`text-xs font-medium ${
-                ctaClicked ? "text-green-700" : ctaShown ? "text-yellow-700" : "text-gray-700"
+                ctaClicked ? "text-domo-success" : ctaShown ? "text-amber-400" : "text-domo-text-muted"
               }`}
             >
               CTA URL:
             </span>
             <p
               className={`text-sm break-all ${
-                ctaClicked ? "text-green-900" : ctaShown ? "text-yellow-900" : "text-gray-900"
+                ctaClicked ? "text-white" : ctaShown ? "text-white" : "text-domo-text-secondary"
               }`}
             >
               {ctaTracking.cta_url}

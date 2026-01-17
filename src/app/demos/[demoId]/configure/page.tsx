@@ -15,6 +15,7 @@ import { CTASettings } from './components/CTASettings';
 // AdminCTAUrlEditor removed - functionality merged into CTASettings
 import { EmbedSettings } from './components/embed/EmbedSettings';
 import { OnboardingStepper, getStepFromTab, getTabFromStep } from './components/OnboardingStepper';
+import { OnboardingComplete } from './components/OnboardingComplete';
 
 // Custom hooks
 import { useDemoData } from './hooks/useDemoData';
@@ -78,14 +79,17 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [currentStep, setCurrentStep] = useState(1);
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // Sync step with tab - but respect explicit URL parameter
+  // Set initial step from URL param only on mount (no auto-advance)
   const hasExplicitTabParam = searchParams?.has('tab');
   useEffect(() => {
-    if (!isOnboardingComplete && !hasExplicitTabParam) {
-      setCurrentStep(firstIncompleteStep);
-      setActiveTab(getTabFromStep(firstIncompleteStep));
+    if (hasExplicitTabParam) {
+      const tabFromUrl = searchParams?.get('tab') || 'videos';
+      setCurrentStep(getStepFromTab(tabFromUrl));
+      setActiveTab(tabFromUrl);
     }
-  }, [isOnboardingComplete, firstIncompleteStep, hasExplicitTabParam]);
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
@@ -124,21 +128,25 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   const [ctaTitle, setCTATitle] = useState('Ready to Get Started?');
   const [ctaMessage, setCTAMessage] = useState('Start your free trial today and see the difference!');
   const [ctaButtonText, setCTAButtonText] = useState('Start Free Trial');
+  const [ctaReturnUrl, setCTAReturnUrl] = useState('');
 
   // Congratulations modal state - shows once when onboarding completes
   const [showCongrats, setShowCongrats] = useState(false);
+  const [congratsChecked, setCongratsChecked] = useState(false);
 
-  // Show congratulations modal once when onboarding completes
+  // Check if congratulations was already shown for this demo
   useEffect(() => {
-    if (isOnboardingComplete && demoId) {
+    // Only run on client side and only check once
+    if (typeof window === 'undefined' || congratsChecked) return;
+
+    if (demoId) {
       const congratsKey = `congrats_shown_${demoId}`;
       const alreadyShown = localStorage.getItem(congratsKey);
-      if (!alreadyShown) {
-        setShowCongrats(true);
-        localStorage.setItem(congratsKey, 'true');
+      if (alreadyShown) {
+        setCongratsChecked(true);
       }
     }
-  }, [isOnboardingComplete, demoId]);
+  }, [demoId, congratsChecked]);
 
   const dismissCongrats = () => {
     setShowCongrats(false);
@@ -147,7 +155,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   // Initialize state from demo data when loaded
   useEffect(() => {
     if (demo) {
-      setAgentName(demo.metadata?.agentName || '');
+      // Default agent name to demo name + " Agent" if not set
+      setAgentName(demo.metadata?.agentName || (demo.name ? `${demo.name} Agent` : ''));
       setAgentPersonality(demo.metadata?.agentPersonality || 'Friendly and helpful assistant.');
       setAgentGreeting(demo.metadata?.agentGreeting || 'Hello! How can I help you with the demo today?');
 
@@ -158,6 +167,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setCTATitle(demo.metadata?.ctaTitle || 'Ready to Get Started?');
       setCTAMessage(demo.metadata?.ctaMessage || 'Start your free trial today and see the difference!');
       setCTAButtonText(demo.metadata?.ctaButtonText || 'Start Free Trial');
+      setCTAReturnUrl(demo.cta_return_url || '');
     }
   }, [demo]);
 
@@ -232,8 +242,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     );
   };
 
-  const handleSaveCTA = async (url: string) => {
-    await saveCTA(ctaTitle, ctaMessage, ctaButtonText, url, demo, demoId, setDemo);
+  const handleSaveCTA = async (url: string, returnUrl: string) => {
+    await saveCTA(ctaTitle, ctaMessage, ctaButtonText, url, returnUrl, demo, demoId, setDemo);
   };
 
   const handleRetryTranscription = async (videoId: string) => {
@@ -272,30 +282,30 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-12 h-12 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-domo-bg-dark">
+        <Loader2 className="w-12 h-12 animate-spin text-domo-primary" />
       </div>
     );
   }
-  
+
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <AlertCircle className="w-12 h-12 text-red-500" />
-        <p className="ml-4">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-domo-bg-dark">
+        <AlertCircle className="w-12 h-12 text-domo-error" />
+        <p className="ml-4 text-white">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen bg-domo-bg-dark">
+      <header className="bg-domo-bg-card border-b border-domo-border">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
           {/* Back button row */}
           <div className="mb-2">
             <Link
               href="/dashboard"
-              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="inline-flex items-center text-sm text-domo-text-secondary hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Dashboard
@@ -305,20 +315,20 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           {/* Main header row */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Configure: {demo?.name}</h1>
-              <p className="text-sm text-gray-500">Manage your demo videos, knowledge base, and agent settings.</p>
+              <h1 className="text-2xl font-bold text-white font-heading">Configure: {demo?.name}</h1>
+              <p className="text-sm text-domo-text-secondary">Manage your demo videos, knowledge base, and agent settings.</p>
             </div>
             <div className="flex items-center space-x-3">
               <Link
                 href={`/demos/${demoId}/reporting`}
-                className="inline-flex items-center px-4 py-2 text-gray-700 bg-gray-100 font-medium rounded-md hover:bg-gray-200 transition-colors"
+                className="inline-flex items-center px-4 py-2 text-domo-text-secondary bg-domo-bg-elevated border border-domo-border font-medium rounded-lg hover:text-white hover:border-domo-primary transition-colors"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Reporting
               </Link>
               <Link
                 href={`/demos/${demoId}/experience`}
-                className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary transition-colors"
               >
                 View Demo Experience
               </Link>
@@ -330,21 +340,21 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* UI State Indicator */}
         {uiState === UIState.VIDEO_PLAYING && (
-          <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-md">
-            <p className="text-blue-800 font-medium">🎥 Video Playing - Agent is showing demo content</p>
+          <div className="mb-4 p-3 bg-domo-primary/10 border border-domo-primary/20 rounded-lg">
+            <p className="text-domo-primary font-medium">🎥 Video Playing - Agent is showing demo content</p>
           </div>
         )}
         {uiState === UIState.DEMO_COMPLETE && (
-          <div className="mb-4 p-4 bg-green-100 border border-green-300 rounded-md">
-            <p className="text-green-800 font-medium">✅ Demo Complete - Ready for trial signup!</p>
-            <button className="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+          <div className="mb-4 p-4 bg-domo-success/10 border border-domo-success/20 rounded-lg">
+            <p className="text-domo-success font-medium">✅ Demo Complete - Ready for trial signup!</p>
+            <button className="mt-2 px-4 py-2 bg-domo-success text-white rounded-lg hover:bg-domo-success/90 transition-colors">
               Start Your Trial
             </button>
           </div>
         )}
         {uiState === UIState.AGENT_THINKING && (
-          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
-            <p className="text-yellow-800 font-medium">🤔 Agent is thinking...</p>
+          <div className="mb-4 p-3 bg-domo-warning/10 border border-domo-warning/20 rounded-lg">
+            <p className="text-domo-warning font-medium">🤔 Agent is thinking...</p>
           </div>
         )}
         
@@ -371,15 +381,15 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           {/* Show different navigation based on onboarding status */}
           {isOnboardingComplete ? (
             /* Post-onboarding: Main navigation with settings dropdown */
-            <Tabs.List className="flex items-center gap-1 border-b border-gray-200 pb-0">
+            <Tabs.List className="flex items-center gap-1 border-b border-domo-border pb-0">
               {/* Content Management - Primary tabs */}
               <div className="flex items-center">
-                <div className="flex bg-white rounded-t-lg">
-                  <Tabs.Trigger value="videos" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-indigo-600 rounded-t border-b-2 border-transparent data-[state=active]:text-indigo-700 data-[state=active]:border-indigo-600 transition-all">
+                <div className="flex bg-domo-bg-card rounded-t-lg">
+                  <Tabs.Trigger value="videos" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-domo-text-secondary hover:text-domo-primary rounded-t border-b-2 border-transparent data-[state=active]:text-domo-primary data-[state=active]:border-domo-primary transition-all">
                     <Video className="w-4 h-4" />
                     Videos
                   </Tabs.Trigger>
-                  <Tabs.Trigger value="knowledge" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-indigo-600 rounded-t border-b-2 border-transparent data-[state=active]:text-indigo-700 data-[state=active]:border-indigo-600 transition-all">
+                  <Tabs.Trigger value="knowledge" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-domo-text-secondary hover:text-domo-primary rounded-t border-b-2 border-transparent data-[state=active]:text-domo-primary data-[state=active]:border-domo-primary transition-all">
                     <BookOpen className="w-4 h-4" />
                     Knowledge Base
                   </Tabs.Trigger>
@@ -397,8 +407,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                   onClick={() => setSettingsOpen(!settingsOpen)}
                   className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t border-b-2 transition-all ${
                     ['agent', 'cta', 'embed'].includes(activeTab)
-                      ? 'text-gray-700 border-gray-400'
-                      : 'text-gray-400 hover:text-gray-600 border-transparent'
+                      ? 'text-white border-domo-primary'
+                      : 'text-domo-text-muted hover:text-domo-text-secondary border-transparent'
                   }`}
                 >
                   <Settings className="w-4 h-4" />
@@ -408,11 +418,11 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
 
                 {/* Dropdown Menu */}
                 {settingsOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-domo-bg-elevated rounded-xl shadow-domo-lg border border-domo-border py-1 z-50">
                     <button
                       onClick={() => handleSettingsOptionClick('agent')}
-                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
-                        activeTab === 'agent' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                        activeTab === 'agent' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
                       }`}
                     >
                       <User className="w-4 h-4" />
@@ -420,8 +430,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     </button>
                     <button
                       onClick={() => handleSettingsOptionClick('cta')}
-                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
-                        activeTab === 'cta' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                        activeTab === 'cta' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
                       }`}
                     >
                       <Megaphone className="w-4 h-4" />
@@ -429,8 +439,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     </button>
                     <button
                       onClick={() => handleSettingsOptionClick('embed')}
-                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
-                        activeTab === 'embed' ? 'bg-gray-50 text-indigo-600' : 'text-gray-700'
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                        activeTab === 'embed' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
                       }`}
                     >
                       <Code2 className="w-4 h-4" />
@@ -468,14 +478,20 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 onRetryTranscription={handleRetryTranscription}
               />
               {/* Next step button during onboarding */}
-              {!isOnboardingComplete && stepStatus.videos && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => handleStepClick(2)}
-                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
-                  >
-                    Next →
-                  </button>
+              {!isOnboardingComplete && (
+                <div className="mt-6 flex justify-between items-center">
+                  {!stepStatus.videos && (
+                    <p className="text-sm text-amber-400">Upload at least one video to continue</p>
+                  )}
+                  <div className="ml-auto">
+                    <button
+                      onClick={() => handleStepClick(2)}
+                      disabled={!stepStatus.videos}
+                      className="px-6 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
                 </div>
               )}
             </Tabs.Content>
@@ -483,6 +499,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
             <Tabs.Content value="knowledge">
               <KnowledgeBaseManagement
                 knowledgeChunks={knowledgeChunks}
+                demoVideos={demoVideos}
                 newQuestion={newQuestion}
                 setNewQuestion={setNewQuestion}
                 newAnswer={newAnswer}
@@ -499,14 +516,20 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 isUploadingUrl={isUploadingUrl}
               />
               {/* Next step button during onboarding */}
-              {!isOnboardingComplete && stepStatus.knowledge && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => handleStepClick(3)}
-                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
-                  >
-                    Next →
-                  </button>
+              {!isOnboardingComplete && (
+                <div className="mt-6 flex justify-between items-center">
+                  {!stepStatus.knowledge && (
+                    <p className="text-sm text-amber-400">Add at least one knowledge item to continue</p>
+                  )}
+                  <div className="ml-auto">
+                    <button
+                      onClick={() => handleStepClick(3)}
+                      disabled={!stepStatus.knowledge}
+                      className="px-6 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
                 </div>
               )}
             </Tabs.Content>
@@ -525,21 +548,24 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 onAgentCreated={async () => {
                   // Refresh demo data to get updated persona_id
                   await fetchDemoData();
-                  // Auto-advance to next step (CTA) during onboarding
-                  if (!isOnboardingComplete) {
-                    handleStepClick(4);
-                  }
                 }}
+                isOnboarding={!isOnboardingComplete}
               />
               {/* Next step button during onboarding */}
-              {!isOnboardingComplete && stepStatus.agent && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => handleStepClick(4)}
-                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
-                  >
-                    Next →
-                  </button>
+              {!isOnboardingComplete && (
+                <div className="mt-6 flex justify-between items-center">
+                  {!stepStatus.agent && (
+                    <p className="text-sm text-amber-400">Create your agent to continue</p>
+                  )}
+                  <div className="ml-auto">
+                    <button
+                      onClick={() => handleStepClick(4)}
+                      disabled={!stepStatus.agent}
+                      className="px-6 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
                 </div>
               )}
             </Tabs.Content>
@@ -553,56 +579,62 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 setCTAMessage={setCTAMessage}
                 ctaButtonText={ctaButtonText}
                 setCTAButtonText={setCTAButtonText}
+                ctaReturnUrl={ctaReturnUrl}
+                setCTAReturnUrl={setCTAReturnUrl}
                 onSaveCTA={handleSaveCTA}
+                isOnboarding={!isOnboardingComplete}
               />
               {/* Next step button during onboarding */}
-              {!isOnboardingComplete && stepStatus.cta && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => handleStepClick(5)}
-                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors"
-                  >
-                    Next →
-                  </button>
+              {!isOnboardingComplete && (
+                <div className="mt-6 flex justify-between items-center">
+                  {!stepStatus.cta && (
+                    <p className="text-sm text-amber-400">Save your CTA settings to continue</p>
+                  )}
+                  <div className="ml-auto">
+                    <button
+                      onClick={() => handleStepClick(5)}
+                      disabled={!stepStatus.cta}
+                      className="px-6 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
                 </div>
               )}
             </Tabs.Content>
 
             <Tabs.Content value="embed">
               <EmbedSettings demo={demo} onDemoUpdate={setDemo} />
+              {/* Done button during onboarding - triggers celebration */}
+              {!congratsChecked && stepStatus.embed && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => {
+                      const congratsKey = `congrats_shown_${demoId}`;
+                      localStorage.setItem(congratsKey, 'true');
+                      setCongratsChecked(true);
+                      setShowCongrats(true);
+                    }}
+                    className="px-8 py-3 bg-domo-success text-white font-semibold rounded-xl hover:bg-domo-success/90 transition-colors text-lg"
+                  >
+                    Done - Complete Setup
+                  </button>
+                </div>
+              )}
             </Tabs.Content>
 
           </div>
         </Tabs.Root>
       </main>
 
-      {/* Full-page Congratulations Modal - shows once when onboarding completes */}
+      {/* Full-page Congratulations Screen - shows once when onboarding completes */}
       {showCongrats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500" />
-
-          {/* Content */}
-          <div className="relative z-10 text-center text-white px-8">
-            <div className="text-7xl mb-6">🎉</div>
-            <h2 className="text-4xl font-bold mb-4">Congratulations!</h2>
-            <p className="text-xl opacity-90 mb-10">Your demo is fully set up and ready to go!</p>
-            <div className="flex justify-center gap-4">
-              <a
-                href={`/demos/${demoId}/experience`}
-                className="px-8 py-4 bg-white text-green-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-lg"
-              >
-                View Demo
-              </a>
-              <button
-                onClick={dismissCongrats}
-                className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors text-lg"
-              >
-                Back to Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnboardingComplete
+          demoId={demoId}
+          demoName={demo?.name || 'Demo'}
+          embedToken={demo?.embed_token}
+          onDismiss={dismissCongrats}
+        />
       )}
     </div>
   );
