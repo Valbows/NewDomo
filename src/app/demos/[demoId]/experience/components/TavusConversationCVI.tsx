@@ -66,6 +66,15 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
 
       log.debug('Parsed tool call result', { parsed });
 
+      // Log more details about what was parsed for debugging
+      if (process.env.NODE_ENV !== 'production') {
+        if (parsed.toolName) {
+          log.info('Tool call parsed', { toolName: parsed.toolName, toolArgs: parsed.toolArgs });
+        } else if (data?.event_type) {
+          log.debug('Event type received but no tool parsed', { eventType: data.event_type });
+        }
+      }
+
       // Handle objective completion events - forward to webhook
       if (data?.event_type === 'conversation.objective.completed') {
         log.info('Objective completion detected, forwarding to webhook');
@@ -284,11 +293,11 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
       
       {/* Manual test button for debugging */}
       {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true') && (
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/90 p-2 rounded shadow">
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-domo-bg-card/90 p-2 rounded shadow border border-domo-border">
           {Array.isArray(debugVideoTitles) && debugVideoTitles.length > 0 ? (
             <>
               <select
-                className="text-xs border rounded px-2 py-1 max-w-xs"
+                className="text-xs border border-domo-border rounded px-2 py-1 max-w-xs bg-domo-bg-elevated text-white"
                 value={selectedTitle}
                 onChange={(e) => setSelectedTitle(e.target.value)}
                 onFocus={() => {
@@ -318,7 +327,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
                     log.debug('No title selected');
                   }
                 }}
-                className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 shadow"
+                className="px-3 py-1 bg-domo-primary text-white text-xs rounded hover:bg-domo-secondary shadow"
               >
                 Play
               </button>
@@ -345,7 +354,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             <button
               data-testid="cvi-dev-pause"
               onClick={() => onToolCall?.('pause_video', {})}
-              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              className="px-3 py-1 bg-domo-bg-elevated text-white text-xs rounded hover:bg-domo-border shadow"
               title="Pause video"
             >
               Pause
@@ -353,7 +362,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             <button
               data-testid="cvi-dev-resume"
               onClick={() => onToolCall?.('play_video', {})}
-              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              className="px-3 py-1 bg-domo-bg-elevated text-white text-xs rounded hover:bg-domo-border shadow"
               title="Resume video"
             >
               Resume
@@ -361,7 +370,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             <button
               data-testid="cvi-dev-next"
               onClick={() => onToolCall?.('next_video', {})}
-              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              className="px-3 py-1 bg-domo-bg-elevated text-white text-xs rounded hover:bg-domo-border shadow"
               title="Next video"
             >
               Next
@@ -369,7 +378,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             <button
               data-testid="cvi-dev-close"
               onClick={() => onToolCall?.('close_video', {})}
-              className="px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 shadow"
+              className="px-3 py-1 bg-domo-bg-elevated text-white text-xs rounded hover:bg-domo-border shadow"
               title="Close video"
             >
               Close
@@ -377,7 +386,7 @@ export const TavusConversationCVI: React.FC<TavusConversationCVIProps> = ({
             <button
               data-testid="cvi-dev-cta"
               onClick={() => onToolCall?.('show_trial_cta', {})}
-              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 shadow"
+              className="px-3 py-1 bg-domo-success text-white text-xs rounded hover:bg-domo-success/80 shadow"
               title="Show CTA"
             >
               Show CTA

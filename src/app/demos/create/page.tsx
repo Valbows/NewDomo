@@ -18,7 +18,7 @@ const CreateDemoPage = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!demoName.trim()) {
       setError('Demo name is required.');
       return;
@@ -31,6 +31,24 @@ const CreateDemoPage = () => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         throw new Error('User authentication failed. Please sign in again.');
+      }
+
+      // Check for duplicate demo name for this user
+      const { data: existingDemo, error: checkError } = await supabase
+        .from('demos')
+        .select('id')
+        .eq('user_id', user.id)
+        .ilike('name', demoName.trim())
+        .maybeSingle();
+
+      if (checkError) {
+        throw new Error('Failed to check for existing demos. Please try again.');
+      }
+
+      if (existingDemo) {
+        setError('A demo with this name already exists. Please choose a different name.');
+        setLoading(false);
+        return;
       }
 
       // Create required metadata to satisfy database validation
@@ -46,8 +64,8 @@ const CreateDemoPage = () => {
 
       const { data: newDemo, error: insertError } = await supabase
         .from('demos')
-        .insert({ 
-          name: demoName, 
+        .insert({
+          name: demoName,
           user_id: user.id,
           upload_id: metadata.uploadId,
           video_storage_path: '', // Placeholder - will be updated when videos are uploaded
@@ -71,12 +89,12 @@ const CreateDemoPage = () => {
   return (
     <DashboardLayout>
       <div className="max-w-2xl mx-auto py-10">
-        <h1 className="text-3xl font-bold text-domo-dark-text mb-2">Create a New Demo</h1>
-        <p className="text-domo-light-text mb-8">Give your demo a name to get started. You'll upload videos and configure your agent in the next step.</p>
+        <h1 className="text-3xl font-bold text-white mb-2 font-heading">Create a New Demo</h1>
+        <p className="text-domo-text-secondary mb-8">Give your demo a name to get started. You'll upload videos and configure your agent in the next step.</p>
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-white rounded-lg shadow-md">
+        <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-domo-bg-card border border-domo-border rounded-xl">
           <div>
-            <label htmlFor="demoName" className="block text-sm font-medium text-domo-dark-text">
+            <label htmlFor="demoName" className="block text-sm font-medium text-domo-text-secondary">
               Demo Name
             </label>
             <input
@@ -84,18 +102,18 @@ const CreateDemoPage = () => {
               id="demoName"
               value={demoName}
               onChange={(e) => setDemoName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-domo-blue-accent focus:border-domo-blue-accent"
+              className="mt-1 block w-full px-3 py-2.5 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary"
               placeholder="e.g., Q2 Product Launch Demo"
               required
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-domo-error">{error}</p>}
 
           <div className="text-right">
             <button
               type="submit"
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-domo-green hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-domo-green disabled:bg-gray-400"
+              className="inline-flex justify-center py-2.5 px-6 border border-transparent text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-domo-primary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
               disabled={loading || !demoName}
             >
               {loading ? 'Creating...' : 'Create and Configure'}

@@ -32,31 +32,31 @@ export function ConversationList({
   hasTavusConversation,
 }: ConversationListProps) {
   return (
-    <div className="bg-white rounded-lg shadow border border-gray-100">
-      <div className="p-6 border-b border-gray-200">
-        <h3 className="text-lg font-semibold">Conversation Details</h3>
-        <p className="text-sm text-gray-600 mt-1">
+    <div className="bg-domo-bg-card rounded-xl border border-domo-border">
+      <div className="p-6 border-b border-domo-border">
+        <h3 className="text-lg font-semibold text-white">Conversation Details</h3>
+        <p className="text-sm text-domo-text-secondary mt-1">
           Detailed transcripts and perception analysis from Domo conversations.
         </p>
       </div>
 
       {loading ? (
         <div className="p-8 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-600" />
-          <div className="text-gray-600">Loading conversation details...</div>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-domo-primary" />
+          <div className="text-domo-text-secondary">Loading conversation details...</div>
         </div>
       ) : conversations.length === 0 ? (
         <div className="p-8 text-center">
-          <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <div className="text-gray-600 mb-2">No detailed conversations found</div>
-          <div className="text-sm text-gray-500">
+          <MessageSquare className="w-12 h-12 mx-auto mb-4 text-domo-text-muted" />
+          <div className="text-domo-text-secondary mb-2">No detailed conversations found</div>
+          <div className="text-sm text-domo-text-muted">
             {hasTavusConversation
               ? 'Click "Sync from Domo" to fetch conversation data'
               : "Start a demo conversation to see analytics here"}
           </div>
         </div>
       ) : (
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-domo-border">
           {conversations.map((conversation) => (
             <ConversationListItem
               key={conversation.id}

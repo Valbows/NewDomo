@@ -1,3 +1,22 @@
+/**
+ * ============================================================================
+ * ⚠️  DOMO SCORE DEPENDENCY - DO NOT MODIFY WITHOUT TESTING SCORE ⚠️
+ * ============================================================================
+ *
+ * These handlers write to tables that directly affect Domo Score:
+ *   - handleProductInterestDiscovery → product_interest_data → "Reason For Visit" criterion
+ *   - handleContactInfoCollection → qualification_data → "Contact Confirmation" criterion
+ *   - handleVideoShowcaseObjective → video_showcase_data → "Platform Feature Interest" criterion
+ *
+ * Before modifying these handlers:
+ *   1. Run existing tests: npm run test:all
+ *   2. After changes, verify Domo Score still calculates correctly
+ *   3. Test with a real Tavus webhook event
+ *
+ * See: src/lib/domo-score/index.ts for centralized Domo Score documentation
+ * ============================================================================
+ */
+
 export async function handleProductInterestDiscovery(
   supabase: any,
   conversationId: string,

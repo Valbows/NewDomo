@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getWebhookUrl } from '@/lib/tavus/webhook-objectives';
+import { getToolsWithVideoTitles } from '@/lib/tavus/tool-definitions';
 
 async function handlePOST(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
@@ -65,14 +66,20 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // Enhanced identity section
     const identitySection = `\n\n## AGENT IDENTITY\nYou are ${agentName}, ${agentPersonality || 'a friendly and knowledgeable assistant'}.\nGreeting: "${agentGreeting || 'Hello! How can I help you with the demo today?'}"\n`;
 
-    // Step 3a: Get video context from Twelve Labs (if available)
+    // Step 3a: Get video context from Twelve Labs (if available) and video titles for tools
     let videoContextSection = '';
+    let videoTitles: string[] = [];
     try {
       const { data: demoVideos } = await supabase
         .from('demo_videos')
         .select('title, metadata')
         .eq('demo_id', demoId)
         .order('order_index', { ascending: true });
+
+      // Extract video titles for tool configuration
+      if (demoVideos && demoVideos.length > 0) {
+        videoTitles = demoVideos.map(v => v.title).filter(Boolean);
+      }
 
       if (demoVideos && demoVideos.length > 0) {
         const indexedVideos = demoVideos.filter((v) => v.metadata?.twelvelabs?.generatedContext);
@@ -155,16 +162,25 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       const TRUNCATION_SUFFIX = '\n\n[Truncated for length]';
       
       if (enhancedSystemPrompt.length > MAX_PROMPT_LENGTH) {
-        console.warn(`⚠️ System prompt is too long (${enhancedSystemPrompt.length} chars). Truncating to ${MAX_PROMPT_LENGTH} chars.`);
+        console.warn(`System prompt is too long (${enhancedSystemPrompt.length} chars). Truncating to ${MAX_PROMPT_LENGTH} chars.`);
         finalSystemPrompt = enhancedSystemPrompt.substring(0, MAX_PROMPT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
       }
 
-      // Create persona payload with all fields
+      // Get tools with video titles for the AI to use
+      const tools = getToolsWithVideoTitles(videoTitles);
+
+      // Create persona payload with all fields including tools in layers.llm
       const personaPayload: any = {
         persona_name: `${agentName} - ${demo.name} (${new Date().toISOString().split('T')[0]})`,
         system_prompt: finalSystemPrompt,
         objectives_id: objectivesId,
         guardrails_id: GUARDRAILS_ID,
+        layers: {
+          llm: {
+            model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+            tools: tools,
+          }
+        },
       };
 
       // Add optional fields only if they exist
@@ -210,7 +226,8 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
             const fallbackPayload = {
               ...personaPayload,
               objectives_id: DEFAULT_OBJECTIVES_ID,
-              persona_name: personaPayload.persona_name + ' (Fallback)'
+              persona_name: personaPayload.persona_name + ' (Fallback)',
+              // Tools already included in layers.llm from personaPayload spread
             };
             
             const fallbackResponse = await fetch(apiUrl, {
@@ -233,6 +250,12 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
                 system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
                 objectives_id: DEFAULT_OBJECTIVES_ID,
                 guardrails_id: GUARDRAILS_ID,
+                layers: {
+                  llm: {
+                    model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+                    tools: tools,
+                  }
+                },
               };
               
               if (process.env.TAVUS_REPLICA_ID) {
@@ -258,7 +281,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
                 
                 return NextResponse.json({
                   success: false,
-                  error: 'Failed to create Tavus persona',
+                  error: 'Failed to create agent',
                   details: {
                     status: response.status,
                     statusText: response.statusText,
@@ -275,6 +298,12 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
               system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
               objectives_id: objectivesId,
               guardrails_id: GUARDRAILS_ID,
+              layers: {
+                llm: {
+                  model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+                  tools: tools,
+                }
+              },
             };
             
             if (process.env.TAVUS_REPLICA_ID) {
@@ -299,7 +328,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
               
               return NextResponse.json({
                 success: false,
-                error: 'Failed to create Tavus persona',
+                error: 'Failed to create agent',
                 details: {
                   status: response.status,
                   statusText: response.statusText,
@@ -313,12 +342,12 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           // Return a more user-friendly error
           return NextResponse.json({
             success: false,
-            error: 'Failed to create Tavus persona',
+            error: 'Failed to create agent',
             details: {
               status: response.status,
               statusText: response.statusText,
               error: errorDetails,
-              suggestion: 'This might be a temporary Tavus API issue. Please try again in a moment.'
+              suggestion: 'This might be a temporary issue. Please try again in a moment.'
             }
           }, { status: 500 });
         }

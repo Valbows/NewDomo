@@ -37,7 +37,7 @@ async function handlePOST(req: NextRequest) {
 
     const tavusApiKey = process.env.TAVUS_API_KEY;
     if (!tavusApiKey) {
-      return NextResponse.json({ error: 'Domo API key is not configured.' }, { status: 500 });
+      return NextResponse.json({ error: 'API configuration error. Please contact support.' }, { status: 500 });
     }
 
     // Fetch knowledge base content for this demo
@@ -171,25 +171,17 @@ async function handlePOST(req: NextRequest) {
     const guardrailsSection = enhancedSystemPrompt.match(/## GUARDRAILS \(Critical\)([\s\S]*?)(?=##|$)/);
     if (guardrailsSection) {
     } else {
-      console.warn('⚠️  Guardrails section NOT found in system prompt');
+      console.warn('Guardrails section NOT found in system prompt');
     }
 
     const allowedTitles = (demoVideos || []).map(v => v.title).filter(Boolean);
 
-    // Define tools for the persona (optional via env toggle)
-    // By default, tools remain disabled to avoid persona validation errors observed previously.
-    // ALWAYS enable tools when custom objectives are being used (ensures video showcase works)
-    const hasCustomObjectives = !!activeCustomObjective;
-    const tavusToolsEnabled = process.env.TAVUS_TOOLS_ENABLED === 'true' || hasCustomObjectives;
-    
-    
-    if (hasCustomObjectives && process.env.TAVUS_TOOLS_ENABLED !== 'true') {
-    }
+    // Define tools for the persona - ALWAYS enabled for video playback and CTA functionality
+    // Tools are required for the AI to call fetch_video, pause_video, show_trial_cta, etc.
+    // Allow a minimal toolset during initial validation to reduce failure risk
+    const tavusMinimalTools = process.env.TAVUS_MINIMAL_TOOLS === 'true';
     let tools: any[] = [];
-    if (tavusToolsEnabled) {
-      // Allow a minimal toolset during initial validation to reduce failure risk
-      const tavusMinimalTools = process.env.TAVUS_MINIMAL_TOOLS === 'true';
-
+    {
       // Build the title property with an enum of allowed titles when available
       const titleProperty: any = {
         type: 'string',
@@ -281,46 +273,9 @@ async function handlePOST(req: NextRequest) {
         );
       }
     }
-    // Debug: log tool enablement and included tool names
-    try {
-    } catch {}
 
-    // Configure LLM model (upgrade to tavus-llama-4 by default, env overrideable)
-    const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
-    
-    /* Disabled tools - causing validation error:
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'fetch_video',
-          description: 'Fetch and display a demo video by title. Use this when the user asks to see a video, demo, or specific feature.',
-          parameters: {
-            type: 'object',
-            properties: {
-              title: {
-                type: 'string',
-                description: 'The exact title of the video to fetch. Must match one of the available video titles exactly.'
-              }
-            },
-            required: ['title']
-          }
-        }
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'show_trial_cta',
-          description: 'Show a call-to-action for starting a trial. Use this when the user expresses interest in trying the product.',
-          parameters: {
-            type: 'object',
-            properties: {},
-            required: []
-          }
-        }
-      }
-    ];
-    */
+    // Configure LLM model (tavus-gpt-oss is the current default, env overrideable)
+    const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss';
 
     const personaResponse = await fetch('https://tavusapi.com/v2/personas', {
       method: 'POST',
@@ -344,8 +299,8 @@ async function handlePOST(req: NextRequest) {
 
     if (!personaResponse.ok) {
       const errorBody = await personaResponse.text();
-      logError(errorBody, 'Tavus Persona API Error');
-      return NextResponse.json({ error: `Failed to create Domo persona: ${personaResponse.statusText}` }, { status: personaResponse.status });
+      logError(errorBody, 'Persona API Error');
+      return NextResponse.json({ error: 'Failed to create agent. Please try again.' }, { status: personaResponse.status });
     }
 
     const personaData = await personaResponse.json();

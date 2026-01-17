@@ -21,7 +21,7 @@ export default function SimpleVideoTestPage() {
 
   const testVideoPlayback = (videoTitle: string) => {
     addTestResult(`Testing video playback for: ${videoTitle}`);
-    
+
     const videoUrl = mockVideos[videoTitle as keyof typeof mockVideos];
     if (videoUrl) {
       setPlayingVideoUrl(videoUrl);
@@ -33,31 +33,31 @@ export default function SimpleVideoTestPage() {
 
   const testToolCall = (toolName: string, args: any) => {
     addTestResult(`🔧 Tool call received: ${toolName} with args: ${JSON.stringify(args)}`);
-    
+
     if (toolName === 'fetch_video' && args.title) {
       testVideoPlayback(args.title);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-domo-bg-dark p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Simple Video System Test</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-3xl font-bold text-white mb-8">Simple Video System Test</h1>
+        <p className="text-domo-text-secondary mb-8">
           This test uses mock video URLs to test the video player component without database dependencies.
         </p>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Test Controls */}
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Video Playback Tests</h2>
+            <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Video Playback Tests</h2>
               <div className="space-y-3">
                 {Object.keys(mockVideos).map((videoTitle) => (
                   <button
                     key={videoTitle}
                     onClick={() => testVideoPlayback(videoTitle)}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-left"
+                    className="w-full px-4 py-2 bg-domo-primary text-white rounded-md hover:bg-domo-secondary text-left"
                   >
                     Play: {videoTitle}
                   </button>
@@ -65,8 +65,8 @@ export default function SimpleVideoTestPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Tool Call Simulation</h2>
+            <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Tool Call Simulation</h2>
               <div className="space-y-3">
                 {Object.keys(mockVideos).map((videoTitle) => (
                   <button
@@ -81,15 +81,15 @@ export default function SimpleVideoTestPage() {
             </div>
 
             {/* Test Results */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Test Results</h2>
-              <div className="bg-gray-100 rounded-md p-4 max-h-96 overflow-y-auto">
+            <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Test Results</h2>
+              <div className="bg-domo-bg-elevated rounded-md p-4 max-h-96 overflow-y-auto">
                 {testResults.length === 0 ? (
-                  <p className="text-gray-500 italic">No tests run yet...</p>
+                  <p className="text-domo-text-muted italic">No tests run yet...</p>
                 ) : (
                   <div className="space-y-1">
                     {testResults.map((result, index) => (
-                      <div key={index} className="text-sm font-mono">
+                      <div key={index} className="text-sm font-mono text-domo-text-secondary">
                         {result}
                       </div>
                     ))}
@@ -98,7 +98,7 @@ export default function SimpleVideoTestPage() {
               </div>
               <button
                 onClick={() => setTestResults([])}
-                className="mt-3 px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                className="mt-3 px-3 py-1 bg-domo-bg-elevated text-white text-sm rounded hover:bg-domo-border"
               >
                 Clear Results
               </button>
@@ -107,8 +107,8 @@ export default function SimpleVideoTestPage() {
 
           {/* Video Display */}
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Video Player</h2>
+            <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Video Player</h2>
               {playingVideoUrl ? (
                 <InlineVideoPlayer
                   videoUrl={playingVideoUrl}
@@ -118,39 +118,39 @@ export default function SimpleVideoTestPage() {
                   }}
                 />
               ) : (
-                <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500">No video playing</p>
+                <div className="h-64 bg-domo-bg-elevated rounded-lg flex items-center justify-center">
+                  <p className="text-domo-text-muted">No video playing</p>
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Current Status</h2>
+            <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Current Status</h2>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Video URL:</span>
-                  <span className="font-mono text-xs">
+                  <span className="text-domo-text-secondary">Video URL:</span>
+                  <span className="font-mono text-xs text-domo-text-muted">
                     {playingVideoUrl ? playingVideoUrl.substring(0, 50) + '...' : 'None'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tests Run:</span>
-                  <span>{testResults.length}</span>
+                  <span className="text-domo-text-secondary">Tests Run:</span>
+                  <span className="text-white">{testResults.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Available Videos:</span>
-                  <span>{Object.keys(mockVideos).length}</span>
+                  <span className="text-domo-text-secondary">Available Videos:</span>
+                  <span className="text-white">{Object.keys(mockVideos).length}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Mock Video URLs</h2>
+            <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Mock Video URLs</h2>
               <div className="space-y-2 text-xs">
                 {Object.entries(mockVideos).map(([title, url]) => (
-                  <div key={title} className="border-b pb-2">
-                    <div className="font-semibold">{title}</div>
-                    <div className="text-gray-500 font-mono">{url}</div>
+                  <div key={title} className="border-b border-domo-border pb-2">
+                    <div className="font-semibold text-white">{title}</div>
+                    <div className="text-domo-text-muted font-mono">{url}</div>
                   </div>
                 ))}
               </div>

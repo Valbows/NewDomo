@@ -1,3 +1,22 @@
+/**
+ * ============================================================================
+ * ⚠️  DOMO SCORE DEPENDENCY - DO NOT MODIFY WITHOUT TESTING SCORE ⚠️
+ * ============================================================================
+ *
+ * This webhook handler processes events that affect multiple Domo Score criteria:
+ *   - Objective completions → qualification_data, product_interest_data
+ *   - Tool calls (fetch_video, show_trial_cta) → video_showcase_data, cta_tracking
+ *   - Perception analysis → conversation_details
+ *
+ * Before modifying this handler:
+ *   1. Run existing tests: npm run test:all
+ *   2. After changes, verify Domo Score still calculates correctly
+ *   3. Test with real Tavus webhook events
+ *
+ * See: src/lib/domo-score/index.ts for centralized Domo Score documentation
+ * ============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getErrorMessage, logError } from '@/lib/errors';

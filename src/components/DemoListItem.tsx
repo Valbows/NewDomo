@@ -26,11 +26,9 @@ const DemoListItem: React.FC<Props> = ({ demo, conversationCount = 0, onDelete }
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -63,31 +61,37 @@ const DemoListItem: React.FC<Props> = ({ demo, conversationCount = 0, onDelete }
 
   return (
     <>
-      <div className="bg-white p-4 rounded-lg shadow-sm flex items-center justify-between border border-gray-100">
+      <div className="bg-domo-bg-card border border-domo-border p-5 rounded-xl flex items-center justify-between hover:border-domo-primary/50 transition-colors">
         <div className="min-w-0">
-          <h3 className="text-lg font-bold text-domo-dark-text truncate">{demo.name}</h3>
-          <p className="text-xs text-domo-light-text mt-1">
-            Created: {formatDate(demo.created_at)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Conversations tracked: {conversationCount}</p>
+          <h3 className="text-lg font-semibold text-white truncate">{demo.name}</h3>
+          <div className="flex items-center gap-4 mt-2">
+            <p className="text-xs text-domo-text-muted">
+              Created: {formatDate(demo.created_at)}
+            </p>
+            <p className="text-xs text-domo-text-muted">
+              {conversationCount} conversation{conversationCount !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           <span
-            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-              isActive ? 'text-domo-success bg-green-100' : 'text-gray-600 bg-gray-100'
+            className={`px-3 py-1 text-xs font-semibold rounded-full ${
+              isActive
+                ? 'text-domo-success bg-domo-success/10 border border-domo-success/20'
+                : 'text-domo-text-muted bg-domo-bg-elevated border border-domo-border'
             }`}
           >
             {isActive ? 'Active' : 'Draft'}
           </span>
           <Link
             href={`/demos/${demo.id}/experience`}
-            className="text-xs px-3 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+            className="text-xs px-4 py-2 rounded-lg bg-domo-primary/10 text-domo-primary hover:bg-domo-primary/20 transition-colors"
           >
             View
           </Link>
           <Link
             href={`/demos/${demo.id}/configure`}
-            className="text-xs px-3 py-1 rounded bg-gray-50 text-gray-700 hover:bg-gray-100"
+            className="text-xs px-4 py-2 rounded-lg bg-domo-bg-elevated text-domo-text-secondary hover:text-white hover:bg-domo-bg-elevated/80 transition-colors"
           >
             Manage
           </Link>
@@ -96,16 +100,16 @@ const DemoListItem: React.FC<Props> = ({ demo, conversationCount = 0, onDelete }
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="text-domo-light-text hover:text-domo-dark-text p-1 rounded hover:bg-gray-100"
+              className="text-domo-text-muted hover:text-white p-2 rounded-lg hover:bg-domo-bg-elevated transition-colors"
             >
               <MoreVertical size={20} />
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-domo-bg-elevated rounded-xl shadow-domo-lg border border-domo-border py-1 z-50">
                 <Link
                   href={`/demos/${demo.id}/reporting`}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-domo-text-secondary hover:text-white hover:bg-domo-bg-card transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   <BarChart3 size={16} />
@@ -113,23 +117,23 @@ const DemoListItem: React.FC<Props> = ({ demo, conversationCount = 0, onDelete }
                 </Link>
                 <Link
                   href={`/demos/${demo.id}/configure?tab=agent`}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-domo-text-secondary hover:text-white hover:bg-domo-bg-card transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   <Settings size={16} />
                   Settings
                 </Link>
-                <hr className="my-1 border-gray-100" />
+                <hr className="my-1 border-domo-border" />
                 <button
                   onClick={handleDuplicateClick}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-domo-text-secondary hover:text-white hover:bg-domo-bg-card w-full text-left transition-colors"
                 >
                   <Copy size={16} />
                   Duplicate
                 </button>
                 <button
                   onClick={handleDeleteClick}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-domo-error hover:bg-domo-error/10 w-full text-left transition-colors"
                 >
                   <Trash2 size={16} />
                   Delete

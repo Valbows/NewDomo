@@ -34,6 +34,7 @@ export default function DemoExperiencePage() {
     loading,
     error,
     conversationUrl,
+    conversationId, // Session-specific, not from shared database
     videoTitles,
     startConversation,
     joiningCall,
@@ -64,28 +65,28 @@ export default function DemoExperiencePage() {
 
   // Handle browser window close/refresh
   useBeforeUnload({
-    conversationId: demo?.tavus_conversation_id,
+    conversationId: conversationId, // Use session-specific ID
     demoId: demo?.id,
   });
 
   // Handle conversation end
   const handleConversationEnd = useCallback(async () => {
     // End the Tavus conversation via API if we have a conversation ID
-    if (demo?.tavus_conversation_id) {
+    if (conversationId) {
       try {
         const response = await fetch('/api/end-conversation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            conversationId: demo.tavus_conversation_id,
-            demoId: demo.id,
+            conversationId: conversationId, // Use session-specific ID
+            demoId: demo?.id,
           }),
         });
 
         if (response.ok) {
           // Automatically sync conversation data after ending
           try {
-            await fetch(`/api/sync-tavus-conversations?demoId=${demo.id}`, {
+            await fetch(`/api/sync-tavus-conversations?demoId=${demo?.id}`, {
               method: 'GET',
             });
           } catch (syncError) {
@@ -102,7 +103,7 @@ export default function DemoExperiencePage() {
 
     // Redirect to the reporting page
     router.push(`/demos/${demoId}/reporting`);
-  }, [demo?.tavus_conversation_id, demo?.id, demoId, router]);
+  }, [conversationId, demo?.id, demoId, router]);
 
   // Handle tool calls (for any experience-specific tracking)
   const handleToolCall = useCallback((_toolCall: any) => {
@@ -119,7 +120,7 @@ export default function DemoExperiencePage() {
       demoId={demoId}
       agentName={agentName}
       conversationUrl={conversationUrl}
-      conversationId={demo?.tavus_conversation_id}
+      conversationId={conversationId}
       loading={loading || joiningCall}
       error={error}
       showLobby={false}

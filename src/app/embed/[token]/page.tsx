@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { DemoExperienceView } from '@/components/conversation';
 
@@ -9,11 +9,13 @@ interface EmbedConfig {
   name: string;
   agentName: string;
   hasPersona: boolean;
+  videoTitles?: string[];
   cta: {
     title?: string;
     message?: string;
     buttonText?: string;
     buttonUrl?: string;
+    returnUrl?: string;
   };
 }
 
@@ -28,6 +30,24 @@ export default function EmbedPage() {
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [joiningCall, setJoiningCall] = useState(false);
+
+  // Capture referrer URL on mount (customer's website)
+  const returnUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    // Get the referrer - this is the page that embedded this demo
+    if (typeof document !== 'undefined' && document.referrer) {
+      // Only use referrer if it's a different origin (not our own site)
+      try {
+        const referrerUrl = new URL(document.referrer);
+        const currentUrl = new URL(window.location.href);
+        if (referrerUrl.origin !== currentUrl.origin) {
+          returnUrlRef.current = document.referrer;
+        }
+      } catch {
+        // Invalid URL, ignore
+      }
+    }
+  }, []);
 
   // Fetch embed config only (don't start conversation automatically)
   useEffect(() => {
@@ -171,6 +191,7 @@ export default function EmbedPage() {
       ctaMessage={config?.cta.message}
       ctaButtonText={config?.cta.buttonText}
       ctaButtonUrl={config?.cta.buttonUrl}
+      returnUrl={config?.cta.returnUrl || returnUrlRef.current || undefined}
       onConversationEnd={handleConversationEnd}
       onToolCall={handleToolCall}
       onCTAClick={handleCTAClick}
@@ -178,6 +199,7 @@ export default function EmbedPage() {
       onRestart={handleRestartConversation}
       source="embed"
       embedToken={token}
+      debugVideoTitles={config?.videoTitles || []}
     />
   );
 }

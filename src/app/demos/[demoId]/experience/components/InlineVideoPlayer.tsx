@@ -220,17 +220,17 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
         
         {/* Error overlay */}
         {hasError && (
-          <div className="absolute inset-0 bg-red-100 border-2 border-red-300 rounded-lg flex items-center justify-center">
+          <div className="absolute inset-0 bg-domo-error/10 border-2 border-domo-error/30 rounded-lg flex items-center justify-center">
             <div className="text-center p-4">
-              <div className="text-red-600 text-4xl mb-2">⚠️</div>
-              <h4 className="text-red-800 font-semibold mb-2">Video Loading Error</h4>
-              <p className="text-red-700 text-sm mb-3">{errorMessage}</p>
-              <div className="text-xs text-red-600 mb-3">
+              <div className="text-domo-error text-4xl mb-2">⚠️</div>
+              <h4 className="text-domo-error font-semibold mb-2">Video Loading Error</h4>
+              <p className="text-domo-error/80 text-sm mb-3">{errorMessage}</p>
+              <div className="text-xs text-domo-error/70 mb-3">
                 <p>Video URL: {videoUrl}</p>
               </div>
               <button
                 onClick={onClose}
-                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                className="px-3 py-1 bg-domo-error text-white rounded text-sm hover:bg-domo-error/80"
               >
                 Close
               </button>
@@ -251,11 +251,11 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       </div>
       
       {/* Video info */}
-      <div className="flex items-center justify-between text-sm text-gray-600">
+      <div className="flex items-center justify-between text-sm text-domo-text-secondary">
         <span>🎬 Demo video playing</span>
         <button
           onClick={onClose}
-          className="text-indigo-600 hover:text-indigo-800 font-medium"
+          className="text-domo-primary hover:text-domo-secondary font-medium"
         >
           Close Video
         </button>

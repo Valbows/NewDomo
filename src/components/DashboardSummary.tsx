@@ -23,7 +23,6 @@ const DashboardSummary: React.FC<Props> = ({ demos, loading = false }) => {
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // Fetch conversation counts from the database
   useEffect(() => {
     const fetchConversationStats = async () => {
       if (demos.length === 0) {
@@ -34,7 +33,6 @@ const DashboardSummary: React.FC<Props> = ({ demos, loading = false }) => {
       try {
         const demoIds = demos.map((d) => d.id);
 
-        // Fetch conversation details for all demos
         const { data, error } = await supabase
           .from("conversation_details")
           .select("demo_id, completed_at, created_at")
@@ -46,15 +44,12 @@ const DashboardSummary: React.FC<Props> = ({ demos, loading = false }) => {
           return;
         }
 
-        // Aggregate the data
         const byDemo: Record<string, number> = {};
         let lastUpdated: string | null = null;
 
         for (const conv of data || []) {
-          // Count by demo
           byDemo[conv.demo_id] = (byDemo[conv.demo_id] || 0) + 1;
 
-          // Track most recent conversation
           const convDate = conv.completed_at || conv.created_at;
           if (convDate && (!lastUpdated || new Date(convDate) > new Date(lastUpdated))) {
             lastUpdated = convDate;
@@ -76,77 +71,88 @@ const DashboardSummary: React.FC<Props> = ({ demos, loading = false }) => {
     fetchConversationStats();
   }, [demos]);
 
-  // Calculate active demos
   const activeDemos = demos.filter(
     (d) => d.tavus_persona_id || d.tavus_conversation_id
   ).length;
 
   const isLoading = loading || statsLoading;
 
+  const stats = [
+    {
+      label: "Total Demos",
+      value: demos.length,
+      testId: "summary-total-demos",
+      icon: (
+        <svg className="w-5 h-5 text-domo-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+    },
+    {
+      label: "Active Demos",
+      value: activeDemos,
+      testId: "summary-active-demos",
+      icon: (
+        <svg className="w-5 h-5 text-domo-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Conversations",
+      value: conversationStats.totalConversations,
+      testId: "summary-total-conversations",
+      icon: (
+        <svg className="w-5 h-5 text-domo-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Last Updated",
+      value: conversationStats.lastUpdated
+        ? new Date(conversationStats.lastUpdated).toLocaleDateString()
+        : "—",
+      testId: "summary-last-updated",
+      isText: true,
+      icon: (
+        <svg className="w-5 h-5 text-domo-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <div
-      className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       aria-live="polite"
     >
-      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-        <p className="text-xs text-gray-500">Total Demos</p>
-        {loading ? (
-          <div className="h-7 w-12 bg-gray-200 animate-pulse rounded"></div>
-        ) : (
-          <p
-            className="text-2xl font-semibold text-domo-dark-text"
-            data-testid="summary-total-demos"
-          >
-            {demos.length}
-          </p>
-        )}
-      </div>
-      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-        <p className="text-xs text-gray-500">Active Demos</p>
-        {loading ? (
-          <div className="h-7 w-12 bg-gray-200 animate-pulse rounded"></div>
-        ) : (
-          <p
-            className="text-2xl font-semibold text-domo-dark-text"
-            data-testid="summary-active-demos"
-          >
-            {activeDemos}
-          </p>
-        )}
-      </div>
-      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-        <p className="text-xs text-gray-500">Conversations Tracked</p>
-        {isLoading ? (
-          <div className="h-7 w-16 bg-gray-200 animate-pulse rounded"></div>
-        ) : (
-          <p
-            className="text-2xl font-semibold text-domo-dark-text"
-            data-testid="summary-total-conversations"
-          >
-            {conversationStats.totalConversations}
-          </p>
-        )}
-      </div>
-      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-        <p className="text-xs text-gray-500">Last Analytics Update</p>
-        {isLoading ? (
-          <div className="h-5 w-40 bg-gray-200 animate-pulse rounded"></div>
-        ) : (
-          <p
-            className="text-sm font-medium text-domo-dark-text"
-            data-testid="summary-last-updated"
-          >
-            {conversationStats.lastUpdated
-              ? new Date(conversationStats.lastUpdated).toLocaleString()
-              : "—"}
-          </p>
-        )}
-      </div>
+      {stats.map((stat) => (
+        <div
+          key={stat.label}
+          className="bg-domo-bg-card border border-domo-border rounded-xl p-5"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            {stat.icon}
+            <p className="text-sm text-domo-text-muted">{stat.label}</p>
+          </div>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-domo-bg-elevated animate-pulse rounded"></div>
+          ) : (
+            <p
+              className={`${stat.isText ? 'text-sm' : 'text-2xl'} font-semibold text-white`}
+              data-testid={stat.testId}
+            >
+              {stat.value}
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
 
-// Export conversation stats getter for use by DemoList
 export function getConversationCountForDemo(
   byDemo: Record<string, number>,
   demoId: string

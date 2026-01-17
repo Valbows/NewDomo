@@ -28,7 +28,6 @@ export function DomoModal({
   cancelText = 'Cancel',
   showCancel = true,
 }: DomoModalProps) {
-  // Handle escape key
   const handleEscape = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
   }, [onClose]);
@@ -49,27 +48,27 @@ export function DomoModal({
   const getIcon = () => {
     switch (type) {
       case 'delete':
-        return <Trash2 className="w-6 h-6 text-red-500" />;
+        return <Trash2 className="w-6 h-6 text-domo-error" />;
       case 'alert':
       case 'confirm':
-        return <AlertTriangle className="w-6 h-6 text-amber-500" />;
+        return <AlertTriangle className="w-6 h-6 text-domo-warning" />;
       case 'success':
-        return <CheckCircle className="w-6 h-6 text-green-500" />;
+        return <CheckCircle className="w-6 h-6 text-domo-success" />;
       case 'info':
-        return <Info className="w-6 h-6 text-blue-500" />;
+        return <Info className="w-6 h-6 text-domo-primary" />;
       default:
-        return <Info className="w-6 h-6 text-indigo-500" />;
+        return <Info className="w-6 h-6 text-domo-primary" />;
     }
   };
 
   const getConfirmButtonStyle = () => {
     switch (type) {
       case 'delete':
-        return 'bg-red-600 hover:bg-red-700 text-white';
+        return 'bg-domo-error hover:bg-domo-error/90 text-white';
       case 'success':
-        return 'bg-green-600 hover:bg-green-700 text-white';
+        return 'bg-domo-success hover:bg-domo-success/90 text-white';
       default:
-        return 'bg-indigo-600 hover:bg-indigo-700 text-white';
+        return 'bg-domo-primary hover:bg-domo-secondary text-white';
     }
   };
 
@@ -95,54 +94,49 @@ export function DomoModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-domo-bg-card border border-domo-border rounded-xl shadow-domo-lg max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center gap-3 p-5 border-b border-gray-100">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+        <div className="flex items-center gap-3 p-5 border-b border-domo-border">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-domo-bg-elevated flex items-center justify-center">
             {getIcon()}
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-lg font-semibold text-white font-heading">{title}</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-domo-bg-elevated transition-colors"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-5 h-5 text-domo-text-muted" />
           </button>
         </div>
 
         {/* Body */}
         <div className="p-5">
-          <p className="text-gray-600">{message}</p>
+          <p className="text-domo-text-secondary">{message}</p>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-5 bg-gray-50 border-t border-gray-100">
+        <div className="flex justify-end gap-3 p-5 bg-domo-bg-dark border-t border-domo-border">
           {showCancel && type !== 'alert' && type !== 'info' && type !== 'success' && (
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2.5 text-sm font-medium text-domo-text-secondary bg-domo-bg-elevated border border-domo-border rounded-lg hover:text-white hover:border-domo-text-muted transition-colors"
             >
               {cancelText}
             </button>
           )}
           <button
             onClick={handleConfirm}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${getConfirmButtonStyle()}`}
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${getConfirmButtonStyle()}`}
           >
             {confirmText || getDefaultConfirmText()}
           </button>
-        </div>
-
-        {/* Domo branding */}
-        <div className="absolute bottom-2 left-5 text-xs text-gray-300">
-          Domo
         </div>
       </div>
     </div>
@@ -186,7 +180,6 @@ export function useDomoModal() {
         onConfirm: () => resolve(true),
         showCancel: true,
       });
-      // If modal is closed without confirming
       const checkClosed = setInterval(() => {
         if (!modalState.isOpen) {
           clearInterval(checkClosed);

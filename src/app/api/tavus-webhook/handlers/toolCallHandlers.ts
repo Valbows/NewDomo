@@ -1,3 +1,21 @@
+/**
+ * ============================================================================
+ * ⚠️  DOMO SCORE DEPENDENCY - DO NOT MODIFY WITHOUT TESTING SCORE ⚠️
+ * ============================================================================
+ *
+ * These handlers write to tables that directly affect Domo Score:
+ *   - handleFetchVideo → video_showcase_data → "Platform Feature Interest" criterion
+ *   - handleShowTrialCTA → cta_tracking → "CTA Execution" criterion
+ *
+ * Before modifying these handlers:
+ *   1. Run existing tests: npm run test:all
+ *   2. After changes, verify Domo Score still calculates correctly
+ *   3. Test with a real Tavus tool call event
+ *
+ * See: src/lib/domo-score/index.ts for centralized Domo Score documentation
+ * ============================================================================
+ */
+
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/errors';
 import { broadcastToDemo } from '../utils/broadcast';

@@ -63,35 +63,35 @@ export default function TestPersonaPage() {
   };
 
   const renderJson = (data: any) => (
-    <pre className="bg-gray-100 p-4 rounded text-xs overflow-auto max-h-96">
+    <pre className="bg-domo-bg-elevated p-4 rounded text-xs overflow-auto max-h-96 text-domo-text-secondary">
       {JSON.stringify(data, null, 2)}
     </pre>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-domo-bg-dark p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Test Persona Configuration</h1>
-        
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Demo Configuration</h2>
+        <h1 className="text-3xl font-bold text-white mb-8">Test Persona Configuration</h1>
+
+        <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6 mb-8">
+          <h2 className="text-xl font-semibold text-white mb-4">Demo Configuration</h2>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-domo-text-secondary mb-2">
                 Demo ID
               </label>
               <input
                 type="text"
                 value={demoId}
                 onChange={(e) => setDemoId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-domo-bg-elevated border border-domo-border rounded-md focus:outline-none focus:ring-2 focus:ring-domo-primary text-white"
                 placeholder="Enter demo ID"
               />
             </div>
             <button
               onClick={testAll}
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+              className="px-6 py-2 bg-domo-primary text-white rounded-md hover:bg-domo-secondary disabled:bg-domo-bg-elevated"
             >
               {loading ? 'Testing...' : 'Test All'}
             </button>
@@ -100,28 +100,28 @@ export default function TestPersonaPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Objectives Test */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Objectives Test</h3>
+              <h3 className="text-lg font-semibold text-white">Objectives Test</h3>
               <button
                 onClick={testObjectives}
                 disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+                className="px-4 py-2 bg-domo-success text-white rounded hover:bg-domo-success/80 disabled:bg-domo-bg-elevated"
               >
                 Test
               </button>
             </div>
-            
+
             {results.objectives && (
               <div className="space-y-4">
-                <div className={`p-3 rounded ${results.objectives.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <div className={`p-3 rounded ${results.objectives.success ? 'bg-domo-success/10 text-domo-success' : 'bg-domo-error/10 text-domo-error'}`}>
                   {results.objectives.success ? '✅ Success' : '❌ Failed'}
                 </div>
-                
+
                 {results.objectives.verification?.integration && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Integration Status:</h4>
-                    <div className="text-sm space-y-1">
+                    <h4 className="font-medium text-white">Integration Status:</h4>
+                    <div className="text-sm space-y-1 text-domo-text-secondary">
                       <div>Demo: {results.objectives.verification.integration.hasDemo ? '✅' : '❌'}</div>
                       <div>Persona: {results.objectives.verification.integration.hasPersona ? '✅' : '❌'}</div>
                       <div>System Prompt: {results.objectives.verification.integration.systemPromptConfigured ? '✅' : '❌'}</div>
@@ -130,9 +130,9 @@ export default function TestPersonaPage() {
                     </div>
                   </div>
                 )}
-                
+
                 <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">Full Response</summary>
+                  <summary className="cursor-pointer font-medium text-domo-text-secondary">Full Response</summary>
                   {renderJson(results.objectives)}
                 </details>
               </div>
@@ -140,37 +140,37 @@ export default function TestPersonaPage() {
           </div>
 
           {/* Config Test */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Config Test</h3>
+              <h3 className="text-lg font-semibold text-white">Config Test</h3>
               <button
                 onClick={testConfig}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+                className="px-4 py-2 bg-domo-primary text-white rounded hover:bg-domo-secondary disabled:bg-domo-bg-elevated"
               >
                 Test
               </button>
             </div>
-            
+
             {results.config && (
               <div className="space-y-4">
-                <div className={`p-3 rounded ${results.config.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <div className={`p-3 rounded ${results.config.success ? 'bg-domo-success/10 text-domo-success' : 'bg-domo-error/10 text-domo-error'}`}>
                   {results.config.success ? '✅ Success' : '❌ Failed'}
                 </div>
-                
+
                 {results.config.analysis && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Analysis:</h4>
-                    <div className="text-sm space-y-1">
+                    <h4 className="font-medium text-white">Analysis:</h4>
+                    <div className="text-sm space-y-1 text-domo-text-secondary">
                       <div>Perception Analysis: {results.config.analysis.perception_analysis_enabled ? '✅ Enabled' : '❌ Disabled'}</div>
                       <div>Default Replica: {results.config.analysis.has_default_replica ? '✅ Set' : '❌ Not Set'}</div>
                       <div>Persona ID: {results.config.analysis.persona_id}</div>
                     </div>
-                    
+
                     {results.config.analysis.recommendations?.length > 0 && (
                       <div className="mt-2">
-                        <h5 className="font-medium text-orange-600">Recommendations:</h5>
-                        <ul className="text-sm text-orange-700 list-disc list-inside">
+                        <h5 className="font-medium text-amber-400">Recommendations:</h5>
+                        <ul className="text-sm text-amber-400/80 list-disc list-inside">
                           {results.config.analysis.recommendations.map((rec: string, i: number) => (
                             <li key={i}>{rec}</li>
                           ))}
@@ -179,9 +179,9 @@ export default function TestPersonaPage() {
                     )}
                   </div>
                 )}
-                
+
                 <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">Full Response</summary>
+                  <summary className="cursor-pointer font-medium text-domo-text-secondary">Full Response</summary>
                   {renderJson(results.config)}
                 </details>
               </div>
@@ -189,28 +189,28 @@ export default function TestPersonaPage() {
           </div>
 
           {/* Info Test */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-domo-bg-card rounded-lg border border-domo-border p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Info Test</h3>
+              <h3 className="text-lg font-semibold text-white">Info Test</h3>
               <button
                 onClick={testInfo}
                 disabled={loading}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400"
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-domo-bg-elevated"
               >
                 Test
               </button>
             </div>
-            
+
             {results.info && (
               <div className="space-y-4">
-                <div className={`p-3 rounded ${results.info.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <div className={`p-3 rounded ${results.info.success ? 'bg-domo-success/10 text-domo-success' : 'bg-domo-error/10 text-domo-error'}`}>
                   {results.info.success ? '✅ Success' : '❌ Failed'}
                 </div>
-                
+
                 {results.info.persona && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Persona Info:</h4>
-                    <div className="text-sm space-y-1">
+                    <h4 className="font-medium text-white">Persona Info:</h4>
+                    <div className="text-sm space-y-1 text-domo-text-secondary">
                       <div>Name: {results.info.persona.name}</div>
                       <div>ID: {results.info.persona.id}</div>
                       <div>Guardrails ID: {results.info.persona.guardrailsId || 'Not set'}</div>
@@ -219,11 +219,11 @@ export default function TestPersonaPage() {
                     </div>
                   </div>
                 )}
-                
+
                 {results.info.integration && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Integration:</h4>
-                    <div className="text-sm space-y-1">
+                    <h4 className="font-medium text-white">Integration:</h4>
+                    <div className="text-sm space-y-1 text-domo-text-secondary">
                       <div>System Prompt: {results.info.integration.systemPrompt ? '✅' : '❌'}</div>
                       <div>Guardrails: {results.info.integration.guardrails ? '✅' : '❌'}</div>
                       <div>Objectives: {results.info.integration.objectives ? '✅' : '❌'}</div>
@@ -231,9 +231,9 @@ export default function TestPersonaPage() {
                     </div>
                   </div>
                 )}
-                
+
                 <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">Full Response</summary>
+                  <summary className="cursor-pointer font-medium text-domo-text-secondary">Full Response</summary>
                   {renderJson(results.info)}
                 </details>
               </div>
@@ -243,24 +243,24 @@ export default function TestPersonaPage() {
 
         {/* Summary */}
         {(results.objectives || results.config || results.info) && (
-          <div className="mt-8 bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Summary</h3>
+          <div className="mt-8 bg-domo-bg-card rounded-lg border border-domo-border p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <h4 className="font-medium mb-2">Objectives Status</h4>
-                <div className={results.objectives?.success ? 'text-green-600' : 'text-red-600'}>
+                <h4 className="font-medium mb-2 text-domo-text-secondary">Objectives Status</h4>
+                <div className={results.objectives?.success ? 'text-domo-success' : 'text-domo-error'}>
                   {results.objectives?.success ? '✅ Configured' : '❌ Issues Found'}
                 </div>
               </div>
               <div>
-                <h4 className="font-medium mb-2">Config Status</h4>
-                <div className={results.config?.success ? 'text-green-600' : 'text-red-600'}>
+                <h4 className="font-medium mb-2 text-domo-text-secondary">Config Status</h4>
+                <div className={results.config?.success ? 'text-domo-success' : 'text-domo-error'}>
                   {results.config?.success ? '✅ Configured' : '❌ Issues Found'}
                 </div>
               </div>
               <div>
-                <h4 className="font-medium mb-2">Info Status</h4>
-                <div className={results.info?.success ? 'text-green-600' : 'text-red-600'}>
+                <h4 className="font-medium mb-2 text-domo-text-secondary">Info Status</h4>
+                <div className={results.info?.success ? 'text-domo-success' : 'text-domo-error'}>
                   {results.info?.success ? '✅ Available' : '❌ Issues Found'}
                 </div>
               </div>

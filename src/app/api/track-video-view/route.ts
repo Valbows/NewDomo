@@ -1,3 +1,20 @@
+/**
+ * ============================================================================
+ * ⚠️  DOMO SCORE DEPENDENCY - DO NOT MODIFY WITHOUT TESTING SCORE ⚠️
+ * ============================================================================
+ *
+ * This API endpoint writes to the `video_showcase_data` table which directly
+ * affects the "Platform Feature Interest" criterion of the Domo Score.
+ *
+ * Before modifying this file:
+ *   1. Run existing tests: npm run test:all
+ *   2. After changes, verify Domo Score still calculates correctly
+ *   3. Test video tracking in a real conversation
+ *
+ * See: src/lib/domo-score/index.ts for centralized Domo Score documentation
+ * ============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 

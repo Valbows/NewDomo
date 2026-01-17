@@ -35,9 +35,15 @@ async function handleGET(
         cta_message,
         cta_button_text,
         cta_button_url,
+        cta_return_url,
         metadata,
         is_embeddable,
-        allowed_domains
+        allowed_domains,
+        demo_videos (
+          id,
+          title,
+          storage_url
+        )
       `)
       .eq('embed_token', token)
       .eq('is_embeddable', true)
@@ -76,17 +82,22 @@ async function handleGET(
       ? JSON.parse(demo.metadata)
       : demo.metadata;
 
+    // Extract video titles for debugging
+    const videoTitles = (demo.demo_videos || []).map((v: { title: string }) => v.title);
+
     // Return minimal config needed for embedding
     const config = {
       demoId: demo.id,
       name: demo.name,
       agentName: metadata?.agentName || 'AI Assistant',
       hasPersona: !!demo.tavus_persona_id,
+      videoTitles,
       cta: {
         title: demo.cta_title || metadata?.ctaTitle,
         message: demo.cta_message || metadata?.ctaMessage,
         buttonText: demo.cta_button_text || metadata?.ctaButtonText,
         buttonUrl: demo.cta_button_url || metadata?.ctaButtonUrl,
+        returnUrl: demo.cta_return_url,
       },
     };
 

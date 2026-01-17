@@ -35,7 +35,7 @@ export const CVIProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           daily.destroy();
         } catch (e) {
-          console.warn('⚠️ CVIProvider: Error destroying Daily instance', e);
+          console.warn('CVIProvider: Error destroying Daily instance', e);
         }
         delete w.__CVI_CALL_OBJECT__;
         delete w.__CVI_CALL_REFCOUNT__;

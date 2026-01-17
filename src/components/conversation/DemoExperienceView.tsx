@@ -48,6 +48,11 @@ export interface DemoExperienceViewProps {
   ctaButtonText?: string;
   ctaButtonUrl?: string;
 
+  // Post-conversation redirect
+  returnUrl?: string; // Customer's website to redirect back to after conversation ends
+  isPopup?: boolean; // Different behavior for popup embeds
+  onClose?: () => void; // For popup - close the modal
+
   // Callbacks
   onConversationEnd: () => void;
   onToolCall: (toolCall: any) => void;
@@ -84,6 +89,9 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       ctaMessage,
       ctaButtonText,
       ctaButtonUrl,
+      returnUrl,
+      isPopup = false,
+      onClose,
       onConversationEnd,
       onToolCall,
       onCTAClick,
@@ -142,9 +150,12 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       async (toolName: string, args: any) => {
         // Handle fetch_video - look up the video by title and play it
         if (toolName === 'fetch_video') {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[DemoExperienceView] fetch_video called', { args, demoId });
+          }
           const videoTitle = args?.title || args?.video_title || args?.video_name;
           if (!videoTitle) {
-            console.warn('❌ fetch_video called without a title');
+            console.warn('fetch_video called without a title');
             return;
           }
 
@@ -170,40 +181,62 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               .single();
 
             if (exactResult.error || !exactResult.data) {
-              console.warn(`❌ Video not found: "${normalizedTitle}"`, videoError);
+              console.warn(`Video not found: "${normalizedTitle}" for demoId: ${demoId}`, videoError);
+              // List available videos for debugging
+              if (process.env.NODE_ENV !== 'production') {
+                const { data: allVideos } = await supabase
+                  .from('demo_videos')
+                  .select('title')
+                  .eq('demo_id', demoId);
+                console.log('[DemoExperienceView] Available videos for this demo:', allVideos?.map(v => v.title));
+              }
               return;
             }
             videoData = exactResult.data;
           }
 
-          // Get signed URL for the video
-          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-            .from('demo-videos')
-            .createSignedUrl(videoData.storage_url, 3600);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[DemoExperienceView] Video found:', { title: videoData.title, id: videoData.id });
+          }
 
-          if (signedUrlError || !signedUrlData) {
-            console.error('Failed to create signed URL:', signedUrlError);
-            return;
+          // Determine the final video URL
+          let finalVideoUrl: string;
+          const storagePath = videoData.storage_url;
+
+          // If storage_url is already a full URL, use it directly
+          if (/^https?:\/\//i.test(storagePath)) {
+            finalVideoUrl = storagePath;
+          } else {
+            // Get signed URL for storage path
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+              .from('demo-videos')
+              .createSignedUrl(storagePath, 3600);
+
+            if (signedUrlError || !signedUrlData) {
+              console.error('Failed to create signed URL:', signedUrlError);
+              return;
+            }
+            finalVideoUrl = signedUrlData.signedUrl;
           }
 
           // Set up video context tracking
           const videoMetadata: CurrentVideoMetadata = {
             title: videoData.title,
-            url: signedUrlData.signedUrl,
+            url: finalVideoUrl,
             demoVideoId: videoData.id,
           };
 
           currentVideoRef.current = videoMetadata;
           lastSentContextRef.current = ''; // Reset last sent context for new video
 
-          setPlayingVideoUrl(signedUrlData.signedUrl);
+          setPlayingVideoUrl(finalVideoUrl);
           setUiState(UIState.VIDEO_PLAYING);
           setShowCTA(false);
 
           // Track video played
           analytics.videoPlayed({
             demoId,
-            videoUrl: signedUrlData.signedUrl,
+            videoUrl: finalVideoUrl,
             videoTitle: videoData.title,
           });
 
@@ -463,7 +496,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     // Initial loading state (fetching config)
     if (loading && !joiningCall) {
       return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center">
           <div className="text-white text-lg">Loading demo...</div>
         </div>
       );
@@ -495,12 +528,18 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     return (
       <CVIProvider>
         <style dangerouslySetInnerHTML={{ __html: pipStyles }} />
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-domo-bg-dark flex flex-col">
           {/* Main Content */}
           <main className="flex-1 relative">
             {/* Conversation Ended State */}
             {conversationEnded ? (
-              <ConversationEndedScreen onRestart={onRestart ? handleRestartConversation : undefined} />
+              <ConversationEndedScreen
+                ctaUrl={ctaButtonUrl}
+                ctaButtonText={ctaButtonText || 'Learn More'}
+                returnUrl={returnUrl}
+                isPopup={isPopup}
+                onClose={onClose}
+              />
             ) : (
               /* Conversation View */
               <div
@@ -512,8 +551,8 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                     : 'w-full h-full flex items-center justify-center p-4'
                 } transition-all duration-300`}
               >
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full h-full flex flex-col">
-                  <div className="p-2 bg-indigo-600 text-white flex justify-between items-center flex-shrink-0">
+                <div className="bg-domo-bg-card border border-domo-border rounded-xl shadow-lg overflow-hidden w-full h-full flex flex-col">
+                  <div className="p-2 bg-domo-primary text-white flex justify-between items-center flex-shrink-0">
                     <div>
                       <h2
                         className={`font-semibold ${
@@ -523,7 +562,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                         AI Demo Assistant
                       </h2>
                       {uiState !== UIState.VIDEO_PLAYING && (
-                        <p className="text-indigo-100 text-sm">
+                        <p className="text-white/80 text-sm">
                           Ask questions and request to see specific features
                         </p>
                       )}
@@ -535,7 +574,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                           setPlayingVideoUrl(null);
                           setUiState(UIState.CONVERSATION);
                         }}
-                        className="text-white hover:text-indigo-200 p-1"
+                        className="text-white hover:text-white/80 p-1"
                         title="Expand conversation"
                       >
                         <svg
@@ -555,7 +594,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                     )}
                   </div>
                   <div
-                    className="relative bg-gray-900 flex-1"
+                    className="relative bg-domo-bg-dark flex-1"
                     style={{
                       height: uiState === UIState.VIDEO_PLAYING ? '250px' : '75vh',
                       minHeight: '400px',
@@ -586,12 +625,12 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                 className="absolute inset-0 bg-black flex flex-col z-30"
                 data-testid="video-overlay"
               >
-                <div className="flex-shrink-0 bg-gray-800 text-white p-4 flex justify-between items-center">
+                <div className="flex-shrink-0 bg-domo-bg-elevated text-white p-4 flex justify-between items-center border-b border-domo-border">
                   <h2 className="text-lg font-semibold">Demo Video</h2>
                   <button
                     data-testid="button-close-video"
                     onClick={handleVideoClose}
-                    className="text-white hover:text-gray-300 p-2"
+                    className="text-domo-text-secondary hover:text-white p-2 transition-colors"
                     title="Close video"
                   >
                     <svg
@@ -609,7 +648,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                     </svg>
                   </button>
                 </div>
-                <div className="flex-1 p-4">
+                <div className="flex-1 p-4 bg-domo-bg-dark">
                   <div className="w-full h-full max-w-6xl mx-auto">
                     <InlineVideoPlayer
                       ref={videoPlayerRef}

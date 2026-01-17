@@ -43,10 +43,10 @@ export function ConversationListItem({
   );
 
   const getScoreColor = (score: number) => {
-    if (score >= 4) return "bg-green-100 text-green-800";
-    if (score >= 3) return "bg-blue-100 text-blue-800";
-    if (score >= 2) return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
+    if (score >= 4) return "bg-domo-success/10 text-domo-success border border-domo-success/20";
+    if (score >= 3) return "bg-domo-primary/10 text-domo-primary border border-domo-primary/20";
+    if (score >= 2) return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+    return "bg-domo-error/10 text-domo-error border border-domo-error/20";
   };
 
   return (
@@ -54,50 +54,50 @@ export function ConversationListItem({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div>
-            <h4 className="font-medium text-gray-900">{conversation.conversation_name}</h4>
-            <div className="text-sm text-gray-500">
+            <h4 className="font-medium text-white">{conversation.conversation_name}</h4>
+            <div className="text-sm text-domo-text-muted">
               ID: {conversation.tavus_conversation_id}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div
               className={`px-2 py-1 text-xs font-medium rounded-full ${
                 conversation.status === "completed"
-                  ? "bg-green-100 text-green-800"
+                  ? "bg-domo-success/10 text-domo-success border border-domo-success/20"
                   : conversation.status === "active"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-gray-100 text-gray-800"
+                  ? "bg-domo-primary/10 text-domo-primary border border-domo-primary/20"
+                  : "bg-domo-bg-elevated text-domo-text-secondary border border-domo-border"
               }`}
             >
               {conversation.status}
             </div>
             {breakdown.contactConfirmation && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-domo-primary/10 text-domo-primary border border-domo-primary/20">
                 👤 Contact Info
               </div>
             )}
             {breakdown.reasonForVisit && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-domo-success/10 text-domo-success border border-domo-success/20">
                 🎯 Interest Data
               </div>
             )}
             {breakdown.platformFeatureInterest && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
                 🎬 Video Data
               </div>
             )}
             {breakdown.perceptionAnalysis && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-domo-secondary/10 text-domo-secondary border border-domo-secondary/20">
                 🧠 Visual Analysis
               </div>
             )}
             {breakdown.ctaExecution && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-domo-success/10 text-domo-success border border-domo-success/20">
                 🎯 CTA Clicked
               </div>
             )}
             {!breakdown.ctaExecution && ctaTracking?.cta_shown_at && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+              <div className="px-2 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 🎯 CTA Shown
               </div>
             )}
@@ -106,7 +106,7 @@ export function ConversationListItem({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-sm text-gray-500">
+        <div className="flex items-center gap-4 text-sm text-domo-text-secondary">
           {conversation.duration_seconds && (
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
@@ -121,7 +121,7 @@ export function ConversationListItem({
           )}
           <button
             onClick={onToggleExpand}
-            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800"
+            className="flex items-center gap-1 text-domo-primary hover:text-domo-secondary transition-colors"
           >
             {isExpanded ? (
               <>
@@ -155,7 +155,7 @@ export function ConversationListItem({
             {/* Perception Analysis */}
             {conversation.perception_analysis && (
               <div>
-                <h5 className="font-medium text-gray-900 mb-3">Perception Analysis</h5>
+                <h5 className="font-medium text-white mb-3">Perception Analysis</h5>
                 {renderPerceptionAnalysis(conversation.perception_analysis)}
               </div>
             )}
@@ -163,14 +163,14 @@ export function ConversationListItem({
             {/* Transcript */}
             {conversation.transcript && (
               <div>
-                <h5 className="font-medium text-gray-900 mb-3">Conversation Transcript</h5>
+                <h5 className="font-medium text-white mb-3">Conversation Transcript</h5>
                 {renderTranscript(conversation.transcript)}
               </div>
             )}
 
             {!conversation.perception_analysis && !conversation.transcript && (
-              <div className="text-sm text-gray-500 bg-gray-50 rounded p-4">
-                No detailed data available for this conversation. Try syncing again later.
+              <div className="text-sm text-domo-text-muted bg-domo-bg-elevated rounded-lg p-4 border border-domo-border">
+                No detailed data available for this conversation. Click "Fetch Missing Analysis" above to retrieve it.
               </div>
             )}
           </div>

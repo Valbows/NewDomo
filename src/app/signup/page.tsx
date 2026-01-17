@@ -33,89 +33,128 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-domo-bg-dark flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Create a new account</h2>
+        <img
+          src="/domo-logo.png"
+          alt="Domo"
+          className="mx-auto h-32"
+        />
+        <h2 className="mt-8 text-center text-3xl font-bold text-white font-heading">
+          Create your account
+        </h2>
+        <p className="mt-2 text-center text-domo-text-secondary">
+          Start building AI-powered demos today
+        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-domo-bg-card border border-domo-border py-8 px-6 shadow-domo rounded-xl">
           {success ? (
             <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900">Registration successful!</h3>
-              <p className="mt-2 text-sm text-gray-600">Please check your email to confirm your account.</p>
-              <div className="mt-4">
-                <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-                  Return to Sign In
-                </Link>
+              <div className="w-16 h-16 bg-domo-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-domo-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Registration successful!</h3>
+              <p className="text-domo-text-secondary mb-6">
+                Please check your email to confirm your account.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-6 py-3 bg-domo-primary hover:bg-domo-secondary text-white font-semibold rounded-lg transition-colors"
+              >
+                Return to Sign In
+              </Link>
             </div>
           ) : (
             <form className="space-y-6" onSubmit={handleSignup}>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
                   Email address
                 </label>
-                <div className="mt-1">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary transition-colors"
+                  placeholder="you@example.com"
+                />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
                   Password
                 </label>
-                <div className="mt-1">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary transition-colors"
+                  placeholder="Create a strong password"
+                />
+                <p className="mt-2 text-xs text-domo-text-muted">
+                  Must be at least 8 characters
+                </p>
               </div>
 
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && (
+                <div className="bg-domo-error/10 border border-domo-error/20 rounded-lg p-3">
+                  <p className="text-domo-error text-sm">{error}</p>
+                </div>
+              )}
 
               <div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                  className="w-full flex justify-center py-3 px-4 rounded-lg text-white font-semibold bg-domo-primary hover:bg-domo-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-domo-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? 'Creating account...' : 'Sign up'}
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Creating account...
+                    </span>
+                  ) : (
+                    'Create account'
+                  )}
                 </button>
               </div>
             </form>
           )}
-           <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Already have an account?</span>
-              </div>
-            </div>
+
+          {!success && (
             <div className="mt-6">
-                <Link href="/login" className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    Sign in
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-domo-border"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-domo-bg-card text-domo-text-muted">Already have an account?</span>
+                </div>
+              </div>
+              <div className="mt-6">
+                <Link
+                  href="/login"
+                  className="w-full flex justify-center py-3 px-4 border border-domo-border rounded-lg text-domo-text-secondary hover:text-white hover:border-domo-primary transition-colors"
+                >
+                  Sign in instead
                 </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

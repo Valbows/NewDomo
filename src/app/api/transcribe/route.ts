@@ -56,7 +56,9 @@ async function handlePOST(req: NextRequest) {
     });
 
     if (!transcriptionResponse || !transcriptionResponse.text) {
-        throw new Error('Failed to transcribe audio with ElevenLabs.');
+        throw new Error(process.env.NODE_ENV !== 'production'
+          ? 'Failed to transcribe audio with ElevenLabs.'
+          : 'Failed to transcribe audio.');
     }
 
     const transcript = transcriptionResponse.text;
@@ -133,14 +135,36 @@ async function handlePOST(req: NextRequest) {
 
   } catch (error: unknown) {
     logError(error, 'Transcription Error');
-    const message = getErrorMessage(error);
+    const rawMessage = getErrorMessage(error);
+
+    // Sanitize error message for production - don't expose third-party service details
+    let userMessage: string;
+    if (process.env.NODE_ENV !== 'production') {
+      // In development, show full error for debugging
+      userMessage = rawMessage;
+    } else {
+      // In production, show generic error messages
+      const lowerMessage = rawMessage.toLowerCase();
+      if (lowerMessage.includes('401') || lowerMessage.includes('unauthorized') || lowerMessage.includes('api key')) {
+        userMessage = 'Transcription service authentication failed. Please contact support.';
+      } else if (lowerMessage.includes('429') || lowerMessage.includes('rate limit') || lowerMessage.includes('quota')) {
+        userMessage = 'Transcription service is temporarily unavailable. Please try again later.';
+      } else if (lowerMessage.includes('unusual activity') || lowerMessage.includes('abuse') || lowerMessage.includes('free tier')) {
+        userMessage = 'Transcription service is temporarily unavailable. Please try again later.';
+      } else if (lowerMessage.includes('timeout') || lowerMessage.includes('network')) {
+        userMessage = 'Transcription service connection failed. Please try again.';
+      } else {
+        userMessage = 'Failed to transcribe audio. Please try again or contact support.';
+      }
+    }
+
     if (demo_video_id) {
       await supabase
         .from('demo_videos')
-        .update({ processing_status: 'failed', processing_error: message })
+        .update({ processing_status: 'failed', processing_error: userMessage })
         .eq('id', demo_video_id);
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }
 

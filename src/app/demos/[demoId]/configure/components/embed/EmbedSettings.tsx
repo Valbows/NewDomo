@@ -134,7 +134,7 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
 
   if (!demo) {
     return (
-      <div className="p-6 text-gray-500">
+      <div className="p-6 text-domo-text-muted">
         Loading demo settings...
       </div>
     );
@@ -144,27 +144,27 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Embed Settings</h2>
-        <p className="text-gray-600 mt-1">
+        <h2 className="text-xl font-semibold text-white font-heading">Embed Settings</h2>
+        <p className="text-domo-text-secondary mt-1">
           Allow external websites to embed your demo using an iFrame.
         </p>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-100 border border-red-300 text-red-700 rounded-md">
+        <div className="p-4 bg-domo-error/10 border border-domo-error/20 text-domo-error rounded-xl">
           {error}
         </div>
       )}
 
       {/* Enable Embedding Toggle */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-domo-bg-card border border-domo-border rounded-xl p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Globe className="w-5 h-5 text-gray-500" />
+            <Globe className="w-5 h-5 text-domo-text-muted" />
             <div>
-              <h3 className="font-medium text-gray-900">Enable Embedding</h3>
-              <p className="text-sm text-gray-500">
+              <h3 className="font-medium text-white">Enable Embedding</h3>
+              <p className="text-sm text-domo-text-secondary">
                 Allow this demo to be embedded on external websites
               </p>
             </div>
@@ -172,8 +172,8 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
           <button
             onClick={handleToggleEmbedding}
             disabled={saving}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-              demo.is_embeddable ? 'bg-indigo-600' : 'bg-gray-200'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-domo-primary focus:ring-offset-2 focus:ring-offset-domo-bg-dark ${
+              demo.is_embeddable ? 'bg-domo-primary' : 'bg-domo-bg-elevated'
             }`}
           >
             <span
@@ -186,8 +186,8 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
 
         {/* Prerequisites Check */}
         {demo.is_embeddable && !demo.tavus_persona_id && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">
+          <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <p className="text-sm text-amber-400">
               <strong>Note:</strong> This demo doesn't have an AI agent configured yet.
               The embed will show an error until you configure the agent in the Agent Settings tab.
             </p>
@@ -198,16 +198,16 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
       {/* Embed URL and Token */}
       {demo.is_embeddable && (
         <>
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-domo-bg-card border border-domo-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <ExternalLink className="w-5 h-5 text-gray-500" />
-                <h3 className="font-medium text-gray-900">Embed URL</h3>
+                <ExternalLink className="w-5 h-5 text-domo-text-muted" />
+                <h3 className="font-medium text-white">Embed URL</h3>
               </div>
               <button
                 onClick={handleRegenerateClick}
                 disabled={regenerating}
-                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                className="text-sm text-domo-text-secondary hover:text-white flex items-center gap-1 transition-colors"
               >
                 <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
                 Regenerate Token
@@ -219,17 +219,17 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
                 type="text"
                 readOnly
                 value={embedUrl || ''}
-                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-mono"
+                className="flex-1 px-3 py-2.5 bg-domo-bg-dark border border-domo-border rounded-lg text-sm font-mono text-domo-text-secondary"
               />
               <button
                 onClick={() => handleCopy('token')}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                className="px-3 py-2.5 bg-domo-bg-elevated hover:bg-domo-bg-elevated/80 rounded-lg transition-colors"
                 title="Copy URL"
               >
                 {copied === 'token' ? (
-                  <Check className="w-5 h-5 text-green-600" />
+                  <Check className="w-5 h-5 text-domo-success" />
                 ) : (
-                  <Copy className="w-5 h-5 text-gray-600" />
+                  <Copy className="w-5 h-5 text-domo-text-secondary" />
                 )}
               </button>
               {embedUrl && (
@@ -237,190 +237,33 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
                   href={embedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  className="px-3 py-2.5 bg-domo-bg-elevated hover:bg-domo-bg-elevated/80 rounded-lg transition-colors"
                   title="Preview embed"
                 >
-                  <ExternalLink className="w-5 h-5 text-gray-600" />
+                  <ExternalLink className="w-5 h-5 text-domo-text-secondary" />
                 </a>
               )}
             </div>
 
-            <p className="mt-3 text-xs text-gray-500">
+            <p className="mt-3 text-xs text-domo-text-muted">
               Share this URL directly or use the embed code below to add to your website.
             </p>
           </div>
 
-          {/* Option 1: iFrame Embed */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          {/* Option 1: Popup Button */}
+          <div className="bg-domo-bg-card border border-domo-border rounded-xl overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 border-b border-domo-border">
               <div className="flex items-center gap-3">
-                <Code2 className="w-5 h-5 text-gray-500" />
+                <MousePointer className="w-5 h-5 text-domo-text-muted" />
                 <div>
-                  <h3 className="font-medium text-gray-900">Option 1: iFrame Embed</h3>
-                  <p className="text-xs text-gray-500">Embed demo directly on a dedicated page</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleCopy('iframe')}
-                className="flex items-center gap-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-colors"
-              >
-                {copied === 'iframe' ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copy Code
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Size Selection */}
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <p className="text-xs text-gray-600 mb-3 font-medium">Select Size:</p>
-              <div className="grid grid-cols-4 gap-2">
-                {(Object.keys(IFRAME_SIZES) as IframeSizeKey[]).map((sizeKey) => {
-                  const size = IFRAME_SIZES[sizeKey];
-                  const isSelected = selectedSize === sizeKey;
-                  // Calculate preview dimensions (scaled down proportionally)
-                  const previewWidth = sizeKey === 'responsive' ? 60 : Math.round(parseInt(size.width) / 16);
-                  const previewHeight = Math.round(parseInt(size.height) / 16);
-
-                  return (
-                    <button
-                      key={sizeKey}
-                      onClick={() => setSelectedSize(sizeKey)}
-                      className={`p-3 rounded-lg border-2 transition-all text-left ${
-                        isSelected
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      {/* Visual size representation */}
-                      <div className="flex justify-center mb-2">
-                        <div
-                          className={`border-2 border-dashed rounded ${
-                            isSelected ? 'border-indigo-400 bg-indigo-100' : 'border-gray-300 bg-gray-100'
-                          }`}
-                          style={{
-                            width: `${previewWidth}px`,
-                            height: `${previewHeight}px`,
-                            minWidth: '35px',
-                            minHeight: '20px'
-                          }}
-                        />
-                      </div>
-                      <p className={`text-xs font-medium ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>
-                        {size.label}
-                      </p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">{size.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Visual Preview */}
-            <div className="p-4 bg-gray-100">
-              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                <Monitor className="w-3 h-3" />
-                Preview: How it looks on your website
-              </p>
-              {/* Mini Website Frame - Domo Homepage Style */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-300 max-w-xl mx-auto">
-                {/* Mini Browser Chrome */}
-                <div className="bg-gray-200 px-3 py-2 flex items-center gap-2 border-b border-gray-300">
-                  <div className="flex gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
-                  </div>
-                  <div className="flex-1 bg-white rounded px-2 py-0.5 text-[10px] text-gray-500 font-mono">
-                    domo.ai/demo
-                  </div>
-                </div>
-                {/* Domo Homepage Style */}
-                <div className="bg-[#1a1a2e]">
-                  {/* Domo navbar */}
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50">
-                    <span className="text-[11px] font-bold text-white tracking-wide">DOMO</span>
-                    <div className="flex gap-3 items-center">
-                      <span className="text-[8px] text-gray-400">Features</span>
-                      <span className="text-[8px] text-gray-400">Pricing</span>
-                      <span className="text-[8px] text-gray-400">About</span>
-                    </div>
-                  </div>
-                  {/* Hero section */}
-                  <div className="px-4 pt-5 pb-3 text-center">
-                    <h2 className="text-sm font-bold text-white leading-tight">
-                      Create AI-Powered Product Demos in Minutes
-                    </h2>
-                    <p className="text-[9px] text-gray-400 mt-1.5">
-                      Interactive video demos that answer questions in real-time.
-                    </p>
-                  </div>
-                  {/* iFrame embed area */}
-                  <div className="px-4 pb-5">
-                    <div
-                      className={`bg-[#0f0f1a] rounded-lg border-2 border-dashed border-indigo-500 flex items-center justify-center mx-auto transition-all ${
-                        selectedSize === 'responsive' ? 'w-full' : ''
-                      }`}
-                      style={{
-                        width: selectedSize === 'responsive' ? '100%' : `${Math.min(parseInt(currentSize.width) / 3.5, 260)}px`,
-                        height: `${Math.min(parseInt(currentSize.height) / 3.5, 160)}px`,
-                      }}
-                    >
-                      <div className="text-center">
-                        <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                          <div className="w-3 h-3 border-2 border-white rounded-full"></div>
-                        </div>
-                        <p className="text-[11px] text-indigo-400 font-medium">Your Demo Embedded Here</p>
-                        <p className="text-[9px] text-gray-500 mt-1">{currentSize.width} × {currentSize.height}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Features section */}
-                  <div className="px-4 pb-4 text-center">
-                    <p className="text-[9px] text-[#4ade80] uppercase tracking-wider font-medium">Core Features</p>
-                    <div className="flex justify-center gap-6 mt-1.5">
-                      <span className="text-[8px] text-gray-400">AI Demos</span>
-                      <span className="text-[8px] text-gray-400">Real-Time Q&A</span>
-                      <span className="text-[8px] text-gray-400">Analytics</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Code */}
-            <div className="p-4 border-t border-gray-200">
-              <pre className="p-3 bg-gray-900 text-gray-100 rounded-md text-xs overflow-x-auto">
-                <code>{iframeCode}</code>
-              </pre>
-              <p className="mt-2 text-xs text-gray-500">
-                Best for: Dedicated demo pages, product tours, documentation sites
-              </p>
-            </div>
-          </div>
-
-          {/* Option 2: Popup Button */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <MousePointer className="w-5 h-5 text-gray-500" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Option 2: Popup Button</h3>
-                  <p className="text-xs text-gray-500">Opens demo in a modal overlay</p>
+                  <h3 className="font-medium text-white">Option 1: Popup Button</h3>
+                  <p className="text-xs text-domo-text-muted">Opens demo in a modal overlay</p>
                 </div>
               </div>
               <button
                 onClick={() => handleCopy('popup')}
-                className="flex items-center gap-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-colors"
+                className="flex items-center gap-1 text-sm bg-domo-primary hover:bg-domo-secondary text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 {copied === 'popup' ? (
                   <>
@@ -437,33 +280,33 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
             </div>
 
             {/* Visual Preview */}
-            <div className="p-4 bg-gray-100">
-              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+            <div className="p-4 bg-domo-bg-dark">
+              <p className="text-xs text-domo-text-muted mb-2 flex items-center gap-1">
                 <Monitor className="w-3 h-3" />
                 Preview: How it looks on your website
               </p>
               {/* Mini Website Frame - Domo Homepage Style */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-300 relative max-w-xl mx-auto">
+              <div className="bg-domo-bg-card rounded-lg shadow-md overflow-hidden border border-domo-border relative max-w-xl mx-auto">
                 {/* Mini Browser Chrome */}
-                <div className="bg-gray-200 px-3 py-2 flex items-center gap-2 border-b border-gray-300">
+                <div className="bg-domo-bg-elevated px-3 py-2 flex items-center gap-2 border-b border-domo-border">
                   <div className="flex gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-domo-error"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-domo-success"></div>
                   </div>
-                  <div className="flex-1 bg-white rounded px-2 py-0.5 text-[10px] text-gray-500 font-mono">
+                  <div className="flex-1 bg-domo-bg-dark rounded px-2 py-0.5 text-[10px] text-domo-text-muted font-mono">
                     domo.ai
                   </div>
                 </div>
                 {/* Domo Homepage Style */}
-                <div className="bg-[#1a1a2e] h-52">
+                <div className="bg-domo-bg-dark h-72">
                   {/* Domo navbar */}
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-domo-border/50">
                     <span className="text-[11px] font-bold text-white tracking-wide">DOMO</span>
                     <div className="flex gap-3 items-center">
-                      <span className="text-[8px] text-gray-400">Features</span>
-                      <span className="text-[8px] text-gray-400">Pricing</span>
-                      <span className="text-[8px] text-gray-400">About</span>
+                      <span className="text-[8px] text-domo-text-muted">Features</span>
+                      <span className="text-[8px] text-domo-text-muted">Pricing</span>
+                      <span className="text-[8px] text-domo-text-muted">About</span>
                     </div>
                   </div>
                   {/* Hero section */}
@@ -471,37 +314,37 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
                     <h2 className="text-sm font-bold text-white leading-tight">
                       Create AI-Powered Product Demos in Minutes
                     </h2>
-                    <p className="text-[9px] text-gray-400 mt-1.5">
+                    <p className="text-[9px] text-domo-text-muted mt-1.5">
                       Interactive video demos that answer questions in real-time
                     </p>
                     {/* CTA Button */}
                     <div className="mt-4">
-                      <span className="inline-block bg-[#4ade80] text-white text-[9px] px-5 py-2 rounded-lg font-medium shadow-lg shadow-green-500/30">
+                      <span className="inline-block bg-domo-success text-white text-[9px] px-5 py-2 rounded-lg font-medium shadow-lg shadow-domo-success/30">
                         Book a Demo
                       </span>
                     </div>
                   </div>
                   {/* Features hint */}
                   <div className="text-center mt-4">
-                    <p className="text-[8px] text-[#4ade80] uppercase tracking-wider">Core Features</p>
+                    <p className="text-[8px] text-domo-success uppercase tracking-wider">Core Features</p>
                   </div>
                 </div>
 
                 {/* Popup Overlay Preview */}
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center" style={{ top: '28px' }}>
-                  <div className="bg-[#1a1a2e] rounded-lg shadow-2xl w-4/5 h-36 border border-gray-600 relative">
+                  <div className="bg-domo-bg-card rounded-lg shadow-2xl w-4/5 h-48 border border-domo-border relative">
                     {/* Close button */}
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-white/10 rounded-full flex items-center justify-center border border-gray-500">
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-domo-bg-elevated rounded-full flex items-center justify-center border border-domo-border">
                       <span className="text-xs text-white">×</span>
                     </div>
                     {/* Demo content */}
                     <div className="h-full flex items-center justify-center">
                       <div className="text-center">
-                        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-domo-primary to-purple-600 flex items-center justify-center">
                           <div className="w-4 h-4 border-2 border-white rounded-full"></div>
                         </div>
                         <p className="text-[11px] text-white font-medium">Your Demo Popup</p>
-                        <p className="text-[8px] text-gray-400 mt-1">Opens when clicking "Book a Demo"</p>
+                        <p className="text-[8px] text-domo-text-muted mt-1">Opens when clicking "Book a Demo"</p>
                       </div>
                     </div>
                   </div>
@@ -510,20 +353,177 @@ export function EmbedSettings({ demo, onDemoUpdate }: EmbedSettingsProps) {
             </div>
 
             {/* Code */}
-            <div className="p-4 border-t border-gray-200">
-              <pre className="p-3 bg-gray-900 text-gray-100 rounded-md text-xs overflow-x-auto whitespace-pre-wrap">
+            <div className="p-4 border-t border-domo-border">
+              <pre className="p-3 bg-domo-bg-dark text-domo-text-secondary rounded-lg text-xs overflow-x-auto whitespace-pre-wrap border border-domo-border">
                 <code>{popupCode}</code>
               </pre>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-domo-text-muted">
                 Best for: Homepage CTAs, navigation buttons, marketing pages
               </p>
             </div>
           </div>
 
+          {/* Option 2: iFrame Embed */}
+          <div className="bg-domo-bg-card border border-domo-border rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-domo-border">
+              <div className="flex items-center gap-3">
+                <Code2 className="w-5 h-5 text-domo-text-muted" />
+                <div>
+                  <h3 className="font-medium text-white">Option 2: iFrame Embed</h3>
+                  <p className="text-xs text-domo-text-muted">Embed demo directly on a dedicated page</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleCopy('iframe')}
+                className="flex items-center gap-1 text-sm bg-domo-primary hover:bg-domo-secondary text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {copied === 'iframe' ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy Code
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Size Selection */}
+            <div className="p-4 border-b border-domo-border bg-domo-bg-elevated">
+              <p className="text-xs text-domo-text-secondary mb-3 font-medium">Select Size:</p>
+              <div className="grid grid-cols-4 gap-2">
+                {(Object.keys(IFRAME_SIZES) as IframeSizeKey[]).map((sizeKey) => {
+                  const size = IFRAME_SIZES[sizeKey];
+                  const isSelected = selectedSize === sizeKey;
+                  // Calculate preview dimensions (scaled down proportionally) - more distinct sizes
+                  const previewWidth = sizeKey === 'responsive' ? 70 : Math.round(parseInt(size.width) / 12);
+                  const previewHeight = Math.round(parseInt(size.height) / 12);
+
+                  return (
+                    <button
+                      key={sizeKey}
+                      onClick={() => setSelectedSize(sizeKey)}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        isSelected
+                          ? 'border-domo-primary bg-domo-primary/10'
+                          : 'border-domo-border bg-domo-bg-dark hover:border-domo-border/80'
+                      }`}
+                    >
+                      {/* Visual size representation */}
+                      <div className="flex justify-center mb-2">
+                        <div
+                          className={`border-2 border-dashed rounded ${
+                            isSelected ? 'border-domo-primary bg-domo-primary/20' : 'border-domo-border bg-domo-bg-elevated'
+                          }`}
+                          style={{
+                            width: `${previewWidth}px`,
+                            height: `${previewHeight}px`,
+                            minWidth: '35px',
+                            minHeight: '20px'
+                          }}
+                        />
+                      </div>
+                      <p className={`text-xs font-medium ${isSelected ? 'text-domo-primary' : 'text-domo-text-secondary'}`}>
+                        {size.label}
+                      </p>
+                      <p className="text-[10px] text-domo-text-muted mt-0.5">{size.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Visual Preview */}
+            <div className="p-4 bg-domo-bg-dark">
+              <p className="text-xs text-domo-text-muted mb-2 flex items-center gap-1">
+                <Monitor className="w-3 h-3" />
+                Preview: How it looks on your website
+              </p>
+              {/* Mini Website Frame - Domo Homepage Style */}
+              <div className="bg-domo-bg-card rounded-lg shadow-md overflow-hidden border border-domo-border max-w-xl mx-auto">
+                {/* Mini Browser Chrome */}
+                <div className="bg-domo-bg-elevated px-3 py-2 flex items-center gap-2 border-b border-domo-border">
+                  <div className="flex gap-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-domo-error"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-domo-success"></div>
+                  </div>
+                  <div className="flex-1 bg-domo-bg-dark rounded px-2 py-0.5 text-[10px] text-domo-text-muted font-mono">
+                    domo.ai/demo
+                  </div>
+                </div>
+                {/* Domo Homepage Style */}
+                <div className="bg-domo-bg-dark">
+                  {/* Domo navbar */}
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-domo-border/50">
+                    <span className="text-[11px] font-bold text-white tracking-wide">DOMO</span>
+                    <div className="flex gap-3 items-center">
+                      <span className="text-[8px] text-domo-text-muted">Features</span>
+                      <span className="text-[8px] text-domo-text-muted">Pricing</span>
+                      <span className="text-[8px] text-domo-text-muted">About</span>
+                    </div>
+                  </div>
+                  {/* Hero section */}
+                  <div className="px-4 pt-5 pb-3 text-center">
+                    <h2 className="text-sm font-bold text-white leading-tight">
+                      Create AI-Powered Product Demos in Minutes
+                    </h2>
+                    <p className="text-[9px] text-domo-text-muted mt-1.5">
+                      Interactive video demos that answer questions in real-time.
+                    </p>
+                  </div>
+                  {/* iFrame embed area */}
+                  <div className="px-4 pb-5">
+                    <div
+                      className={`bg-domo-bg-card rounded-lg border-2 border-dashed border-domo-primary flex items-center justify-center mx-auto transition-all ${
+                        selectedSize === 'responsive' ? 'w-full' : ''
+                      }`}
+                      style={{
+                        width: selectedSize === 'responsive' ? '100%' : `${Math.min(parseInt(currentSize.width) / 2.8, 340)}px`,
+                        height: `${Math.min(parseInt(currentSize.height) / 2.8, 200)}px`,
+                      }}
+                    >
+                      <div className="text-center">
+                        <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br from-domo-primary to-purple-600 flex items-center justify-center">
+                          <div className="w-3 h-3 border-2 border-white rounded-full"></div>
+                        </div>
+                        <p className="text-[11px] text-domo-primary font-medium">Your Demo Embedded Here</p>
+                        <p className="text-[9px] text-domo-text-muted mt-1">{currentSize.width} × {currentSize.height}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Features section */}
+                  <div className="px-4 pb-4 text-center">
+                    <p className="text-[9px] text-domo-success uppercase tracking-wider font-medium">Core Features</p>
+                    <div className="flex justify-center gap-6 mt-1.5">
+                      <span className="text-[8px] text-domo-text-muted">AI Demos</span>
+                      <span className="text-[8px] text-domo-text-muted">Real-Time Q&A</span>
+                      <span className="text-[8px] text-domo-text-muted">Analytics</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Code */}
+            <div className="p-4 border-t border-domo-border">
+              <pre className="p-3 bg-domo-bg-dark text-domo-text-secondary rounded-lg text-xs overflow-x-auto border border-domo-border">
+                <code>{iframeCode}</code>
+              </pre>
+              <p className="mt-2 text-xs text-domo-text-muted">
+                Best for: Dedicated demo pages, product tours, documentation sites
+              </p>
+            </div>
+          </div>
+
           {/* Security Notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Security Information</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
+          <div className="bg-domo-primary/10 border border-domo-primary/20 rounded-xl p-4">
+            <h4 className="font-medium text-white mb-2">Security Information</h4>
+            <ul className="text-sm text-domo-text-secondary space-y-1">
               <li>• The embed token is unique and cannot be guessed</li>
               <li>• Only demos with embedding enabled can be accessed via the embed URL</li>
               <li>• Regenerating the token will invalidate all existing embeds</li>
