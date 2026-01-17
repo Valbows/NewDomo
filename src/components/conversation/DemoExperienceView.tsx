@@ -150,9 +150,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       async (toolName: string, args: any) => {
         // Handle fetch_video - look up the video by title and play it
         if (toolName === 'fetch_video') {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[DemoExperienceView] fetch_video called', { args, demoId });
-          }
           const videoTitle = args?.title || args?.video_title || args?.video_name;
           if (!videoTitle) {
             console.warn('fetch_video called without a title');
@@ -182,21 +179,9 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
             if (exactResult.error || !exactResult.data) {
               console.warn(`Video not found: "${normalizedTitle}" for demoId: ${demoId}`, videoError);
-              // List available videos for debugging
-              if (process.env.NODE_ENV !== 'production') {
-                const { data: allVideos } = await supabase
-                  .from('demo_videos')
-                  .select('title')
-                  .eq('demo_id', demoId);
-                console.log('[DemoExperienceView] Available videos for this demo:', allVideos?.map(v => v.title));
-              }
               return;
             }
             videoData = exactResult.data;
-          }
-
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[DemoExperienceView] Video found:', { title: videoData.title, id: videoData.id });
           }
 
           // Determine the final video URL

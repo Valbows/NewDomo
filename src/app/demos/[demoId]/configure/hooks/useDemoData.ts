@@ -91,26 +91,17 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
           // Filter by demo_id in callback (more reliable than filter param for non-PK columns)
           if (!updatedVideo || updatedVideo.demo_id !== demoId) return;
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[useDemoData] demo_videos UPDATE received:', updatedVideo.id, updatedVideo.processing_status);
-          }
           setDemoVideos(prev => prev.map(v =>
             v.id === updatedVideo.id ? updatedVideo : v
           ));
           // If transcription completed, also refresh knowledge chunks
           if (updatedVideo.processing_status === 'completed') {
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('[useDemoData] Transcription completed, fetching knowledge chunks...');
-            }
             supabase
               .from('knowledge_chunks')
               .select('*')
               .eq('demo_id', demoId)
               .then(({ data }) => {
                 if (data) {
-                  if (process.env.NODE_ENV !== 'production') {
-                    console.log('[useDemoData] Knowledge chunks fetched:', data.length);
-                  }
                   setKnowledgeChunks(data);
                 }
               });
@@ -125,9 +116,6 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
           // Filter by demo_id in callback
           if (!newVideo || newVideo.demo_id !== demoId) return;
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[useDemoData] demo_videos INSERT received:', newVideo.id);
-          }
           // Deduplicate: only add if video doesn't already exist
           setDemoVideos(prev => {
             const exists = prev.some(v => v.id === newVideo.id);
@@ -144,9 +132,6 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
           // Filter by demo_id in callback (if available in old record)
           if (!deletedVideo?.id) return;
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[useDemoData] demo_videos DELETE received:', deletedVideo.id);
-          }
           setDemoVideos(prev => prev.filter(v => v.id !== deletedVideo.id));
         }
       )
@@ -159,9 +144,6 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
           // Filter by demo_id in callback
           if (!newChunk || newChunk.demo_id !== demoId) return;
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[useDemoData] knowledge_chunks INSERT received:', newChunk.id);
-          }
           // Deduplicate: only add if chunk doesn't already exist
           setKnowledgeChunks(prev => {
             const exists = prev.some(c => c.id === newChunk.id);
@@ -177,16 +159,10 @@ export function useDemoData(demoId: string): UseDemoDataReturn {
           const deletedChunk = payload.old as { id: string; demo_id?: string };
           if (!deletedChunk?.id) return;
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[useDemoData] knowledge_chunks DELETE received:', deletedChunk.id);
-          }
           setKnowledgeChunks(prev => prev.filter(c => c.id !== deletedChunk.id));
         }
       )
       .subscribe((status, err) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[useDemoData] Realtime subscription status: ${status}`, err || '');
-        }
         if (status === 'CHANNEL_ERROR') {
           console.error('[useDemoData] Realtime channel error:', err);
         }
