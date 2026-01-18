@@ -43,7 +43,7 @@ const LoginPage = () => {
           Sign in to your account
         </h2>
         <p className="mt-2 text-center text-domo-text-secondary">
-          Welcome back to Domo
+          Welcome Back to Domo
         </p>
       </div>
 

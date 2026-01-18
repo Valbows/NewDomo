@@ -15,6 +15,7 @@ interface UseRealtimeSubscriptionParams {
   onPlayVideo: (url: string) => void;
   onShowCTA: (overrides: CtaOverrides) => void;
   onAnalyticsUpdated?: (payload: any) => void;
+  onConversationEnded?: (payload: { conversation_id: string; ended_at: string }) => void;
 }
 
 export function useRealtimeSubscription({
@@ -22,13 +23,14 @@ export function useRealtimeSubscription({
   onPlayVideo,
   onShowCTA,
   onAnalyticsUpdated,
+  onConversationEnded,
 }: UseRealtimeSubscriptionParams): void {
   // Use ref to hold the latest callbacks to avoid stale closures
-  const callbacksRef = useRef({ onPlayVideo, onShowCTA, onAnalyticsUpdated });
+  const callbacksRef = useRef({ onPlayVideo, onShowCTA, onAnalyticsUpdated, onConversationEnded });
 
   useEffect(() => {
-    callbacksRef.current = { onPlayVideo, onShowCTA, onAnalyticsUpdated };
-  }, [onPlayVideo, onShowCTA, onAnalyticsUpdated]);
+    callbacksRef.current = { onPlayVideo, onShowCTA, onAnalyticsUpdated, onConversationEnded };
+  }, [onPlayVideo, onShowCTA, onAnalyticsUpdated, onConversationEnded]);
 
   useEffect(() => {
     if (!demoId) return;
@@ -63,6 +65,17 @@ export function useRealtimeSubscription({
       })
       .on('broadcast', { event: 'analytics_updated' }, (payload: any) => {
         callbacksRef.current.onAnalyticsUpdated?.(payload?.payload);
+      })
+      .on('broadcast', { event: 'conversation_ended' }, (payload: any) => {
+        try {
+          const p = payload?.payload || {};
+          callbacksRef.current.onConversationEnded?.({
+            conversation_id: p.conversation_id || '',
+            ended_at: p.ended_at || new Date().toISOString(),
+          });
+        } catch (e) {
+          console.warn('Realtime conversation_ended handler error', e);
+        }
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {

@@ -32,7 +32,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-domo-bg-card border-r border-domo-border min-h-screen flex flex-col">
+    <div className="w-64 bg-domo-bg-card border-r border-domo-border min-h-screen flex flex-col select-none">
       {/* Logo */}
       <div className="p-5 border-b border-domo-border">
         <Link href="/dashboard">
@@ -41,7 +41,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 px-3 space-y-1">
+      <nav className="sidebar-nav flex-1 py-6 px-3 space-y-1 border-l-0 outline-none">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (

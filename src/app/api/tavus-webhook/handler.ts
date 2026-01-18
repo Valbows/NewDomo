@@ -122,6 +122,10 @@ export async function handlePOST(req: NextRequest) {
           console.warn(`Failed to mark conversation ${conversation_id} as ended:`, updateError);
         }
 
+        // ALWAYS broadcast conversation_ended for real-time UI updates
+        // This allows frontends to immediately update their state
+        await broadcastConversationEnded(supabase, conversation_id);
+
         // Also do analytics ingestion for the ended event
         if (shouldIngestEvent(event)) {
           await ingestAnalyticsForEvent(supabase, conversation_id, event);
@@ -299,5 +303,45 @@ async function broadcastAnalyticsUpdate(
     }
   } catch (broadcastErr) {
     console.warn('Webhook: analytics_updated broadcast failed (non-fatal):', broadcastErr);
+  }
+}
+
+async function broadcastConversationEnded(
+  supabase: any,
+  conversationId: string
+): Promise<void> {
+  try {
+    // Try to find demo by tavus_conversation_id first
+    let demoId: string | null = null;
+
+    const { data: demoByConvId } = await supabase
+      .from('demos')
+      .select('id')
+      .eq('tavus_conversation_id', conversationId)
+      .single();
+
+    if (demoByConvId?.id) {
+      demoId = demoByConvId.id;
+    } else {
+      // Fallback: find demo via conversation_details
+      const { data: convDetails } = await supabase
+        .from('conversation_details')
+        .select('demo_id')
+        .eq('tavus_conversation_id', conversationId)
+        .single();
+
+      if (convDetails?.demo_id) {
+        demoId = convDetails.demo_id;
+      }
+    }
+
+    if (demoId) {
+      await broadcastToDemo(supabase, demoId, 'conversation_ended', {
+        conversation_id: conversationId,
+        ended_at: new Date().toISOString(),
+      });
+    }
+  } catch (broadcastErr) {
+    console.warn('Webhook: conversation_ended broadcast failed (non-fatal):', broadcastErr);
   }
 }

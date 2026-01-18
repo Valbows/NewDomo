@@ -10,6 +10,79 @@ const MAX_CONCURRENT_CONVERSATIONS = parseInt(process.env.TAVUS_MAX_CONCURRENT |
 // In-memory lock to prevent duplicate starts per session
 const startLocks = new Map<string, Promise<unknown>>();
 
+// Cleanup stale conversations that are marked active but actually ended in Tavus
+async function cleanupStaleConversationsForDemo(
+  supabase: any,
+  demoId: string,
+  tavusApiKey: string
+): Promise<void> {
+  try {
+    // Get the user who owns this demo
+    const { data: demo } = await supabase
+      .from('demos')
+      .select('user_id')
+      .eq('id', demoId)
+      .single();
+
+    if (!demo) return;
+
+    // Get all demos owned by this user
+    const { data: userDemos } = await supabase
+      .from('demos')
+      .select('id')
+      .eq('user_id', demo.user_id);
+
+    if (!userDemos || userDemos.length === 0) return;
+
+    const demoIds = userDemos.map((d: { id: string }) => d.id);
+
+    // Find conversations marked as active/starting
+    const { data: activeConvs } = await supabase
+      .from('conversation_details')
+      .select('id, tavus_conversation_id, status')
+      .in('demo_id', demoIds)
+      .in('status', ['active', 'starting', 'waiting']);
+
+    if (!activeConvs || activeConvs.length === 0) return;
+
+    // Check each with Tavus API (limit to 3 to avoid slowing down start)
+    const toCheck = activeConvs.slice(0, 3);
+
+    for (const conv of toCheck) {
+      if (!conv.tavus_conversation_id) continue;
+
+      try {
+        const response = await fetch(
+          `https://tavusapi.com/v2/conversations/${conv.tavus_conversation_id}`,
+          {
+            method: 'GET',
+            headers: { 'x-api-key': tavusApiKey },
+          }
+        );
+
+        const shouldMarkEnded = response.status === 404 ||
+          (response.ok && ['ended', 'completed', 'failed'].includes((await response.json()).status));
+
+        if (shouldMarkEnded) {
+          await supabase
+            .from('conversation_details')
+            .update({
+              status: 'ended',
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', conv.id);
+
+          logger.info(`[Embed] Auto-cleaned stale conversation ${conv.tavus_conversation_id}`);
+        }
+      } catch {
+        // Ignore errors for individual conversation checks
+      }
+    }
+  } catch (error) {
+    logger.warn('[Embed] Auto-cleanup failed (non-fatal)', { error });
+  }
+}
+
 // Count active conversations for a demo's owner
 async function countActiveConversationsForDemo(demoId: string): Promise<{ count: number; userId: string | null }> {
   const supabase = createServiceClient();
@@ -132,7 +205,11 @@ async function handlePOST(
 
     const demoId = demo.id;
 
-    // Check concurrent conversation limit BEFORE creating a new one
+    // Auto-cleanup stale conversations before checking limit
+    // This prevents phantom "active" conversations from blocking new ones
+    await cleanupStaleConversationsForDemo(supabase, demoId, tavusApiKey);
+
+    // Check concurrent conversation limit AFTER cleanup
     const { count: activeCount, userId: demoOwnerId } = await countActiveConversationsForDemo(demoId);
     if (activeCount >= MAX_CONCURRENT_CONVERSATIONS) {
       logger.warn(`[Embed] Demo owner ${demoOwnerId} at max capacity: ${activeCount}/${MAX_CONCURRENT_CONVERSATIONS}`);

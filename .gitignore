@@ -70,3 +70,6 @@ tunnel.log
 # Test results
 test-results/
 playwright-report/
+
+# Pages with hardcoded tokens (development only)
+src/app/brand-kit/page.tsx

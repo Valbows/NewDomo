@@ -66,3 +66,15 @@ input, textarea, select {
 button {
   transition: all 0.2s ease;
 }
+
+/* Sidebar styling - prevent accidental carets/cursors */
+.sidebar-nav,
+.sidebar-nav * {
+  caret-color: transparent;
+  user-select: none;
+}
+
+/* Hide any accidental text cursors in non-input areas */
+nav:not(:focus-within) {
+  caret-color: transparent;
+}

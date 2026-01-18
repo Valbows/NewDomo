@@ -32,7 +32,7 @@ async function handlePOST(
     // Fetch demo by embed token to validate access
     const { data: demo, error: demoError } = await supabase
       .from('demos')
-      .select('id, tavus_conversation_id, is_embeddable, allowed_domains')
+      .select('id, is_embeddable, allowed_domains')
       .eq('embed_token', token)
       .eq('is_embeddable', true)
       .single();
@@ -64,8 +64,16 @@ async function handlePOST(
       }
     }
 
-    // Verify the conversation belongs to this demo
-    if (demo.tavus_conversation_id !== conversationId) {
+    // Verify the conversation belongs to this demo via conversation_details
+    // This is more reliable than checking demos.tavus_conversation_id since
+    // multiple users can have concurrent conversations on the same embedded demo
+    const { data: convRecord, error: convError } = await supabase
+      .from('conversation_details')
+      .select('id, demo_id')
+      .eq('tavus_conversation_id', conversationId)
+      .single();
+
+    if (convError || !convRecord || convRecord.demo_id !== demo.id) {
       return NextResponse.json(
         { error: 'Conversation does not belong to this demo' },
         { status: 403 }

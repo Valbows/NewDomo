@@ -31,18 +31,55 @@ export function ConversationEndedScreen({
   const [hasRedirected, setHasRedirected] = useState(false);
   const hasRedirectedRef = useRef(false);
 
-  const handleCtaRedirect = useCallback(() => {
+  const handleCtaRedirect = useCallback((isUserClick: boolean = false) => {
     if (hasRedirectedRef.current) return;
     hasRedirectedRef.current = true;
     setHasRedirected(true);
 
+    // Check if we're in an iframe
+    const isInIframe = window !== window.top;
+
+    // For user clicks, we can reliably open new tab + redirect
+    // For auto-countdown, popup blockers may block window.open
     if (ctaUrl) {
-      window.open(ctaUrl, '_blank', 'noopener,noreferrer');
+      if (isUserClick) {
+        // User clicked - popup blockers won't block this
+        window.open(ctaUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        // Auto-countdown - try to open, but it may be blocked
+        // Use a small delay and try anyway
+        const popup = window.open(ctaUrl, '_blank', 'noopener,noreferrer');
+        if (!popup || popup.closed) {
+          // Popup was blocked - redirect to CTA instead of return URL
+          // so user doesn't miss the CTA
+          if (isInIframe) {
+            try {
+              window.top!.location.href = ctaUrl;
+            } catch {
+              window.open(ctaUrl, '_top', 'noopener,noreferrer');
+            }
+          } else {
+            window.location.href = ctaUrl;
+          }
+          return; // Don't also redirect to return URL
+        }
+      }
     }
 
     if (!isPopup && returnUrl) {
       setTimeout(() => {
-        window.location.href = returnUrl;
+        try {
+          if (isInIframe) {
+            // In iframe: redirect the top-level window (parent page)
+            window.top!.location.href = returnUrl;
+          } else {
+            // Not in iframe: redirect normally
+            window.location.href = returnUrl;
+          }
+        } catch (e) {
+          // Cross-origin iframe - can't access parent, open in new tab instead
+          window.open(returnUrl, '_top', 'noopener,noreferrer');
+        }
       }, 500);
     }
 
@@ -54,7 +91,7 @@ export function ConversationEndedScreen({
   }, [ctaUrl, returnUrl, isPopup, onClose]);
 
   const handleLearnMoreClick = useCallback(() => {
-    handleCtaRedirect();
+    handleCtaRedirect(true); // true = user clicked, so popup won't be blocked
   }, [handleCtaRedirect]);
 
   useEffect(() => {

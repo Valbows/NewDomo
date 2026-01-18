@@ -175,7 +175,6 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         system_prompt: finalSystemPrompt,
         objectives_id: objectivesId,
         guardrails_id: GUARDRAILS_ID,
-        perception_model: 'raven-0', // Enable perception analysis for all new personas
         layers: {
           llm: {
             model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
