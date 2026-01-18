@@ -55,13 +55,30 @@ async function handlePOST(req: NextRequest) {
       modelId: 'scribe_v1'
     });
 
-    if (!transcriptionResponse || !transcriptionResponse.text) {
-        throw new Error(process.env.NODE_ENV !== 'production'
-          ? 'Failed to transcribe audio with ElevenLabs.'
-          : 'Failed to transcribe audio.');
+    // Handle different response types from ElevenLabs SDK
+    // The response can be SpeechToTextChunkResponseModel or MultichannelSpeechToTextResponseModel
+    let transcript: string;
+    const response = transcriptionResponse as any;
+
+    if (response.text) {
+      transcript = response.text;
+    } else if (response.channels && Array.isArray(response.channels)) {
+      // Multichannel response - combine all channel transcripts
+      transcript = response.channels
+        .map((ch: any) => ch.text || '')
+        .filter(Boolean)
+        .join(' ');
+    } else {
+      throw new Error(process.env.NODE_ENV !== 'production'
+        ? 'Failed to transcribe audio with ElevenLabs - unexpected response format.'
+        : 'Failed to transcribe audio.');
     }
 
-    const transcript = transcriptionResponse.text;
+    if (!transcript) {
+      throw new Error(process.env.NODE_ENV !== 'production'
+        ? 'Failed to transcribe audio with ElevenLabs.'
+        : 'Failed to transcribe audio.');
+    }
 
     // Persist transcript on the video record for quick access
     await supabase
