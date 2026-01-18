@@ -632,7 +632,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
         <OnboardingComplete
           demoId={demoId}
           demoName={demo?.name || 'Demo'}
-          embedToken={demo?.embed_token}
+          embedToken={demo?.embed_token ?? undefined}
           onDismiss={dismissCongrats}
         />
       )}
