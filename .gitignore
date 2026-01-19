@@ -71,5 +71,4 @@ tunnel.log
 test-results/
 playwright-report/
 
-# Pages with hardcoded tokens (development only)
-src/app/brand-kit/page.tsx
+# Previously ignored brand-kit page (now tracked)
