@@ -50,10 +50,39 @@ async function handlePOST(req: NextRequest) {
     // 4. Transcribe the audio using ElevenLabs
     const elevenlabs = new ElevenLabsClient(); // API key is read from ELEVENLABS_API_KEY env var
 
-    const transcriptionResponse = await elevenlabs.speechToText.convert({
-      file: fileData,
-      modelId: 'scribe_v1'
-    });
+    // Check if API key is configured
+    if (!process.env.ELEVENLABS_API_KEY) {
+      console.error('[Transcribe] ELEVENLABS_API_KEY is not set');
+      throw new Error('Transcription service not configured. Please contact support.');
+    }
+
+    let transcriptionResponse;
+    try {
+      transcriptionResponse = await elevenlabs.speechToText.convert({
+        file: fileData,
+        modelId: 'scribe_v1'
+      });
+    } catch (elevenLabsError: any) {
+      // Log detailed error for debugging (shows in Render logs)
+      console.error('[Transcribe] ElevenLabs API error:', {
+        message: elevenLabsError?.message,
+        status: elevenLabsError?.status || elevenLabsError?.statusCode,
+        body: elevenLabsError?.body,
+        name: elevenLabsError?.name,
+      });
+
+      // Re-throw with more context
+      const statusCode = elevenLabsError?.status || elevenLabsError?.statusCode;
+      if (statusCode === 401) {
+        throw new Error('Transcription service authentication failed. Invalid API key.');
+      } else if (statusCode === 429) {
+        throw new Error('Transcription service rate limit exceeded. Please try again later.');
+      } else if (statusCode === 400) {
+        throw new Error('Invalid audio format or file. Please upload a supported video format.');
+      } else {
+        throw elevenLabsError;
+      }
+    }
 
     // Handle different response types from ElevenLabs SDK
     // The response can be SpeechToTextChunkResponseModel or MultichannelSpeechToTextResponseModel
