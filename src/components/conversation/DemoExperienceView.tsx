@@ -52,6 +52,7 @@ export interface DemoExperienceViewProps {
   returnUrl?: string; // Customer's website to redirect back to after conversation ends
   isPopup?: boolean; // Different behavior for popup embeds
   onClose?: () => void; // For popup - close the modal
+  skipEndedScreen?: boolean; // Skip ConversationEndedScreen and just call onConversationEnd (for dashboard)
 
   // Callbacks
   onConversationEnd: () => void;
@@ -92,6 +93,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       returnUrl,
       isPopup = false,
       onClose,
+      skipEndedScreen = false,
       onConversationEnd,
       onToolCall,
       onCTAClick,
@@ -314,10 +316,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     const handleConversationEnd = useCallback(() => {
       const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
 
-      setConversationEnded(true);
-      setUiState(UIState.IDLE);
-      setShowCTA(true);
-
       // Track demo ended
       analytics.demoEnded({
         demoId,
@@ -327,8 +325,19 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         conversationId: conversationId || undefined,
       });
 
+      // For dashboard experience page, skip the ended screen and redirect immediately
+      if (skipEndedScreen) {
+        onConversationEnd();
+        return;
+      }
+
+      // For embedded demos, show the ended screen with CTA and countdown
+      setConversationEnded(true);
+      setUiState(UIState.IDLE);
+      setShowCTA(true);
+
       onConversationEnd();
-    }, [onConversationEnd, demoId, demoName, source, conversationId, startTime]);
+    }, [onConversationEnd, demoId, demoName, source, conversationId, startTime, skipEndedScreen]);
 
     // Handle restart conversation
     const handleRestartConversation = useCallback(() => {

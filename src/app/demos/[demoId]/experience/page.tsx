@@ -124,6 +124,7 @@ export default function DemoExperiencePage() {
       loading={loading || joiningCall}
       error={error}
       showLobby={false}
+      skipEndedScreen={true}
       ctaTitle={ctaTitle}
       ctaMessage={ctaMessage}
       ctaButtonText={ctaButtonText}
