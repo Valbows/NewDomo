@@ -82,10 +82,19 @@ export const VideoManagement = ({
             </button>
             {processingStatus.stage !== 'idle' && (
               <div className="mt-4 text-sm text-domo-text-secondary">
-                <p>{processingStatus.message}</p>
-                <div className="w-full bg-domo-bg-dark rounded-full h-2.5 mt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <p>{processingStatus.message}</p>
+                  <span className="text-domo-primary font-semibold">{Math.round(processingStatus.progress)}%</span>
+                </div>
+                <div className="w-full bg-domo-bg-dark rounded-full h-2.5">
                   <div className="bg-domo-primary h-2.5 rounded-full transition-all" style={{ width: `${processingStatus.progress}%` }}></div>
                 </div>
+                {processingStatus.stage === 'uploading' && (
+                  <p className="text-xs text-domo-text-muted mt-1">Uploading video... This may take a moment depending on file size.</p>
+                )}
+                {processingStatus.stage === 'processing' && (
+                  <p className="text-xs text-domo-text-muted mt-1">Transcribing audio... Typically takes 30-60 seconds.</p>
+                )}
               </div>
             )}
           </div>
@@ -116,7 +125,7 @@ export const VideoManagement = ({
                 color: 'text-domo-primary',
                 bg: 'bg-domo-primary/10 border-domo-primary/20',
                 icon: <Loader2 className="h-4 w-4 animate-spin" />,
-                label: 'Transcribing Audio...',
+                label: 'Transcribing Audio... (typically 30-60 seconds)',
               },
               completed: {
                 color: 'text-domo-success',
@@ -142,6 +151,27 @@ export const VideoManagement = ({
                     {config.icon}
                     <span className="text-xs font-medium">{config.label}</span>
                   </div>
+                  {/* Show animated progress bar for processing videos */}
+                  {video.processing_status === 'processing' && (
+                    <div className="mt-2 w-full max-w-xs">
+                      <div className="w-full bg-domo-bg-dark rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-domo-primary h-1.5 rounded-full animate-pulse"
+                          style={{
+                            width: '100%',
+                            animation: 'progress-indeterminate 2s ease-in-out infinite'
+                          }}
+                        />
+                      </div>
+                      <style jsx>{`
+                        @keyframes progress-indeterminate {
+                          0% { transform: translateX(-100%); width: 50%; }
+                          50% { transform: translateX(50%); width: 50%; }
+                          100% { transform: translateX(200%); width: 50%; }
+                        }
+                      `}</style>
+                    </div>
+                  )}
                   {/* Show error details if transcription failed */}
                   {video.processing_status === 'failed' && (
                     <div className="mt-2 p-2 bg-domo-error/20 rounded-lg text-xs text-domo-error">
