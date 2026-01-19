@@ -52,7 +52,7 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
     perception_model: 'raven-0', // Enable perception analysis by default
     layers: {
       llm: {
-        model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+        model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
         tools: DOMO_AI_TOOLS, // Include all standard tools for video playback and CTA
       }
     },

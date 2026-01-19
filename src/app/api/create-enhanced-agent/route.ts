@@ -177,7 +177,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         guardrails_id: GUARDRAILS_ID,
         layers: {
           llm: {
-            model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+            model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
             tools: tools,
           }
         },
@@ -252,7 +252,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
                 guardrails_id: GUARDRAILS_ID,
                 layers: {
                   llm: {
-                    model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+                    model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
                     tools: tools,
                   }
                 },
@@ -300,7 +300,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
               guardrails_id: GUARDRAILS_ID,
               layers: {
                 llm: {
-                  model: process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss',
+                  model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
                   tools: tools,
                 }
               },

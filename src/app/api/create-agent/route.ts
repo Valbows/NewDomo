@@ -274,8 +274,8 @@ async function handlePOST(req: NextRequest) {
       }
     }
 
-    // Configure LLM model (tavus-gpt-oss is the current default, env overrideable)
-    const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-gpt-oss';
+    // Configure LLM model (tavus-llama-4 is the default, env overrideable)
+    const tavusLlmModel = process.env.TAVUS_LLM_MODEL || 'tavus-llama-4';
 
     const personaResponse = await fetch('https://tavusapi.com/v2/personas', {
       method: 'POST',
