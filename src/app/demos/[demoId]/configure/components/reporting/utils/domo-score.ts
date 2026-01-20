@@ -6,96 +6,33 @@ import {
   DomoScoreResult,
 } from "../types";
 
-// Visual indicators that suggest meaningful perception analysis
-const VISUAL_INDICATORS = [
-  "user",
-  "appearance",
-  "facial",
-  "expression",
-  "gesture",
-  "movement",
-  "looking",
-  "speaking",
-  "engaged",
-  "focused",
-  "attentive",
-  "background",
-  "setting",
-  "clothing",
-  "hair",
-  "eyes",
-  "mouth",
-  "hand",
-  "head",
-  "body language",
-  "emotional state",
-  "behavior",
-];
-
-// Black screen indicators that suggest no valid visual data
-const BLACK_SCREEN_INDICATORS = [
-  "completely black",
-  "black screen",
-  "no visual",
-  "no details regarding",
-  "no discernible visual",
-  "absence of visible content",
-  "all visual inputs were consistently reported as completely black",
-];
-
 // Helper function to determine if perception analysis is valid
-// Since Raven-0 is enabled by default, we should award the point when:
-// 1. Camera is capturing actual visual data (not black screen)
-// 2. Analysis contains meaningful visual indicators
-// 3. Structured perception metrics are present
+// Simple rule: If we have perception data that will be displayed, award the point
 export function isValidPerceptionAnalysis(perceptionAnalysis: any): boolean {
   // If no perception data at all, return false
-  if (!perceptionAnalysis) {
+  if (perceptionAnalysis === null || perceptionAnalysis === undefined) {
     return false;
   }
 
-  // If it's a string, check if it contains meaningful visual analysis
+  // If it's a string, check it has meaningful content
   if (typeof perceptionAnalysis === "string") {
-    const analysis = perceptionAnalysis.trim().toLowerCase();
-
-    // Return false if it's empty or only contains generic/error messages
-    if (analysis.length === 0) {
-      return false;
-    }
-
-    // Check for black screen indicators (should not award point)
-    const hasBlackScreenIndicator = BLACK_SCREEN_INDICATORS.some((indicator) =>
-      analysis.includes(indicator)
-    );
-
-    if (hasBlackScreenIndicator) {
-      return false;
-    }
-
-    // Check for positive visual indicators (should award point)
-    const hasVisualIndicator = VISUAL_INDICATORS.some((indicator) =>
-      analysis.includes(indicator)
-    );
-
-    // Award point if we have visual indicators and no black screen
-    return hasVisualIndicator;
+    const trimmed = perceptionAnalysis.trim();
+    // Must have some content (at least 10 chars)
+    return trimmed.length >= 10;
   }
 
-  // If it's an object with structured data, check for meaningful content
+  // If it's an array, check it's not empty
+  if (Array.isArray(perceptionAnalysis)) {
+    return perceptionAnalysis.length > 0;
+  }
+
+  // If it's an object, check it has keys
   if (typeof perceptionAnalysis === "object") {
-    // Check if it has any meaningful perception metrics
-    const hasMetrics = !!(
-      perceptionAnalysis.overall_score ||
-      perceptionAnalysis.engagement_score ||
-      perceptionAnalysis.sentiment_score ||
-      perceptionAnalysis.key_insights
-    );
-
-    return hasMetrics;
+    return Object.keys(perceptionAnalysis).length > 0;
   }
 
-  // Default to false for unknown formats
-  return false;
+  // Any other truthy value counts
+  return !!perceptionAnalysis;
 }
 
 // Calculate Domo Score based on data completeness

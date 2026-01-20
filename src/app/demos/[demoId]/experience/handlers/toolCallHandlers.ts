@@ -188,4 +188,26 @@ export async function handleRealTimeToolCall(params: ToolCallHandlerParams) {
     setShowCTA(true);
     return;
   }
+
+  if (toolName === 'seek_video') {
+    if (uiState === UIState.VIDEO_PLAYING && videoPlayerRef.current?.seekTo) {
+      const timestampStr = args?.timestamp || args?.time || '';
+      // Parse timestamp in MM:SS or M:SS format
+      const parts = timestampStr.toString().split(':');
+      let seconds = 0;
+      if (parts.length === 2) {
+        const mins = parseInt(parts[0], 10) || 0;
+        const secs = parseInt(parts[1], 10) || 0;
+        seconds = mins * 60 + secs;
+      } else if (parts.length === 1) {
+        seconds = parseInt(parts[0], 10) || 0;
+      }
+      if (seconds >= 0) {
+        videoPlayerRef.current.seekTo(seconds);
+        // Clear paused position since we're seeking to a new location
+        pausedPositionRef.current = seconds;
+      }
+    }
+    return;
+  }
 }

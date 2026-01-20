@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { formatTime, findChapterAtTimestamp, type VideoChapter } from '@/lib/video-context';
 
 interface InlineVideoPlayerProps {
   videoUrl: string;
   videoTitle?: string;
+  chapters?: VideoChapter[];
   onClose: () => void;
   onVideoEnd?: () => void;
   onTimeUpdate?: (currentTime: number, isPaused: boolean) => void;
@@ -18,10 +20,12 @@ export type InlineVideoPlayerHandle = {
   isPaused: () => boolean;
   getCurrentTime: () => number;
   seekTo: (time: number) => void;
+  setVolume: (volume: number) => void; // 0.0 to 1.0 for audio ducking
+  getVolume: () => number;
 };
 
 export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideoPlayerProps>(function InlineVideoPlayer(
-  { videoUrl, videoTitle, onClose, onVideoEnd, onTimeUpdate, onPause, onSeek }: InlineVideoPlayerProps,
+  { videoUrl, videoTitle, chapters = [], onClose, onVideoEnd, onTimeUpdate, onPause, onSeek }: InlineVideoPlayerProps,
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -29,6 +33,15 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [paused, setPaused] = useState<boolean>(true);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [showChapterList, setShowChapterList] = useState<boolean>(false);
+
+  // Find current chapter based on playback position
+  const currentChapter = useMemo(() => {
+    if (!chapters || chapters.length === 0) return null;
+    return findChapterAtTimestamp(chapters, currentTime);
+  }, [chapters, currentTime]);
 
   useImperativeHandle(ref, () => ({
     async play() {
@@ -71,6 +84,19 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
         console.warn('InlineVideoPlayer.seekTo() failed:', e);
       }
     },
+    setVolume(volume: number) {
+      const el = videoRef.current;
+      if (!el) return;
+      try {
+        el.volume = Math.max(0, Math.min(1, volume));
+      } catch (e) {
+        console.warn('InlineVideoPlayer.setVolume() failed:', e);
+      }
+    },
+    getVolume() {
+      const el = videoRef.current;
+      return el ? el.volume : 1;
+    },
   }), []);
 
   useEffect(() => {
@@ -111,6 +137,10 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     };
 
     const handleLoadedMetadata = async () => {
+      // Capture video duration for chapter markers
+      if (videoElement.duration && !isNaN(videoElement.duration)) {
+        setDuration(videoElement.duration);
+      }
       // Start playback only if autoplay is still intended
       if (shouldAutoplayRef.current) {
         try {
@@ -160,10 +190,14 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       }
     };
 
-    // Track time updates (throttled to every 2 seconds to avoid spam)
+    // Track time updates - update local state frequently for chapter display
+    // but throttle parent callbacks to every 2 seconds
     let lastTimeUpdate = 0;
     const handleTimeUpdate = () => {
       if (!videoElement) return;
+      // Always update local time for chapter display
+      setCurrentTime(videoElement.currentTime);
+      // Throttle parent callback
       const now = Date.now();
       if (now - lastTimeUpdate > 2000) {
         lastTimeUpdate = now;
@@ -199,25 +233,121 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     };
   }, [videoUrl, onTimeUpdate, onPause, onSeek]);
 
+  // Handle chapter click - seek to chapter start
+  const handleChapterClick = (chapter: VideoChapter) => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.currentTime = chapter.start;
+    setShowChapterList(false);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
+      {/* Current Chapter Indicator */}
+      {chapters && chapters.length > 0 && currentChapter && (
+        <div className="flex items-center justify-between bg-domo-bg-elevated px-3 py-2 rounded-t-lg border border-domo-border border-b-0">
+          <div className="flex items-center gap-2 text-sm min-w-0 flex-1 mr-2">
+            <span className="text-domo-primary font-medium whitespace-nowrap">
+              {currentChapter.chapterNumber ? `Ch ${currentChapter.chapterNumber}` : 'Chapter'}
+            </span>
+            <span className="text-domo-text-muted whitespace-nowrap">
+              {formatTime(currentChapter.start)} - {formatTime(currentChapter.end)}
+            </span>
+            {currentChapter.description && (
+              <span className="text-white truncate">{currentChapter.description}</span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowChapterList(!showChapterList)}
+            className="text-domo-primary hover:text-domo-secondary text-sm flex items-center gap-1 whitespace-nowrap"
+          >
+            <svg className={`w-4 h-4 transition-transform ${showChapterList ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+            {showChapterList ? 'Hide' : 'Chapters'}
+          </button>
+        </div>
+      )}
+
+      {/* Chapter List (Expandable) */}
+      {chapters && chapters.length > 0 && showChapterList && (
+        <div className="bg-domo-bg-elevated border border-domo-border border-t-0 rounded-b-lg max-h-48 overflow-y-auto">
+          {chapters.map((chapter, index) => {
+            const isActive = currentChapter?.start === chapter.start && currentChapter?.end === chapter.end;
+            return (
+              <button
+                key={index}
+                onClick={() => handleChapterClick(chapter)}
+                className={`w-full px-3 py-2 text-left text-sm hover:bg-domo-bg-card transition-colors ${
+                  isActive ? 'bg-domo-primary/20' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isActive && (
+                    <span className="w-2 h-2 bg-domo-primary rounded-full animate-pulse flex-shrink-0" />
+                  )}
+                  <span className={`${isActive ? 'text-domo-primary font-medium' : 'text-domo-text-muted'} whitespace-nowrap`}>
+                    {chapter.chapterNumber ? `Ch ${chapter.chapterNumber}` : `${index + 1}`}
+                  </span>
+                  <span className="text-domo-text-muted text-xs whitespace-nowrap">
+                    {formatTime(chapter.start)} - {formatTime(chapter.end)}
+                  </span>
+                  {chapter.description && (
+                    <span className={`truncate ${isActive ? 'text-white' : 'text-domo-text-secondary'}`}>
+                      {chapter.description}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="relative">
+        {/* Chapter Progress Bar (visual markers) */}
+        {chapters && chapters.length > 0 && duration > 0 && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-domo-bg-elevated z-10 rounded-t-lg overflow-hidden">
+            {chapters.map((chapter, index) => {
+              const startPercent = (chapter.start / duration) * 100;
+              const widthPercent = ((chapter.end - chapter.start) / duration) * 100;
+              const isActive = currentChapter?.title === chapter.title;
+              return (
+                <div
+                  key={index}
+                  className={`absolute h-full transition-colors cursor-pointer ${
+                    isActive ? 'bg-domo-primary' : 'bg-domo-border hover:bg-domo-primary/50'
+                  }`}
+                  style={{
+                    left: `${startPercent}%`,
+                    width: `${Math.max(widthPercent, 1)}%`,
+                  }}
+                  onClick={() => handleChapterClick(chapter)}
+                  title={chapter.description
+                    ? `${chapter.description} (${formatTime(chapter.start)} - ${formatTime(chapter.end)})`
+                    : `Chapter ${chapter.chapterNumber || index + 1} (${formatTime(chapter.start)} - ${formatTime(chapter.end)})`
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+
         <video
           ref={videoRef}
           key={videoUrl}
           src={videoUrl}
           controls
           autoPlay
-          muted // Muting is often required for autoplay to work reliably
-          playsInline // Improve autoplay on mobile/iOS and headless environments
-          preload="metadata" // Prioritize metadata to reach HAVE_METADATA quickly in headless
-          className="w-full h-full bg-black rounded-lg"
+          playsInline
+          preload="metadata"
+          className={`w-full h-full bg-black ${chapters && chapters.length > 0 ? 'rounded-b-lg' : 'rounded-lg'}`}
           data-testid="inline-video"
           data-paused={paused ? 'true' : 'false'}
           poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='14' fill='%236b7280' text-anchor='middle' dy='0.3em'%3ELoading...%3C/text%3E%3C/svg%3E"
         >
         </video>
-        
+
         {/* Error overlay */}
         {hasError && (
           <div className="absolute inset-0 bg-domo-error/10 border-2 border-domo-error/30 rounded-lg flex items-center justify-center">
@@ -237,7 +367,7 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
             </div>
           </div>
         )}
-        
+
         {/* Close button */}
         <button
           onClick={onClose}
@@ -249,10 +379,10 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
           </svg>
         </button>
       </div>
-      
+
       {/* Video info */}
       <div className="flex items-center justify-between text-sm text-domo-text-secondary">
-        <span>🎬 Demo video playing</span>
+        <span>🎬 {videoTitle || 'Demo video playing'}</span>
         <button
           onClick={onClose}
           className="text-domo-primary hover:text-domo-secondary font-medium"

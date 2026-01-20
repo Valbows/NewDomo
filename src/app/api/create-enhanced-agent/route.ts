@@ -179,7 +179,13 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           llm: {
             model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
             tools: tools,
-          }
+          },
+          // Sparrow-1: Human-level turn-taking with <100ms response time
+          // Eliminates interruptions and awkward pauses
+          conversational_context: {
+            turn_taking_model: 'sparrow-1',
+            turn_taking_patience: 'high', // Recommended for best performance
+          },
         },
       };
 
@@ -254,7 +260,11 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
                   llm: {
                     model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
                     tools: tools,
-                  }
+                  },
+                  conversational_context: {
+                    turn_taking_model: 'sparrow-1',
+                    turn_taking_patience: 'high',
+                  },
                 },
               };
               

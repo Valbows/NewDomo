@@ -71,38 +71,27 @@ export default function DemoExperiencePage() {
 
   // Handle conversation end
   const handleConversationEnd = useCallback(async () => {
-    // End the Tavus conversation via API if we have a conversation ID
-    if (conversationId) {
-      try {
-        const response = await fetch('/api/end-conversation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            conversationId: conversationId, // Use session-specific ID
-            demoId: demo?.id,
-          }),
-        });
-
-        if (response.ok) {
-          // Automatically sync conversation data after ending
-          try {
-            await fetch(`/api/sync-tavus-conversations?demoId=${demo?.id}`, {
-              method: 'GET',
-            });
-          } catch (syncError) {
-            console.warn('Error syncing conversation data:', syncError);
-          }
-
-          // Small delay to ensure sync completes before redirect
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      } catch (error) {
-        console.warn('Error ending Tavus conversation:', error);
-      }
-    }
-
-    // Redirect to the reporting page
+    // Redirect immediately - don't wait for API calls
     router.push(`/demos/${demoId}/reporting`);
+
+    // End the Tavus conversation via API in background (non-blocking)
+    if (conversationId) {
+      fetch('/api/end-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: conversationId,
+          demoId: demo?.id,
+        }),
+      }).then((response) => {
+        if (response.ok) {
+          // Sync conversation data in background
+          fetch(`/api/sync-tavus-conversations?demoId=${demo?.id}`, {
+            method: 'GET',
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   }, [conversationId, demo?.id, demoId, router]);
 
   // Handle tool calls (for any experience-specific tracking)

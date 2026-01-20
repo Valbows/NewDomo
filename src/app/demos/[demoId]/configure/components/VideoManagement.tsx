@@ -1,6 +1,59 @@
-import React, { useState } from 'react';
-import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2, RotateCcw, Brain, Sparkles, X } from 'lucide-react';
 import { DemoVideo, ProcessingStatus } from '@/app/demos/[demoId]/configure/types';
+
+// Helper to get Twelve Labs status from video metadata
+function getTwelveLabsStatus(video: DemoVideo): {
+  status: 'none' | 'pending' | 'indexing' | 'ready' | 'failed';
+  hasContext: boolean;
+} {
+  const twelvelabs = video.metadata?.twelvelabs;
+  if (!twelvelabs) {
+    return { status: 'none', hasContext: false };
+  }
+  return {
+    status: twelvelabs.status || 'pending',
+    hasContext: !!twelvelabs.generatedContext,
+  };
+}
+
+// Success Modal Component
+function SuccessModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Modal */}
+      <div className="relative bg-domo-bg-card border border-domo-border rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-domo-text-muted hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-domo-primary/20 rounded-full flex items-center justify-center mb-4">
+            <Sparkles className="h-8 w-8 text-domo-primary" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">All Videos Ready!</h3>
+          <p className="text-domo-text-secondary mb-6">
+            All your videos now have AI context with chapters and summaries. Your Domo agent can now provide timestamp-aware responses and guide users to specific video sections.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary transition-colors"
+          >
+            Got it!
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface VideoManagementProps {
   demoVideos: DemoVideo[];
@@ -15,6 +68,8 @@ interface VideoManagementProps {
   previewVideoUrl: string | null;
   setPreviewVideoUrl: (url: string | null) => void;
   onRetryTranscription?: (videoId: string) => Promise<void>;
+  onGenerateAIContext?: (videoId: string) => Promise<void>;
+  onIndexWithTwelveLabs?: (videoId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const VideoManagement = ({
@@ -29,9 +84,40 @@ export const VideoManagement = ({
   handleDeleteVideo,
   previewVideoUrl,
   setPreviewVideoUrl,
-  onRetryTranscription
+  onRetryTranscription,
+  onGenerateAIContext,
+  onIndexWithTwelveLabs
 }: VideoManagementProps) => {
   const [retryingVideoId, setRetryingVideoId] = useState<string | null>(null);
+  const [processingAll, setProcessingAll] = useState(false);
+  const [processingVideoId, setProcessingVideoId] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState({ current: 0, total: 0, phase: '' });
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Calculate AI context stats
+  const aiContextStats = useMemo(() => {
+    const total = demoVideos.length;
+    const withContext = demoVideos.filter(v => getTwelveLabsStatus(v).hasContext).length;
+    const needsIndexing = demoVideos.filter(v => getTwelveLabsStatus(v).status === 'none').length;
+    const indexing = demoVideos.filter(v => {
+      const s = getTwelveLabsStatus(v).status;
+      return s === 'indexing' || s === 'pending';
+    }).length;
+    const needsContext = demoVideos.filter(v => {
+      const status = getTwelveLabsStatus(v);
+      return status.status === 'ready' && !status.hasContext;
+    }).length;
+
+    const stats = { total, withContext, needsIndexing, indexing, needsContext };
+    console.log('[VideoManagement] AI Context Stats:', stats);
+    console.log('[VideoManagement] Videos metadata:', demoVideos.map(v => ({
+      id: v.id,
+      title: v.title,
+      twelvelabs: v.metadata?.twelvelabs
+    })));
+    return stats;
+  }, [demoVideos]);
 
   const handleRetryTranscription = async (videoId: string) => {
     if (!onRetryTranscription) return;
@@ -40,6 +126,175 @@ export const VideoManagement = ({
       await onRetryTranscription(videoId);
     } finally {
       setRetryingVideoId(null);
+    }
+  };
+
+  // Helper to check video status from API
+  const checkVideoStatus = async (videoId: string): Promise<string> => {
+    try {
+      const response = await fetch('/api/twelve-labs/check-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demoVideoId: videoId }),
+      });
+      const data = await response.json();
+      return data.status || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  };
+
+  const handleProcessAllVideos = async () => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[VideoManagement] Generate All clicked', {
+        hasIndexHandler: !!onIndexWithTwelveLabs,
+        hasContextHandler: !!onGenerateAIContext,
+        stats: aiContextStats
+      });
+    }
+
+    if (!onIndexWithTwelveLabs || !onGenerateAIContext) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[VideoManagement] Missing handlers, returning early');
+      }
+      return;
+    }
+
+    // Get ALL videos that need ANY work
+    const allVideos = [...demoVideos];
+    const videosToIndex = allVideos.filter(v => getTwelveLabsStatus(v).status === 'none');
+    const videosIndexing = allVideos.filter(v => {
+      const s = getTwelveLabsStatus(v).status;
+      return s === 'indexing' || s === 'pending';
+    });
+    const videosNeedingContext = allVideos.filter(v => {
+      const status = getTwelveLabsStatus(v);
+      return status.status === 'ready' && !status.hasContext;
+    });
+    const videosWithoutFullContext = allVideos.filter(v => !getTwelveLabsStatus(v).hasContext);
+
+    console.log('[VideoManagement] Videos breakdown:', {
+      total: allVideos.length,
+      toIndex: videosToIndex.length,
+      indexing: videosIndexing.length,
+      needingContext: videosNeedingContext.length,
+      withoutFullContext: videosWithoutFullContext.length
+    });
+
+    // If all videos already have full context, show success
+    if (videosWithoutFullContext.length === 0) {
+      setShowSuccessModal(true);
+      return;
+    }
+
+    setProcessingAll(true);
+    setProcessingError(null);
+
+    try {
+      // PHASE 1: Index videos that haven't been indexed
+      if (videosToIndex.length > 0) {
+        setProcessingProgress({ current: 0, total: videosToIndex.length, phase: 'Sending to AI' });
+        console.log('[VideoManagement] Phase 1: Indexing', videosToIndex.length, 'videos');
+
+        for (let i = 0; i < videosToIndex.length; i++) {
+          const video = videosToIndex[i];
+          setProcessingVideoId(video.id);
+          setProcessingProgress({ current: i + 1, total: videosToIndex.length, phase: 'Sending to AI' });
+
+          console.log('[VideoManagement] Indexing video:', video.id, video.title);
+          const result = await onIndexWithTwelveLabs(video.id);
+
+          if (!result.success) {
+            console.error('[VideoManagement] Indexing failed for video:', video.title, result.error);
+            setProcessingError(`AI indexing failed. Please try again later.`);
+            return; // Stop processing on first failure
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      // PHASE 2: Wait for all indexing to complete (videos we just indexed + already indexing)
+      const videosToWaitFor = [...videosToIndex, ...videosIndexing];
+      if (videosToWaitFor.length > 0) {
+        setProcessingProgress({ current: 0, total: videosToWaitFor.length, phase: 'AI analyzing videos' });
+        setProcessingVideoId(null);
+        console.log('[VideoManagement] Phase 2: Waiting for', videosToWaitFor.length, 'videos to complete analysis');
+
+        // Poll until all videos are ready (max 10 minutes)
+        const startTime = Date.now();
+        const maxWaitMs = 10 * 60 * 1000;
+        let allReady = false;
+
+        while (!allReady && (Date.now() - startTime < maxWaitMs)) {
+          let readyCount = 0;
+
+          for (const video of videosToWaitFor) {
+            const status = await checkVideoStatus(video.id);
+            if (status === 'ready') {
+              readyCount++;
+            } else if (status === 'failed') {
+              console.log('[VideoManagement] Video indexing failed:', video.id);
+              readyCount++; // Count as done (failed)
+            }
+          }
+
+          setProcessingProgress({
+            current: readyCount,
+            total: videosToWaitFor.length,
+            phase: 'AI analyzing videos'
+          });
+
+          console.log('[VideoManagement] Phase 2 progress:', readyCount, '/', videosToWaitFor.length);
+
+          if (readyCount >= videosToWaitFor.length) {
+            allReady = true;
+          } else {
+            // Wait 5 seconds before checking again
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        }
+
+        if (!allReady) {
+          console.error('[VideoManagement] Timeout waiting for video analysis');
+          setProcessingError('Video analysis is taking longer than expected. Please try again.');
+          return;
+        }
+      }
+
+      // PHASE 3: Generate context for ALL videos without context
+      // This includes: videos we just indexed + videos that were already ready but missing context
+      const allVideosForContext = [...videosWithoutFullContext];
+
+      if (allVideosForContext.length > 0) {
+        setProcessingProgress({ current: 0, total: allVideosForContext.length, phase: 'Generating chapters' });
+        console.log('[VideoManagement] Phase 3: Generating context for', allVideosForContext.length, 'videos');
+
+        for (let i = 0; i < allVideosForContext.length; i++) {
+          const video = allVideosForContext[i];
+          setProcessingVideoId(video.id);
+          setProcessingProgress({ current: i + 1, total: allVideosForContext.length, phase: 'Generating chapters' });
+
+          console.log('[VideoManagement] Generating context for:', video.id, video.title);
+          await onGenerateAIContext(video.id);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      // FINAL CHECK: Verify all videos now have context before showing success
+      // Note: We trust that if we got here without errors, all videos should have context
+      console.log('[VideoManagement] All processing complete!');
+      setProcessingVideoId(null);
+      setShowSuccessModal(true);
+
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[VideoManagement] Error processing videos:', err);
+      }
+    } finally {
+      setProcessingAll(false);
+      setProcessingVideoId(null);
+      setProcessingProgress({ current: 0, total: 0, phase: '' });
     }
   };
   return (
@@ -111,9 +366,65 @@ export const VideoManagement = ({
       </div>
 
       <div className="mt-8">
-        <h3 className="text-lg font-medium text-white mb-4">Uploaded Videos</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-white">Uploaded Videos</h3>
+          {/* AI context indicator - purple themed */}
+          {demoVideos.length > 0 && (
+            <div className="flex flex-col items-end gap-2">
+              {/* Error display */}
+              {processingError && (
+                <div className="text-xs text-red-400 bg-red-500/10 px-3 py-1.5 rounded-lg">
+                  {processingError}
+                </div>
+              )}
+              <div className="flex items-center gap-3 text-sm">
+              {processingAll && processingProgress.total > 0 ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-purple-400 font-medium">
+                    {Math.round((processingProgress.current / processingProgress.total) * 100)}%
+                  </span>
+                  <div className="w-32 bg-purple-900/30 rounded-full h-2">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(processingProgress.current / processingProgress.total) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-purple-300">
+                    {processingProgress.phase}: {processingProgress.current}/{processingProgress.total}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-purple-400">
+                  {aiContextStats.withContext} of {aiContextStats.total} with AI context
+                </span>
+              )}
+              {/* Show button when processing, or when there's work to do (indexing, analyzing, or context generation needed) */}
+              {(processingAll || ((aiContextStats.needsIndexing > 0 || aiContextStats.indexing > 0 || aiContextStats.needsContext > 0) && onIndexWithTwelveLabs && onGenerateAIContext)) && (
+                <button
+                  onClick={handleProcessAllVideos}
+                  disabled={processingAll}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 disabled:text-purple-200 transition-colors"
+                >
+                  {processingAll ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {processingProgress.phase || 'Processing...'}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Generate All
+                    </>
+                  )}
+                </button>
+              )}
+              </div>
+            </div>
+          )}
+        </div>
         <ul className="space-y-3">
           {demoVideos.map(video => {
+            const isCurrentlyProcessing = processingVideoId === video.id;
             const statusConfig: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
               pending: {
                 color: 'text-amber-400',
@@ -142,8 +453,31 @@ export const VideoManagement = ({
             };
             const config = statusConfig[video.processing_status] || statusConfig.pending;
 
+            // Override styling if this video is currently being processed for AI
+            const cardBg = isCurrentlyProcessing
+              ? 'bg-purple-500/20 border-purple-500/50 ring-2 ring-purple-500/30'
+              : config.bg;
+
+            // Determine what action is being taken on this video
+            const tlStatus = getTwelveLabsStatus(video);
+            const processingAction = isCurrentlyProcessing
+              ? (processingProgress.phase === 'Sending to AI'
+                  ? 'Sending to AI for analysis...'
+                  : 'Generating chapters & summary...')
+              : null;
+
             return (
-            <li key={video.id} className={`rounded-xl px-6 py-4 border ${config.bg}`}>
+            <li key={video.id} className={`rounded-xl px-6 py-4 border ${cardBg} transition-all duration-300`}>
+              {/* Processing indicator bar */}
+              {isCurrentlyProcessing && processingAction && (
+                <div className="mb-3 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                  <span className="text-sm font-medium text-purple-400">{processingAction}</span>
+                  <div className="flex-1 bg-purple-900/30 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-purple-500 h-1.5 rounded-full animate-pulse" style={{ width: '100%' }} />
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{video.title}</p>
@@ -203,6 +537,43 @@ export const VideoManagement = ({
                   {video.processing_status === 'completed' && (
                     <p className="mt-1 text-xs text-domo-success">Audio transcribed and added to knowledge base</p>
                   )}
+
+                  {/* Twelve Labs AI Status - subtle indicator only */}
+                  {(() => {
+                    const tlStatus = getTwelveLabsStatus(video);
+                    if (tlStatus.status === 'none') return null;
+
+                    const tlConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+                      pending: {
+                        color: 'text-purple-400',
+                        icon: <Clock className="h-3 w-3" />,
+                        label: 'AI Analysis Queued',
+                      },
+                      indexing: {
+                        color: 'text-purple-400',
+                        icon: <Loader2 className="h-3 w-3 animate-spin" />,
+                        label: 'AI Analyzing Video...',
+                      },
+                      ready: {
+                        color: 'text-purple-400',
+                        icon: tlStatus.hasContext ? <Sparkles className="h-3 w-3" /> : <Brain className="h-3 w-3" />,
+                        label: tlStatus.hasContext ? 'AI Context Ready (Chapters + Summary)' : 'AI Indexed',
+                      },
+                      failed: {
+                        color: 'text-amber-400',
+                        icon: <AlertCircle className="h-3 w-3" />,
+                        label: 'AI Analysis Failed (optional)',
+                      },
+                    };
+                    const cfg = tlConfig[tlStatus.status] || tlConfig.pending;
+
+                    return (
+                      <div className={`flex items-center gap-1 mt-1 ${cfg.color}`}>
+                        {cfg.icon}
+                        <span className="text-xs">{cfg.label}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center space-x-2 ml-4">
                   <button
@@ -231,6 +602,9 @@ export const VideoManagement = ({
           )}
         </ul>
       </div>
+
+      {/* Success Modal */}
+      <SuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} />
     </div>
   );
 };

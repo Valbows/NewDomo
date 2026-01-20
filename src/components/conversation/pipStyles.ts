@@ -1,6 +1,8 @@
 /**
  * Custom CSS styles for Picture-in-Picture video layout.
  * Used when video is playing and conversation is minimized.
+ * - Hides ALL video views (agent shown in DualPipOverlay on bottom-left)
+ * - Shows ONLY floating control buttons (no container)
  */
 export const pipStyles = `
   .pip-video-layout {
@@ -8,36 +10,32 @@ export const pipStyles = `
     display: flex;
     flex-direction: column;
     position: relative;
+    justify-content: flex-end;
+    background: transparent !important;
   }
 
-  .pip-video-layout [class*="mainVideoContainer"] {
-    flex: 1;
-    min-height: 0;
-    position: relative;
+  /* Hide ALL video containers - both agent and user */
+  .pip-video-layout [class*="mainVideoContainer"],
+  .pip-video-layout [class*="videoContainer"],
+  .pip-video-layout [class*="selfViewContainer"],
+  .pip-video-layout video {
+    display: none !important;
   }
 
-  .pip-video-layout [class*="selfViewContainer"] {
-    position: relative !important;
-    bottom: auto !important;
-    right: auto !important;
-    left: auto !important;
-    z-index: 1;
-    margin-top: 8px;
-    align-self: center;
+  /* Make footer transparent - just floating buttons */
+  .pip-video-layout [class*="footer"],
+  .pip-video-layout [class*="controlBar"],
+  .pip-video-layout [class*="Footer"],
+  .pip-video-layout [class*="ControlBar"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 8px !important;
   }
 
-  .pip-video-layout [class*="previewVideoContainer"] {
-    width: 80px !important;
-    height: 60px !important;
-    max-height: 60px !important;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  .pip-video-layout [class*="previewVideo"] {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
+  .pip-video-layout [class*="footerControls"],
+  .pip-video-layout [class*="controls"] {
+    gap: 8px !important;
+    justify-content: flex-end !important;
   }
 `;

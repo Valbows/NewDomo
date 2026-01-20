@@ -2,11 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
+import { useActiveSpeakerId, useLocalSessionId } from '@daily-co/daily-react';
 import { TavusConversationCVI } from '@/app/demos/[demoId]/experience/components/TavusConversationCVI';
 import { InlineVideoPlayer } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
-import { BusyErrorScreen, CTABanner, ConversationEndedScreen, PreCallLobby, pipStyles } from '@/components/conversation';
+import { BusyErrorScreen, CTABanner, ConversationEndedScreen, PreCallLobby, pipStyles, DualPipOverlay } from '@/components/conversation';
+import { useReplicaIDs } from '@/components/cvi/hooks/use-replica-ids';
 import { analytics } from '@/lib/mixpanel';
 import {
   formatTime,
@@ -21,6 +23,124 @@ interface CurrentVideoMetadata {
   demoVideoId?: string;
   generatedContext?: string;
   chapters?: VideoChapter[];
+}
+
+/**
+ * Video overlay component with audio ducking
+ * Needs to be inside CVIProvider to use Daily hooks
+ */
+interface VideoOverlayWithDuckingProps {
+  videoUrl: string;
+  videoTitle?: string;
+  chapters?: VideoChapter[];
+  videoPlayerRef: React.MutableRefObject<InlineVideoPlayerHandle | null>;
+  onClose: () => void;
+  onVideoEnd: () => void;
+  onPause: (currentTime: number) => void;
+  onSeek: (currentTime: number) => void;
+  onTimeUpdate: (currentTime: number, isPaused: boolean) => void;
+}
+
+function VideoOverlayWithDucking({
+  videoUrl,
+  videoTitle,
+  chapters,
+  videoPlayerRef,
+  onClose,
+  onVideoEnd,
+  onPause,
+  onSeek,
+  onTimeUpdate,
+}: VideoOverlayWithDuckingProps) {
+  const replicaIds = useReplicaIDs();
+  const localSessionId = useLocalSessionId();
+  const activeSpeakerId = useActiveSpeakerId();
+  const previousVolumeRef = useRef<number>(1);
+  const isDuckedRef = useRef<boolean>(false);
+
+  // Audio ducking: lower video volume ONLY when USER is speaking
+  // This helps the agent hear the user better
+  // When agent speaks, keep video at normal volume (agent voice comes separately)
+  useEffect(() => {
+    const player = videoPlayerRef.current;
+    if (!player) return;
+
+    const isUserSpeaking = activeSpeakerId === localSessionId && localSessionId !== undefined;
+
+    if (isUserSpeaking && !isDuckedRef.current) {
+      // User started speaking - duck the video audio so agent can hear
+      previousVolumeRef.current = player.getVolume();
+      player.setVolume(0.1); // Low but not muted
+      isDuckedRef.current = true;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AudioDucking] Ducking video - user speaking');
+      }
+    } else if (!isUserSpeaking && isDuckedRef.current) {
+      // User stopped speaking - restore volume
+      player.setVolume(previousVolumeRef.current || 1);
+      isDuckedRef.current = false;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AudioDucking] Restoring video volume');
+      }
+    }
+  }, [activeSpeakerId, localSessionId, videoPlayerRef]);
+
+  // Ensure volume is set to full on mount
+  useEffect(() => {
+    const player = videoPlayerRef.current;
+    if (player) {
+      player.setVolume(1);
+      previousVolumeRef.current = 1;
+    }
+  }, [videoPlayerRef]);
+
+  return (
+    <div
+      className="absolute inset-0 bg-black flex flex-col z-30"
+      data-testid="video-overlay"
+    >
+      <div className="flex-shrink-0 bg-domo-bg-elevated text-white p-4 flex justify-between items-center border-b border-domo-border">
+        <h2 className="text-lg font-semibold">Demo Video</h2>
+        <button
+          data-testid="button-close-video"
+          onClick={onClose}
+          className="text-domo-text-secondary hover:text-white p-2 transition-colors"
+          title="Close video"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+      <div className="flex-1 p-4 bg-domo-bg-dark relative">
+        <div className="w-full h-full max-w-6xl mx-auto">
+          <InlineVideoPlayer
+            ref={videoPlayerRef}
+            videoUrl={videoUrl}
+            videoTitle={videoTitle}
+            chapters={chapters}
+            onClose={onClose}
+            onVideoEnd={onVideoEnd}
+            onPause={onPause}
+            onSeek={onSeek}
+            onTimeUpdate={onTimeUpdate}
+          />
+        </div>
+        {/* Dual PiP overlay showing Domo agent and User */}
+        <DualPipOverlay visible={true} />
+      </div>
+    </div>
+  );
 }
 
 export interface DemoExperienceViewProps {
@@ -161,14 +281,14 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             return;
           }
 
-          // Look up video from database
+          // Look up video from database (including metadata for Twelve Labs chapters)
           const { supabase } = await import('@/lib/supabase');
           const normalizedTitle = videoTitle.trim().replace(/^['"]|['"]$/g, '');
 
           // Try case-insensitive match first
           let { data: videoData, error: videoError } = await supabase
             .from('demo_videos')
-            .select('storage_url, title, id')
+            .select('storage_url, title, id, metadata')
             .eq('demo_id', demoId)
             .ilike('title', normalizedTitle)
             .single();
@@ -177,24 +297,70 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             // Try exact match as fallback
             const exactResult = await supabase
               .from('demo_videos')
-              .select('storage_url, title, id')
+              .select('storage_url, title, id, metadata')
               .eq('demo_id', demoId)
               .eq('title', normalizedTitle)
               .single();
 
             if (exactResult.error || !exactResult.data) {
-              console.warn(`Video not found: "${normalizedTitle}" for demoId: ${demoId}`, videoError);
-              // List available videos for debugging
+              // Try semantic search via Twelve Labs as last resort
               if (process.env.NODE_ENV !== 'production') {
-                const { data: allVideos } = await supabase
-                  .from('demo_videos')
-                  .select('title')
-                  .eq('demo_id', demoId);
-                console.log('[DemoExperienceView] Available videos for this demo:', allVideos?.map(v => v.title));
+                console.log('[DemoExperienceView] Exact match failed, trying semantic search for:', normalizedTitle);
               }
-              return;
+
+              try {
+                const searchResponse = await fetch('/api/twelve-labs/search', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: normalizedTitle, demoId }),
+                });
+
+                if (searchResponse.ok) {
+                  const searchData = await searchResponse.json();
+                  if (searchData.results && searchData.results.length > 0) {
+                    // Get the video with highest confidence from semantic search
+                    const bestMatch = searchData.results[0];
+                    if (bestMatch.demoVideoId) {
+                      const { data: semanticVideo } = await supabase
+                        .from('demo_videos')
+                        .select('storage_url, title, id, metadata')
+                        .eq('id', bestMatch.demoVideoId)
+                        .single();
+
+                      if (semanticVideo) {
+                        if (process.env.NODE_ENV !== 'production') {
+                          console.log('[DemoExperienceView] Semantic search found video:', {
+                            query: normalizedTitle,
+                            foundTitle: semanticVideo.title,
+                            confidence: bestMatch.confidence,
+                          });
+                        }
+                        videoData = semanticVideo;
+                      }
+                    }
+                  }
+                }
+              } catch (searchError) {
+                if (process.env.NODE_ENV !== 'production') {
+                  console.warn('[DemoExperienceView] Semantic search failed:', searchError);
+                }
+              }
+
+              // If still no video found, log and return
+              if (!videoData) {
+                console.warn(`Video not found: "${normalizedTitle}" for demoId: ${demoId}`, videoError);
+                if (process.env.NODE_ENV !== 'production') {
+                  const { data: allVideos } = await supabase
+                    .from('demo_videos')
+                    .select('title')
+                    .eq('demo_id', demoId);
+                  console.log('[DemoExperienceView] Available videos for this demo:', allVideos?.map(v => v.title));
+                }
+                return;
+              }
+            } else {
+              videoData = exactResult.data;
             }
-            videoData = exactResult.data;
           }
 
           if (process.env.NODE_ENV !== 'production') {
@@ -221,11 +387,23 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             finalVideoUrl = signedUrlData.signedUrl;
           }
 
+          // Parse chapters from Twelve Labs generated context (if available)
+          let chapters: VideoChapter[] = [];
+          const generatedContext = videoData.metadata?.twelvelabs?.generatedContext;
+          if (generatedContext) {
+            chapters = parseChaptersFromContext(generatedContext);
+            if (process.env.NODE_ENV !== 'production' && chapters.length > 0) {
+              console.log('[DemoExperienceView] Parsed chapters from Twelve Labs:', chapters);
+            }
+          }
+
           // Set up video context tracking
           const videoMetadata: CurrentVideoMetadata = {
             title: videoData.title,
             url: finalVideoUrl,
             demoVideoId: videoData.id,
+            generatedContext,
+            chapters,
           };
 
           currentVideoRef.current = videoMetadata;
@@ -257,6 +435,28 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         // Handle play_video (resume)
         if (toolName === 'play_video') {
           videoPlayerRef.current?.play?.();
+          onToolCall({ name: toolName, args });
+          return;
+        }
+
+        // Handle seek_video - jump to a specific timestamp
+        if (toolName === 'seek_video') {
+          if (uiState === UIState.VIDEO_PLAYING && videoPlayerRef.current?.seekTo) {
+            const timestampStr = args?.timestamp || args?.time || '';
+            // Parse timestamp in MM:SS or M:SS format
+            const parts = timestampStr.toString().split(':');
+            let seconds = 0;
+            if (parts.length === 2) {
+              const mins = parseInt(parts[0], 10) || 0;
+              const secs = parseInt(parts[1], 10) || 0;
+              seconds = mins * 60 + secs;
+            } else if (parts.length === 1) {
+              seconds = parseInt(parts[0], 10) || 0;
+            }
+            if (seconds >= 0) {
+              videoPlayerRef.current.seekTo(seconds);
+            }
+          }
           onToolCall({ name: toolName, args });
           return;
         }
@@ -561,22 +761,9 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                 } transition-all duration-300`}
               >
                 <div className="bg-domo-bg-card border border-domo-border rounded-xl shadow-lg overflow-hidden w-full h-full flex flex-col">
-                  <div className="p-2 bg-domo-primary text-white flex justify-between items-center flex-shrink-0">
-                    <div>
-                      <h2
-                        className={`font-semibold ${
-                          uiState === UIState.VIDEO_PLAYING ? 'text-sm' : 'text-lg'
-                        }`}
-                      >
-                        AI Demo Assistant
-                      </h2>
-                      {uiState !== UIState.VIDEO_PLAYING && (
-                        <p className="text-white/80 text-sm">
-                          Ask questions and request to see specific features
-                        </p>
-                      )}
-                    </div>
-                    {uiState === UIState.VIDEO_PLAYING && (
+                  {/* Minimal header - only show expand button in PiP mode */}
+                  {uiState === UIState.VIDEO_PLAYING && (
+                    <div className="p-2 bg-domo-primary text-white flex justify-end items-center flex-shrink-0">
                       <button
                         data-testid="button-expand-conversation"
                         onClick={() => {
@@ -600,13 +787,19 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                           />
                         </svg>
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   <div
-                    className="relative bg-domo-bg-dark flex-1"
+                    className={`relative flex-1 ${uiState === UIState.VIDEO_PLAYING ? 'bg-transparent' : 'bg-domo-bg-dark'}`}
                     style={{
-                      height: uiState === UIState.VIDEO_PLAYING ? '250px' : '75vh',
-                      minHeight: '400px',
+                      height: uiState === UIState.VIDEO_PLAYING ? '60px' : '75vh',
+                      minHeight: uiState === UIState.VIDEO_PLAYING ? '60px' : '400px',
+                      position: uiState === UIState.VIDEO_PLAYING ? 'fixed' : 'relative',
+                      bottom: uiState === UIState.VIDEO_PLAYING ? '16px' : 'auto',
+                      right: uiState === UIState.VIDEO_PLAYING ? '16px' : 'auto',
+                      left: uiState === UIState.VIDEO_PLAYING ? 'auto' : undefined,
+                      width: uiState === UIState.VIDEO_PLAYING ? 'auto' : undefined,
+                      zIndex: uiState === UIState.VIDEO_PLAYING ? 50 : undefined,
                     }}
                   >
                     {conversationUrl ? (
@@ -628,50 +821,19 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               </div>
             )}
 
-            {/* Video Player - Full screen when playing */}
+            {/* Video Player - Full screen when playing with dual PiP and audio ducking */}
             {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
-              <div
-                className="absolute inset-0 bg-black flex flex-col z-30"
-                data-testid="video-overlay"
-              >
-                <div className="flex-shrink-0 bg-domo-bg-elevated text-white p-4 flex justify-between items-center border-b border-domo-border">
-                  <h2 className="text-lg font-semibold">Demo Video</h2>
-                  <button
-                    data-testid="button-close-video"
-                    onClick={handleVideoClose}
-                    className="text-domo-text-secondary hover:text-white p-2 transition-colors"
-                    title="Close video"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <div className="flex-1 p-4 bg-domo-bg-dark">
-                  <div className="w-full h-full max-w-6xl mx-auto">
-                    <InlineVideoPlayer
-                      ref={videoPlayerRef}
-                      videoUrl={playingVideoUrl}
-                      videoTitle={currentVideoRef.current?.title}
-                      onClose={handleVideoClose}
-                      onVideoEnd={handleVideoEnd}
-                      onPause={handleVideoPause}
-                      onSeek={handleVideoSeek}
-                      onTimeUpdate={handleVideoTimeUpdate}
-                    />
-                  </div>
-                </div>
-              </div>
+              <VideoOverlayWithDucking
+                videoUrl={playingVideoUrl}
+                videoTitle={currentVideoRef.current?.title}
+                chapters={currentVideoRef.current?.chapters}
+                videoPlayerRef={videoPlayerRef}
+                onClose={handleVideoClose}
+                onVideoEnd={handleVideoEnd}
+                onPause={handleVideoPause}
+                onSeek={handleVideoSeek}
+                onTimeUpdate={handleVideoTimeUpdate}
+              />
             )}
           </main>
 

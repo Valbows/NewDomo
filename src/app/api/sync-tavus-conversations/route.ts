@@ -131,7 +131,7 @@ async function handleGET(req: NextRequest) {
         );
 
         if (!conversationResponse.ok) {
-          console.warn(`Failed to fetch conversation ${conversationId}:`, conversationResponse.status);
+          // Silently skip - conversation may be old/deleted from Tavus
           continue;
         }
 
@@ -187,32 +187,8 @@ async function handleGET(req: NextRequest) {
         if (perceptionAnalysis) {
         }
 
-        // If no perception analysis, check persona configuration
-        if (!perceptionAnalysis && demo.tavus_persona_id) {
-          try {
-            const personaResponse = await fetch(
-              `https://tavusapi.com/v2/personas/${demo.tavus_persona_id}`,
-              {
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-api-key': tavusApiKey,
-                },
-              }
-            );
-
-            if (personaResponse.ok) {
-              const personaData = await personaResponse.json();
-              const perceptionModel = personaData.perception_model;
-              
-              if (perceptionModel !== 'raven-0') {
-                console.warn(`Perception analysis requires perception_model to be set to 'raven-0'. Current: ${perceptionModel || 'not set'}`);
-              }
-            }
-          } catch (personaError) {
-            console.warn('Could not check persona configuration:', personaError);
-          }
-        }
+        // Note: If no perception analysis, the persona may not have perception_model set to 'raven-0'
+        // This is configured when creating the demo/persona, not checked here to avoid API spam
 
         // Calculate duration from created_at and updated_at if not provided by Tavus
         // Tavus API doesn't return duration/completed_at, so we calculate from timestamps
@@ -233,10 +209,11 @@ async function handleGET(req: NextRequest) {
         }
 
         // Prepare conversation detail record with transcript and perception data
-        const conversationDetail = {
+        // IMPORTANT: Don't overwrite conversation_name - preserve the name set during start-conversation
+        // (e.g., "WorkDay Platform Demo - 1/20/2026, 2:27:37 AM")
+        const conversationDetail: Record<string, any> = {
           demo_id: demo.id,
           tavus_conversation_id: conversationId,
-          conversation_name: conversationData.conversation_name || `Conversation ${conversationId.slice(-8)}`,
           transcript: transcript,
           perception_analysis: perceptionAnalysis,
           started_at: conversationData.created_at ? new Date(conversationData.created_at).toISOString() : null,
@@ -245,8 +222,12 @@ async function handleGET(req: NextRequest) {
           status: conversationData.status || 'active',
         };
 
+        // Only set conversation_name if creating a new record (not updating existing)
+        // This preserves the nice demo name format set during start-conversation
+
         // Insert or update the conversation detail
         if (existingConversation) {
+          // Update existing - DON'T include conversation_name to preserve the original
           const { error: updateError } = await supabase
             .from('conversation_details')
             .update(conversationDetail)
@@ -265,6 +246,10 @@ async function handleGET(req: NextRequest) {
             has_perception: !!perceptionAnalysis
           });
         } else {
+          // Creating new record - include conversation_name
+          conversationDetail.conversation_name = conversationData.conversation_name ||
+            `${demo.name || 'Demo'} - ${new Date().toLocaleString()}`;
+
           const { error: insertError } = await supabase
             .from('conversation_details')
             .insert([conversationDetail]);

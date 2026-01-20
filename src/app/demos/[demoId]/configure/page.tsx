@@ -280,6 +280,92 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     }
   };
 
+  const handleGenerateAIContext = async (videoId: string) => {
+    try {
+      const response = await fetch('/api/twelve-labs/generate-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demoVideoId: videoId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Context generation failed');
+      }
+
+      const data = await response.json();
+
+      // Update the video metadata with the generated context
+      setDemoVideos(prev => prev.map(v =>
+        v.id === videoId ? {
+          ...v,
+          metadata: {
+            ...v.metadata,
+            twelvelabs: {
+              ...v.metadata?.twelvelabs,
+              generatedContext: data.context,
+              contextGeneratedAt: new Date().toISOString(),
+            }
+          }
+        } : v
+      ));
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[GenerateAIContext] Error:', err);
+      }
+      // Could show error toast here
+    }
+  };
+
+  const handleIndexWithTwelveLabs = async (videoId: string): Promise<{ success: boolean; error?: string }> => {
+    console.log('[handleIndexWithTwelveLabs] Starting for video:', videoId);
+    try {
+      const response = await fetch('/api/twelve-labs/index-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demoVideoId: videoId }),
+      });
+
+      console.log('[handleIndexWithTwelveLabs] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[handleIndexWithTwelveLabs] API error:', errorData);
+        return { success: false, error: errorData.error || 'Indexing failed' };
+      }
+
+      const data = await response.json();
+      console.log('[handleIndexWithTwelveLabs] Response data:', data);
+
+      if (data.success) {
+        console.log('[handleIndexWithTwelveLabs] Success! Updating video metadata');
+        // Update the video metadata with indexing info
+        setDemoVideos(prev => prev.map(v =>
+          v.id === videoId ? {
+            ...v,
+            metadata: {
+              ...v.metadata,
+              twelvelabs: {
+                indexId: data.indexId,
+                videoId: data.videoId,
+                taskId: data.taskId,
+                status: data.status || 'indexing',
+                indexedAt: new Date().toISOString(),
+              }
+            }
+          } : v
+        ));
+        return { success: true };
+      } else {
+        console.warn('[handleIndexWithTwelveLabs] API returned success: false', data.message, data.error);
+        return { success: false, error: data.error || data.message || 'Indexing failed' };
+      }
+    } catch (err: any) {
+      console.error('[handleIndexWithTwelveLabs] Error:', err);
+      return { success: false, error: err.message || 'Unknown error' };
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-domo-bg-dark">
@@ -476,6 +562,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 previewVideoUrl={previewVideoUrl}
                 setPreviewVideoUrl={setPreviewVideoUrl}
                 onRetryTranscription={handleRetryTranscription}
+                onGenerateAIContext={handleGenerateAIContext}
+                onIndexWithTwelveLabs={handleIndexWithTwelveLabs}
               />
               {/* Next step button during onboarding */}
               {!isOnboardingComplete && (

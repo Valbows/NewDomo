@@ -54,7 +54,12 @@ export async function createDomoAIPersona(config: Omit<PersonaConfig, 'guardrail
       llm: {
         model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
         tools: DOMO_AI_TOOLS, // Include all standard tools for video playback and CTA
-      }
+      },
+      // Sparrow-1: Human-level turn-taking with <100ms response time
+      conversational_context: {
+        turn_taking_model: 'sparrow-1',
+        turn_taking_patience: 'high',
+      },
     },
   };
 

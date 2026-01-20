@@ -24,6 +24,7 @@ export interface VideoSearchResult {
   confidence: number;
   text?: string;
   thumbnailUrl?: string;
+  videoId?: string; // Twelve Labs video ID for mapping back to demo_videos
 }
 
 export interface VideoContext {
@@ -42,6 +43,12 @@ async function apiRequest(
 ): Promise<any> {
   const url = `${TWELVE_LABS_BASE_URL}${endpoint}`;
 
+  console.log(`[TwelveLabs] API Request: ${method} ${url}`);
+  console.log(`[TwelveLabs] API Key present: ${!!TWELVE_LABS_API_KEY}, length: ${TWELVE_LABS_API_KEY.length}`);
+  if (body) {
+    console.log(`[TwelveLabs] Request body:`, JSON.stringify(body).substring(0, 200));
+  }
+
   const response = await fetch(url, {
     method,
     headers: {
@@ -51,13 +58,25 @@ async function apiRequest(
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  console.log(`[TwelveLabs] API Response status: ${response.status}`);
+
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[TwelveLabs] API Error: ${response.status} - ${errorText}`);
-    throw new Error(`Twelve Labs API error: ${response.status}`);
+    console.error(`[TwelveLabs] API Error: ${response.status}`);
+    console.error(`[TwelveLabs] Error details:`, errorText);
+    // Try to parse JSON error for more details
+    try {
+      const errorJson = JSON.parse(errorText);
+      console.error(`[TwelveLabs] Error message:`, errorJson.message || errorJson.error);
+    } catch {
+      // Not JSON, already logged as text
+    }
+    throw new Error(`Twelve Labs API error: ${response.status} - ${errorText.substring(0, 200)}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log(`[TwelveLabs] API Response:`, JSON.stringify(data).substring(0, 500));
+  return data;
 }
 
 /**
@@ -98,6 +117,7 @@ export async function getOrCreateIndex(): Promise<string> {
 /**
  * Index a video from a URL
  * This should be called when a user uploads a demo video
+ * Note: Twelve Labs /tasks endpoint requires multipart/form-data
  */
 export async function indexVideo(
   videoUrl: string,
@@ -106,11 +126,33 @@ export async function indexVideo(
   try {
     const indexId = await getOrCreateIndex();
 
-    // Create a task to index the video
-    const task = await apiRequest('/tasks', 'POST', {
-      index_id: indexId,
-      video_url: videoUrl,
+    console.log('[TwelveLabs] Creating task with FormData for video URL');
+
+    // Create FormData for multipart request (required by Twelve Labs)
+    const formData = new FormData();
+    formData.append('index_id', indexId);
+    formData.append('video_url', videoUrl);
+
+    const url = `${TWELVE_LABS_BASE_URL}/tasks`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': TWELVE_LABS_API_KEY,
+        // Don't set Content-Type - let fetch set it with boundary for FormData
+      },
+      body: formData,
     });
+
+    console.log('[TwelveLabs] Task creation response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[TwelveLabs] Task creation error:', errorText);
+      throw new Error(`Twelve Labs API error: ${response.status}`);
+    }
+
+    const task = await response.json();
+    console.log('[TwelveLabs] Task created:', task);
 
     return {
       indexId,
@@ -194,6 +236,7 @@ export async function searchVideo(
       confidence: result.confidence || 0,
       text: result.metadata?.text || result.transcription,
       thumbnailUrl: result.thumbnail_url,
+      videoId: result.video_id, // Include for mapping back to demo_videos
     }));
   } catch (error) {
     console.error('[TwelveLabs] Error searching video:', error);

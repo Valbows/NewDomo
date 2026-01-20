@@ -87,11 +87,24 @@ export async function handleVideoUpload(params: VideoUploadParams) {
     }).catch((err: unknown) => logError(err, 'Transcription request failed'));
 
     // Start Twelve Labs video indexing in background (for AI video understanding)
+    // This is optional - failure doesn't affect core functionality
     fetch('/api/twelve-labs/index-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ demoVideoId: newVideo.id }),
-    }).catch((err: unknown) => logError(err, 'Twelve Labs indexing request failed'));
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!data.success && data.skipped && process.env.NODE_ENV !== 'production') {
+          console.warn('[TwelveLabs] Video indexing skipped:', data.message);
+        }
+      })
+      .catch((err: unknown) => {
+        // Only log in development - this is an optional feature
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[TwelveLabs] Video indexing request failed (optional):', getErrorMessage(err));
+        }
+      });
 
     setDemoVideos([...demoVideos, newVideo]);
     setProcessingStatus({ stage: 'completed', progress: 100, message: 'Video uploaded. Transcription in progress.' });

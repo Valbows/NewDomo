@@ -67,3 +67,12 @@ CREATE TRIGGER handle_updated_at_conversation_details
   BEFORE UPDATE ON public.conversation_details
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_updated_at();
+
+-- Enable Realtime for conversation_details
+-- This allows automatic UI updates when perception_analysis, transcript, or status changes
+DO $$ BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.conversation_details;
+  EXCEPTION WHEN others THEN NULL;
+  END;
+END $$;

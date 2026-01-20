@@ -77,23 +77,14 @@ export function PreCallLobby({
       <div className="bg-domo-bg-card border border-domo-border rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-domo-primary to-domo-secondary px-6 py-8 text-center">
-          {/* Agent Avatar */}
-          <div className="w-24 h-24 mx-auto bg-domo-bg-card rounded-full flex items-center justify-center shadow-lg mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-domo-primary to-domo-secondary rounded-full flex items-center justify-center">
-              <svg
-                className="w-12 h-12 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
+          {/* Domo Logo */}
+          <div className="mx-auto mb-4">
+            <img
+              src="/domo-logo.png"
+              alt="Domo"
+              className="h-32 w-auto"
+              style={{ height: '128px' }}
+            />
           </div>
 
           <h1 className="text-2xl font-bold text-white mb-1 font-heading">

@@ -12,8 +12,14 @@ function getSupabaseAdmin() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[TwelveLabs API] POST /index-video called');
+
     // Check if Twelve Labs is configured
-    if (!process.env.TWELVE_LABS_API_KEY?.trim()) {
+    const apiKey = process.env.TWELVE_LABS_API_KEY?.trim();
+    console.log('[TwelveLabs API] API Key configured:', !!apiKey, 'Length:', apiKey?.length || 0);
+
+    if (!apiKey) {
+      console.log('[TwelveLabs API] No API key - skipping');
       return NextResponse.json({
         success: false,
         skipped: true,
@@ -22,6 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { demoVideoId } = await request.json();
+    console.log('[TwelveLabs API] Processing video ID:', demoVideoId);
 
     if (!demoVideoId) {
       return NextResponse.json({ error: 'demoVideoId is required' }, { status: 400 });
@@ -41,16 +48,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a signed URL for the video
+    console.log('[TwelveLabs API] Generating signed URL for:', video.storage_url);
     const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
       .from('demo-videos')
       .createSignedUrl(video.storage_url, 3600); // 1 hour validity
 
     if (urlError || !signedUrlData) {
+      console.log('[TwelveLabs API] Failed to generate signed URL:', urlError);
       return NextResponse.json({ error: 'Could not generate video URL' }, { status: 500 });
     }
+    console.log('[TwelveLabs API] Signed URL generated successfully');
 
     // Start indexing with Twelve Labs
+    console.log('[TwelveLabs API] Calling Twelve Labs indexVideo...');
     const indexResult = await indexVideo(signedUrlData.signedUrl, video.title);
+    console.log('[TwelveLabs API] Index result:', indexResult);
 
     // Update the video record with Twelve Labs metadata
     const { error: updateError } = await supabaseAdmin
@@ -69,7 +81,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', demoVideoId);
 
-    if (updateError) {
+    if (updateError && process.env.NODE_ENV !== 'production') {
       console.error('[TwelveLabs] Error updating video metadata:', updateError);
     }
 
@@ -82,8 +94,15 @@ export async function POST(request: NextRequest) {
       message: 'Video indexing started. This may take a few minutes.',
     });
   } catch (error: any) {
-    // Log the error but return 200 with error flag (optional feature shouldn't cause 500s)
-    console.error('[TwelveLabs] Index video error:', error);
+    // Log specific error only in development - this is an optional feature
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[TwelveLabs] Index video error:', {
+        message: error.message,
+        status: error.status,
+        cause: error.cause,
+      });
+    }
+    // Return 200 with error flag - optional feature shouldn't cause failures
     return NextResponse.json({
       success: false,
       skipped: true,
@@ -153,7 +172,9 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error: any) {
-    console.error('[TwelveLabs] Get status error:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[TwelveLabs] Get status error:', error.message);
+    }
     return NextResponse.json(
       { error: error.message || 'Failed to get indexing status' },
       { status: 500 }

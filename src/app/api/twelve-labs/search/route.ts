@@ -11,8 +11,9 @@ function getSupabaseAdmin() {
 }
 
 /**
- * Search within indexed videos
+ * Search within indexed videos using Twelve Labs semantic search
  * Used by the Tavus agent to find relevant video segments
+ * Returns demoVideoId for each result so caller can look up the video
  */
 export async function POST(request: NextRequest) {
   try {
@@ -26,31 +27,45 @@ export async function POST(request: NextRequest) {
 
     let indexId: string | undefined;
     let videoId: string | undefined;
+    let targetDemoVideoId: string | undefined = demoVideoId;
+
+    // Build a map of Twelve Labs videoId -> demoVideoId for result mapping
+    const videoIdMap: Record<string, string> = {};
 
     // If specific video, get its Twelve Labs info
     if (demoVideoId) {
       const { data: video } = await supabaseAdmin
         .from('demo_videos')
-        .select('metadata')
+        .select('id, metadata')
         .eq('id', demoVideoId)
         .single();
 
       if (video?.metadata?.twelvelabs) {
         indexId = video.metadata.twelvelabs.indexId;
         videoId = video.metadata.twelvelabs.videoId;
+        if (videoId) {
+          videoIdMap[videoId] = video.id;
+        }
       }
     }
     // If demo ID, search across all videos in that demo
     else if (demoId) {
       const { data: videos } = await supabaseAdmin
         .from('demo_videos')
-        .select('metadata')
+        .select('id, title, metadata')
         .eq('demo_id', demoId);
 
-      // Get the index ID from the first indexed video
-      const indexedVideo = videos?.find((v) => v.metadata?.twelvelabs?.indexId);
-      if (indexedVideo) {
-        indexId = indexedVideo.metadata.twelvelabs.indexId;
+      if (videos) {
+        // Build videoId -> demoVideoId map for all indexed videos
+        for (const v of videos) {
+          if (v.metadata?.twelvelabs?.videoId) {
+            videoIdMap[v.metadata.twelvelabs.videoId] = v.id;
+            // Get index ID from first indexed video
+            if (!indexId && v.metadata.twelvelabs.indexId) {
+              indexId = v.metadata.twelvelabs.indexId;
+            }
+          }
+        }
       }
     }
 
@@ -61,22 +76,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Search the video(s)
+    // Search the video(s) using Twelve Labs semantic search
     const results = await searchVideo(query, indexId, videoId);
 
+    // Map results back to demoVideoIds
     return NextResponse.json({
       success: true,
       query,
-      results: results.map((r) => ({
-        startTime: r.start,
-        endTime: r.end,
-        confidence: r.confidence,
-        text: r.text,
-        formattedTime: `${formatTime(r.start)} - ${formatTime(r.end)}`,
-      })),
+      results: results.map((r: any) => {
+        // Twelve Labs returns video_id in the result
+        const tlVideoId = r.videoId || r.video_id;
+        const mappedDemoVideoId = tlVideoId ? videoIdMap[tlVideoId] : targetDemoVideoId;
+
+        return {
+          demoVideoId: mappedDemoVideoId,
+          startTime: r.start,
+          endTime: r.end,
+          confidence: r.confidence,
+          text: r.text,
+          formattedTime: `${formatTime(r.start)} - ${formatTime(r.end)}`,
+        };
+      }),
     });
   } catch (error: any) {
-    console.error('[TwelveLabs] Search error:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[TwelveLabs] Search error:', error);
+    }
     return NextResponse.json(
       { error: error.message || 'Failed to search video' },
       { status: 500 }

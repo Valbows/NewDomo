@@ -9,6 +9,8 @@ export interface VideoChapter {
   start: number;
   end: number;
   title: string;
+  chapterNumber?: number;
+  description?: string;
 }
 
 export interface VideoContextInfo {
@@ -32,22 +34,42 @@ export function parseChaptersFromContext(generatedContext: string): VideoChapter
 
   const chapterSection = chapterMatch[1];
 
-  // Parse each chapter line: "1. [0:00 - 1:30] Chapter title"
-  const chapterRegex = /\d+\.\s*\[(\d+):(\d+)\s*-\s*(\d+):(\d+)\]\s*(.+)/g;
-  let match;
+  // Split into lines and process each line separately to avoid greedy matching issues
+  const lines = chapterSection.split('\n');
 
-  while ((match = chapterRegex.exec(chapterSection)) !== null) {
-    const startMins = parseInt(match[1], 10);
-    const startSecs = parseInt(match[2], 10);
-    const endMins = parseInt(match[3], 10);
-    const endSecs = parseInt(match[4], 10);
-    const title = match[5].trim();
+  for (const line of lines) {
+    // Match chapter pattern: "1. [0:00 - 1:30] Chapter title" or "1. [0:00 - 1:30]"
+    // Description should NOT start with another chapter pattern (digit followed by period)
+    const chapterRegex = /^(\d+)\.\s*\[(\d+):(\d+)\s*-\s*(\d+):(\d+)\]\s*(.*)$/;
+    const match = line.trim().match(chapterRegex);
 
-    chapters.push({
-      start: startMins * 60 + startSecs,
-      end: endMins * 60 + endSecs,
-      title
-    });
+    if (match) {
+      const chapterNumber = parseInt(match[1], 10);
+      const startMins = parseInt(match[2], 10);
+      const startSecs = parseInt(match[3], 10);
+      const endMins = parseInt(match[4], 10);
+      const endSecs = parseInt(match[5], 10);
+      let description = match[6]?.trim() || '';
+
+      // Clean up description: remove any trailing chapter patterns that might have been captured
+      // e.g., if description is "2. [0:21 - 0:56] Something", extract only "Something" or clear it
+      const nextChapterPattern = /^\d+\.\s*\[\d+:\d+\s*-\s*\d+:\d+\]/;
+      if (nextChapterPattern.test(description)) {
+        // Description contains another chapter pattern - this means no real description
+        description = '';
+      }
+
+      // Create a user-friendly title: use description if available, otherwise "Chapter N"
+      const title = description || `Chapter ${chapterNumber}`;
+
+      chapters.push({
+        start: startMins * 60 + startSecs,
+        end: endMins * 60 + endSecs,
+        title,
+        chapterNumber,
+        description: description || undefined,
+      });
+    }
   }
 
   return chapters;

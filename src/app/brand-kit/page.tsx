@@ -1,9 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 
 const BrandKitPage = () => {
+  const [embedToken, setEmbedToken] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+
+  useEffect(() => {
+    // Set baseUrl from current origin
+    if (typeof window !== 'undefined') {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
+
+  const handleOpenPopup = () => {
+    if (!embedToken.trim()) {
+      alert('Please enter an embed token');
+      return;
+    }
+    // @ts-ignore - Domo is loaded via script
+    if (typeof window !== 'undefined' && window.Domo) {
+      // @ts-ignore
+      window.Domo.setBaseUrl(baseUrl);
+      // @ts-ignore
+      window.Domo.open(embedToken.trim());
+    } else {
+      alert('Domo embed script not loaded yet');
+    }
+  };
   const colors = [
     { name: 'Primary Blue', variable: 'domo-primary', hex: '#248BFB', usage: 'Main buttons, links, accents' },
     { name: 'Secondary Blue', variable: 'domo-secondary', hex: '#6FB3FC', usage: 'Hover states, secondary elements' },
@@ -275,7 +301,41 @@ module.exports = {
             Use consistent spacing based on an 8px grid system for harmony across layouts.
           </p>
         </section>
+
+        {/* Embed Test Section */}
+        <section className="mb-16">
+          <h2 className="text-2xl font-semibold text-white mb-6 font-heading">
+            Embed Popup Test
+          </h2>
+          <div className="bg-domo-bg-card border border-domo-border rounded-xl p-6">
+            <p className="text-domo-text-secondary mb-4">
+              Test your popup modal embed here. Enter your embed token and click the button to open the demo popup.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <input
+                type="text"
+                value={embedToken}
+                onChange={(e) => setEmbedToken(e.target.value)}
+                placeholder="Enter your embed token..."
+                className="flex-1 px-4 py-3 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary"
+              />
+              <button
+                onClick={handleOpenPopup}
+                className="px-6 py-3 bg-domo-primary hover:bg-domo-secondary text-white font-semibold rounded-lg transition-colors whitespace-nowrap"
+              >
+                Open Popup Modal
+              </button>
+            </div>
+            <div className="text-xs text-domo-text-muted">
+              <p><strong>Base URL:</strong> <code className="text-domo-primary">{baseUrl || 'Loading...'}</code></p>
+              <p className="mt-1">The popup will load the demo from your current environment.</p>
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Load Domo Embed Script */}
+      <Script src="/embed.js" strategy="afterInteractive" />
 
       {/* Footer */}
       <footer className="bg-domo-bg-card border-t border-domo-border">

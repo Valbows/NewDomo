@@ -74,6 +74,23 @@ export const VIDEO_TOOLS: TavusTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'seek_video',
+      description: 'Jump to a specific timestamp in the currently playing video. Use this when the user asks to go to a specific time or chapter.',
+      parameters: {
+        type: 'object',
+        properties: {
+          timestamp: {
+            type: 'string',
+            description: 'The timestamp to seek to in MM:SS or M:SS format (e.g., "1:30" for 1 minute 30 seconds, "0:45" for 45 seconds)',
+          },
+        },
+        required: ['timestamp'],
+      },
+    },
+  },
 ];
 
 /**

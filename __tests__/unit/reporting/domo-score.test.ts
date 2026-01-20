@@ -23,42 +23,35 @@ describe("domo-score", () => {
       expect(isValidPerceptionAnalysis("   ")).toBe(false);
     });
 
-    it("should return false for black screen indicators", () => {
-      expect(isValidPerceptionAnalysis("completely black screen")).toBe(false);
-      expect(isValidPerceptionAnalysis("no visual data")).toBe(false);
-      expect(isValidPerceptionAnalysis("black screen detected")).toBe(false);
-      expect(isValidPerceptionAnalysis("all visual inputs were consistently reported as completely black")).toBe(false);
+    it("should return false for very short strings (< 10 chars)", () => {
+      expect(isValidPerceptionAnalysis("short")).toBe(false);
+      expect(isValidPerceptionAnalysis("abc")).toBe(false);
     });
 
-    it("should return true for valid visual indicators (string)", () => {
+    it("should return true for any string with 10+ characters", () => {
       expect(isValidPerceptionAnalysis("user appears engaged and focused")).toBe(true);
-      expect(isValidPerceptionAnalysis("facial expression shows interest")).toBe(true);
-      expect(isValidPerceptionAnalysis("person looking at screen attentively")).toBe(true);
-      expect(isValidPerceptionAnalysis("hand gestures indicate active participation")).toBe(true);
+      expect(isValidPerceptionAnalysis("completely black screen")).toBe(true); // Still counts as data
+      expect(isValidPerceptionAnalysis("some analysis text here")).toBe(true);
     });
 
-    it("should return false for black screen even with some visual words", () => {
-      expect(isValidPerceptionAnalysis("completely black, no user visible")).toBe(false);
-    });
-
-    it("should return true for object with perception metrics", () => {
+    it("should return true for object with any keys", () => {
       expect(isValidPerceptionAnalysis({ overall_score: 0.8 })).toBe(true);
       expect(isValidPerceptionAnalysis({ engagement_score: 0.9 })).toBe(true);
       expect(isValidPerceptionAnalysis({ key_insights: ["engaged", "focused"] })).toBe(true);
+      expect(isValidPerceptionAnalysis({ any_key: "any_value" })).toBe(true);
     });
 
     it("should return false for empty object", () => {
       expect(isValidPerceptionAnalysis({})).toBe(false);
     });
 
-    it("should handle complex perception objects", () => {
-      const validPerception = {
-        overall_score: 0.85,
-        engagement_score: 0.9,
-        sentiment_score: 0.75,
-        key_insights: ["User highly engaged", "Positive sentiment"],
-      };
-      expect(isValidPerceptionAnalysis(validPerception)).toBe(true);
+    it("should return true for non-empty arrays", () => {
+      expect(isValidPerceptionAnalysis(["item1", "item2"])).toBe(true);
+      expect(isValidPerceptionAnalysis([{ data: "value" }])).toBe(true);
+    });
+
+    it("should return false for empty arrays", () => {
+      expect(isValidPerceptionAnalysis([])).toBe(false);
     });
   });
 

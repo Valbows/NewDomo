@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   ConversationDetail,
@@ -27,6 +27,8 @@ interface UseConversationDataReturn {
   fetchVideoShowcaseData: () => Promise<void>;
   fetchCtaTrackingData: () => Promise<void>;
   refreshAllData: () => Promise<void>;
+  pauseRealtime: () => void; // Pause realtime updates during sync
+  resumeRealtime: () => void; // Resume realtime updates after sync
 }
 
 export function useConversationData({
@@ -44,7 +46,32 @@ export function useConversationData({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch detailed conversation data from our new table
+  // Core fetch logic - shared between initial load and silent updates
+  const doFetchConversationDetails = useCallback(async () => {
+    if (!demoId) return;
+
+    const { data, error } = await supabase
+      .from("conversation_details")
+      .select("*")
+      .eq("demo_id", demoId)
+      .order("completed_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    // Sort conversations by date (most recent first)
+    const sortedData = (data || []).sort((a, b) => {
+      const aDate = a.completed_at || a.created_at;
+      const bDate = b.completed_at || b.created_at;
+      const aTime = aDate ? new Date(aDate).getTime() : 0;
+      const bTime = bDate ? new Date(bDate).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    setConversationDetails(sortedData);
+  }, [demoId]);
+
+  // Fetch with loading state - for initial load and manual refresh
   const fetchConversationDetails = useCallback(async () => {
     if (!demoId) return;
 
@@ -52,35 +79,24 @@ export function useConversationData({
     setError(null);
 
     try {
-      const { data, error } = await supabase
-        .from("conversation_details")
-        .select("*")
-        .eq("demo_id", demoId)
-        .order("completed_at", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Sort conversations by date (most recent first)
-      // Use completed_at if available, otherwise fall back to created_at
-      const sortedData = (data || []).sort((a, b) => {
-        const aDate = a.completed_at || a.created_at;
-        const bDate = b.completed_at || b.created_at;
-
-        const aTime = aDate ? new Date(aDate).getTime() : 0;
-        const bTime = bDate ? new Date(bDate).getTime() : 0;
-
-        return bTime - aTime; // Descending order (latest first)
-      });
-
-      setConversationDetails(sortedData);
+      await doFetchConversationDetails();
     } catch (err) {
       console.error("Failed to fetch conversation details:", err);
       setError("Failed to load conversation details");
     } finally {
       setLoading(false);
     }
-  }, [demoId]);
+  }, [demoId, doFetchConversationDetails]);
+
+  // Silent fetch - for realtime updates (no loading spinner)
+  const silentFetchConversationDetails = useCallback(async () => {
+    try {
+      await doFetchConversationDetails();
+    } catch (err) {
+      // Silent fail - don't show error for background updates
+      console.error("Silent fetch failed:", err);
+    }
+  }, [doFetchConversationDetails]);
 
   // Fetch contact information for conversations
   const fetchContactInfo = useCallback(async () => {
@@ -192,6 +208,59 @@ export function useConversationData({
     refreshAllData();
   }, [refreshAllData]);
 
+  // Refs to control realtime behavior during sync
+  const realtimePausedRef = useRef(false);
+  const pendingUpdatesRef = useRef(0);
+
+  // Pause realtime updates - call before starting sync
+  const pauseRealtime = useCallback(() => {
+    realtimePausedRef.current = true;
+    pendingUpdatesRef.current = 0;
+  }, []);
+
+  // Resume realtime updates - call after sync completes, triggers ONE silent refresh
+  const resumeRealtime = useCallback(() => {
+    realtimePausedRef.current = false;
+    // If there were any updates while paused, do one silent refresh
+    if (pendingUpdatesRef.current > 0) {
+      pendingUpdatesRef.current = 0;
+      silentFetchConversationDetails();
+    }
+  }, [silentFetchConversationDetails]);
+
+  // Subscribe to realtime updates for conversation_details
+  // Uses SILENT fetch to avoid UI flickering on background updates
+  // Ignores updates when paused (during manual sync)
+  useEffect(() => {
+    if (!demoId) return;
+
+    const channel = supabase
+      .channel(`conversation_details_${demoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'conversation_details',
+          filter: `demo_id=eq.${demoId}`,
+        },
+        () => {
+          // If paused (during sync), just count updates - don't refresh
+          if (realtimePausedRef.current) {
+            pendingUpdatesRef.current++;
+            return;
+          }
+          // Normal operation: silent refresh (no loading spinner)
+          silentFetchConversationDetails();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [demoId, silentFetchConversationDetails]);
+
   // Compute if there are any ended conversations missing perception analysis
   // This is used by the parent component to trigger Tavus API sync
   const hasPendingAnalysis = conversationDetails.some((c) => {
@@ -214,5 +283,7 @@ export function useConversationData({
     fetchVideoShowcaseData,
     fetchCtaTrackingData,
     refreshAllData,
+    pauseRealtime,
+    resumeRealtime,
   };
 }

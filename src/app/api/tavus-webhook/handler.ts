@@ -254,7 +254,7 @@ async function ensureConversationDetailsRecord(
     // Find the demo associated with this conversation
     const { data: demo, error: demoError } = await supabase
       .from('demos')
-      .select('id')
+      .select('id, name')
       .eq('tavus_conversation_id', conversationId)
       .single();
 
@@ -263,13 +263,13 @@ async function ensureConversationDetailsRecord(
       return;
     }
 
-    // Create a minimal conversation_details record
+    // Create a minimal conversation_details record with proper demo name format
     const { error: insertError } = await supabase
       .from('conversation_details')
       .insert({
         demo_id: demo.id,
         tavus_conversation_id: conversationId,
-        conversation_name: `Conversation ${conversationId.slice(-8)}`,
+        conversation_name: `${demo.name || 'Demo'} - ${new Date().toLocaleString()}`,
         status: 'active',
         started_at: new Date().toISOString(),
       });

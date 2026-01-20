@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { ReportingProps } from "./types";
 import { useConversationData } from "./hooks/useConversationData";
-import { useConversationSync } from "./hooks/useConversationSync";
 import { calculateDomoScore } from "./utils/domo-score";
 import { StatsDashboard } from "./components/StatsDashboard";
 import { ConversationList } from "./components/ConversationList";
 
 export const Reporting = ({ demo }: ReportingProps) => {
   const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const syncingRef = useRef(false); // Prevent multiple simultaneous syncs
 
   // Use custom hooks for data management
+  // Realtime subscription in useConversationData handles automatic updates
   const {
     conversationDetails,
     contactInfo,
@@ -23,86 +26,43 @@ export const Reporting = ({ demo }: ReportingProps) => {
     error: dataError,
     hasPendingAnalysis,
     refreshAllData,
+    pauseRealtime,
+    resumeRealtime,
   } = useConversationData({ demoId: demo?.id });
 
-  const { syncing, syncError, syncConversations, initialSyncComplete } = useConversationSync({
-    demoId: demo?.id,
-    onSyncComplete: refreshAllData,
-    autoSync: true, // Auto-sync when page loads
-  });
+  // Manual sync function - fetches perception analysis from Tavus API
+  // Pauses realtime during sync to prevent multiple UI refreshes
+  const syncConversations = useCallback(async () => {
+    if (!demo?.id || syncingRef.current) return;
 
-  // Track auto-sync state with retry limits
-  const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const autoSyncAttemptsRef = useRef<number>(0);
-  const autoSyncStartTimeRef = useRef<number | null>(null);
-  const MAX_AUTO_SYNC_ATTEMPTS = 3; // Reduced from 10
-  const MAX_AUTO_SYNC_DURATION_MS = 1 * 60 * 1000; // 1 minute (changed from 5 minutes)
+    syncingRef.current = true;
+    setSyncing(true);
+    setSyncError(null);
 
-  // Check if any conversation ended recently (within 1 minute)
-  const hasRecentlyEndedConversation = conversationDetails.some((c) => {
-    if (c.status !== 'ended' && c.status !== 'completed') return false;
-    if (!c.completed_at) return false;
-    const completedTime = new Date(c.completed_at).getTime();
-    const oneMinuteAgo = Date.now() - 60 * 1000;
-    return completedTime > oneMinuteAgo;
-  });
+    // Pause realtime updates during sync to prevent UI flickering
+    pauseRealtime();
 
-  // Auto-sync from Tavus API ONLY when:
-  // 1. Initial sync is complete
-  // 2. There are pending analyses
-  // 3. A conversation ended recently (within 1 minute)
-  useEffect(() => {
-    // Only start auto-sync if initial sync is complete, there are pending analyses, AND a conversation ended recently
-    if (!initialSyncComplete || !hasPendingAnalysis || !hasRecentlyEndedConversation) {
-      // Reset counters when conditions not met
-      if (!hasPendingAnalysis || !hasRecentlyEndedConversation) {
-        autoSyncAttemptsRef.current = 0;
-        autoSyncStartTimeRef.current = null;
+    try {
+      const response = await fetch(`/api/sync-tavus-conversations?demoId=${demo.id}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to sync conversations");
       }
-      if (autoSyncIntervalRef.current) {
-        clearInterval(autoSyncIntervalRef.current);
-        autoSyncIntervalRef.current = null;
-      }
-      return;
+
+      // Sync complete - do ONE refresh of all data
+      await refreshAllData();
+    } catch (err) {
+      console.error("Failed to sync conversations:", err);
+      setSyncError("Failed to sync conversations from Domo");
+    } finally {
+      setSyncing(false);
+      syncingRef.current = false;
+      // Resume realtime updates
+      resumeRealtime();
     }
-
-    // Initialize start time on first run
-    if (!autoSyncStartTimeRef.current) {
-      autoSyncStartTimeRef.current = Date.now();
-    }
-
-    // Check if we've exceeded limits
-    const hasExceededAttempts = autoSyncAttemptsRef.current >= MAX_AUTO_SYNC_ATTEMPTS;
-    const hasExceededTime = Date.now() - (autoSyncStartTimeRef.current || Date.now()) > MAX_AUTO_SYNC_DURATION_MS;
-
-    if (hasExceededAttempts || hasExceededTime) {
-      if (autoSyncIntervalRef.current) {
-        clearInterval(autoSyncIntervalRef.current);
-        autoSyncIntervalRef.current = null;
-      }
-      return;
-    }
-
-    // Start polling Tavus API every 20 seconds for perception analysis (reduced from 30)
-    const syncInterval = () => {
-      if (!syncing) {
-        autoSyncAttemptsRef.current += 1;
-        syncConversations();
-      }
-    };
-
-    // Start interval if not already running
-    if (!autoSyncIntervalRef.current) {
-      autoSyncIntervalRef.current = setInterval(syncInterval, 20000);
-    }
-
-    return () => {
-      if (autoSyncIntervalRef.current) {
-        clearInterval(autoSyncIntervalRef.current);
-        autoSyncIntervalRef.current = null;
-      }
-    };
-  }, [initialSyncComplete, hasPendingAnalysis, hasRecentlyEndedConversation, syncing, syncConversations]);
+  }, [demo?.id, pauseRealtime, resumeRealtime, refreshAllData]);
 
   // Combine errors
   const error = dataError || syncError;
@@ -163,19 +123,22 @@ export const Reporting = ({ demo }: ReportingProps) => {
             )}
           </p>
         </div>
-        <button
-          onClick={syncConversations}
-          disabled={syncing || !demo?.tavus_conversation_id}
-          className="inline-flex items-center px-4 py-2 bg-domo-primary text-white rounded-lg hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
-          title="Fetch perception analysis from Domo"
-        >
-          {syncing ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4 mr-2" />
-          )}
-          {syncing ? "Fetching..." : "Fetch Domo"}
-        </button>
+        {/* Fetch button - show when there are conversations missing perception analysis */}
+        {hasPendingAnalysis && (
+          <button
+            onClick={syncConversations}
+            disabled={syncing || !demo?.tavus_conversation_id}
+            className="inline-flex items-center px-3 py-1.5 text-sm bg-domo-primary text-white rounded-md hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
+            title="Fetch perception analysis from Domo"
+          >
+            {syncing ? (
+              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+            ) : (
+              <RefreshCw className="w-3 h-3 mr-1.5" />
+            )}
+            {syncing ? "Fetching..." : "Fetch Domo"}
+          </button>
+        )}
       </div>
 
       {/* Error Display */}

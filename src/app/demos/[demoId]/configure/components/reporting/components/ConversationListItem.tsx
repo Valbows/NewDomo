@@ -170,7 +170,7 @@ export function ConversationListItem({
 
             {!conversation.perception_analysis && !conversation.transcript && (
               <div className="text-sm text-domo-text-muted bg-domo-bg-elevated rounded-lg p-4 border border-domo-border">
-                No detailed data available for this conversation. Click "Fetch Missing Analysis" above to retrieve it.
+                No detailed data available for this conversation yet. Perception analysis will appear automatically when ready, or click "Fetch Domo" above if the button is visible.
               </div>
             )}
           </div>
