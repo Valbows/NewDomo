@@ -109,14 +109,7 @@ export const VideoManagement = ({
       return status.status === 'ready' && !status.hasContext;
     }).length;
 
-    const stats = { total, withContext, needsIndexing, indexing, needsContext };
-    console.log('[VideoManagement] AI Context Stats:', stats);
-    console.log('[VideoManagement] Videos metadata:', demoVideos.map(v => ({
-      id: v.id,
-      title: v.title,
-      twelvelabs: v.metadata?.twelvelabs
-    })));
-    return stats;
+    return { total, withContext, needsIndexing, indexing, needsContext };
   }, [demoVideos]);
 
   const handleRetryTranscription = async (videoId: string) => {
@@ -145,18 +138,7 @@ export const VideoManagement = ({
   };
 
   const handleProcessAllVideos = async () => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[VideoManagement] Generate All clicked', {
-        hasIndexHandler: !!onIndexWithTwelveLabs,
-        hasContextHandler: !!onGenerateAIContext,
-        stats: aiContextStats
-      });
-    }
-
     if (!onIndexWithTwelveLabs || !onGenerateAIContext) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[VideoManagement] Missing handlers, returning early');
-      }
       return;
     }
 
@@ -173,14 +155,6 @@ export const VideoManagement = ({
     });
     const videosWithoutFullContext = allVideos.filter(v => !getTwelveLabsStatus(v).hasContext);
 
-    console.log('[VideoManagement] Videos breakdown:', {
-      total: allVideos.length,
-      toIndex: videosToIndex.length,
-      indexing: videosIndexing.length,
-      needingContext: videosNeedingContext.length,
-      withoutFullContext: videosWithoutFullContext.length
-    });
-
     // If all videos already have full context, show success
     if (videosWithoutFullContext.length === 0) {
       setShowSuccessModal(true);
@@ -194,14 +168,12 @@ export const VideoManagement = ({
       // PHASE 1: Index videos that haven't been indexed
       if (videosToIndex.length > 0) {
         setProcessingProgress({ current: 0, total: videosToIndex.length, phase: 'Sending to AI' });
-        console.log('[VideoManagement] Phase 1: Indexing', videosToIndex.length, 'videos');
 
         for (let i = 0; i < videosToIndex.length; i++) {
           const video = videosToIndex[i];
           setProcessingVideoId(video.id);
           setProcessingProgress({ current: i + 1, total: videosToIndex.length, phase: 'Sending to AI' });
 
-          console.log('[VideoManagement] Indexing video:', video.id, video.title);
           const result = await onIndexWithTwelveLabs(video.id);
 
           if (!result.success) {
@@ -219,7 +191,6 @@ export const VideoManagement = ({
       if (videosToWaitFor.length > 0) {
         setProcessingProgress({ current: 0, total: videosToWaitFor.length, phase: 'AI analyzing videos' });
         setProcessingVideoId(null);
-        console.log('[VideoManagement] Phase 2: Waiting for', videosToWaitFor.length, 'videos to complete analysis');
 
         // Poll until all videos are ready (max 10 minutes)
         const startTime = Date.now();
@@ -234,7 +205,6 @@ export const VideoManagement = ({
             if (status === 'ready') {
               readyCount++;
             } else if (status === 'failed') {
-              console.log('[VideoManagement] Video indexing failed:', video.id);
               readyCount++; // Count as done (failed)
             }
           }
@@ -244,8 +214,6 @@ export const VideoManagement = ({
             total: videosToWaitFor.length,
             phase: 'AI analyzing videos'
           });
-
-          console.log('[VideoManagement] Phase 2 progress:', readyCount, '/', videosToWaitFor.length);
 
           if (readyCount >= videosToWaitFor.length) {
             allReady = true;
@@ -268,29 +236,23 @@ export const VideoManagement = ({
 
       if (allVideosForContext.length > 0) {
         setProcessingProgress({ current: 0, total: allVideosForContext.length, phase: 'Generating chapters' });
-        console.log('[VideoManagement] Phase 3: Generating context for', allVideosForContext.length, 'videos');
 
         for (let i = 0; i < allVideosForContext.length; i++) {
           const video = allVideosForContext[i];
           setProcessingVideoId(video.id);
           setProcessingProgress({ current: i + 1, total: allVideosForContext.length, phase: 'Generating chapters' });
 
-          console.log('[VideoManagement] Generating context for:', video.id, video.title);
           await onGenerateAIContext(video.id);
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
       // FINAL CHECK: Verify all videos now have context before showing success
-      // Note: We trust that if we got here without errors, all videos should have context
-      console.log('[VideoManagement] All processing complete!');
       setProcessingVideoId(null);
       setShowSuccessModal(true);
 
     } catch (err) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('[VideoManagement] Error processing videos:', err);
-      }
+      console.error('[VideoManagement] Error processing videos:', err);
     } finally {
       setProcessingAll(false);
       setProcessingVideoId(null);

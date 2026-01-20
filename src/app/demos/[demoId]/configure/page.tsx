@@ -318,15 +318,12 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   };
 
   const handleIndexWithTwelveLabs = async (videoId: string): Promise<{ success: boolean; error?: string }> => {
-    console.log('[handleIndexWithTwelveLabs] Starting for video:', videoId);
     try {
       const response = await fetch('/api/twelve-labs/index-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ demoVideoId: videoId }),
       });
-
-      console.log('[handleIndexWithTwelveLabs] Response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -335,10 +332,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       }
 
       const data = await response.json();
-      console.log('[handleIndexWithTwelveLabs] Response data:', data);
 
       if (data.success) {
-        console.log('[handleIndexWithTwelveLabs] Success! Updating video metadata');
         // Update the video metadata with indexing info
         setDemoVideos(prev => prev.map(v =>
           v.id === videoId ? {
