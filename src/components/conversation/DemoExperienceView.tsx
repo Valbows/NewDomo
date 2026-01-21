@@ -58,32 +58,34 @@ function VideoOverlayWithDucking({
   const previousVolumeRef = useRef<number>(1);
   const isDuckedRef = useRef<boolean>(false);
 
-  // Audio ducking: lower video volume ONLY when USER is speaking
-  // This helps the agent hear the user better
-  // When agent speaks, keep video at normal volume (agent voice comes separately)
+  // Audio ducking: MUTE video when anyone is speaking (agent or user)
+  // This prevents the video audio from being distracting during conversation
   useEffect(() => {
     const player = videoPlayerRef.current;
     if (!player) return;
 
+    const replicaId = replicaIds[0];
     const isUserSpeaking = activeSpeakerId === localSessionId && localSessionId !== undefined;
+    const isAgentSpeaking = activeSpeakerId === replicaId && replicaId !== undefined;
+    const isSomeonesSpeaking = isUserSpeaking || isAgentSpeaking;
 
-    if (isUserSpeaking && !isDuckedRef.current) {
-      // User started speaking - duck the video audio so agent can hear
+    if (isSomeonesSpeaking && !isDuckedRef.current) {
+      // Someone started speaking - mute video audio completely
       previousVolumeRef.current = player.getVolume();
-      player.setVolume(0.1); // Low but not muted
+      player.setVolume(0); // Mute completely when speaking
       isDuckedRef.current = true;
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[AudioDucking] Ducking video - user speaking');
+        console.log('[AudioDucking] Muting video -', isAgentSpeaking ? 'agent' : 'user', 'speaking');
       }
-    } else if (!isUserSpeaking && isDuckedRef.current) {
-      // User stopped speaking - restore volume
-      player.setVolume(previousVolumeRef.current || 1);
+    } else if (!isSomeonesSpeaking && isDuckedRef.current) {
+      // No one speaking - restore volume
+      player.setVolume(previousVolumeRef.current || 0.3);
       isDuckedRef.current = false;
       if (process.env.NODE_ENV !== 'production') {
         console.log('[AudioDucking] Restoring video volume');
       }
     }
-  }, [activeSpeakerId, localSessionId, videoPlayerRef]);
+  }, [activeSpeakerId, localSessionId, replicaIds, videoPlayerRef]);
 
   // Set video volume to lower level on mount (less distracting)
   useEffect(() => {
