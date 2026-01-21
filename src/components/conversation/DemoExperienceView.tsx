@@ -285,13 +285,13 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           const { supabase } = await import('@/lib/supabase');
           const normalizedTitle = videoTitle.trim().replace(/^['"]|['"]$/g, '');
 
-          // Try case-insensitive match first
+          // Try case-insensitive match first (use maybeSingle to avoid 406 errors)
           let { data: videoData, error: videoError } = await supabase
             .from('demo_videos')
             .select('storage_url, title, id, metadata')
             .eq('demo_id', demoId)
             .ilike('title', normalizedTitle)
-            .single();
+            .maybeSingle();
 
           if (videoError || !videoData) {
             // Try exact match as fallback
@@ -300,49 +300,78 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               .select('storage_url, title, id, metadata')
               .eq('demo_id', demoId)
               .eq('title', normalizedTitle)
-              .single();
+              .maybeSingle();
 
             if (exactResult.error || !exactResult.data) {
-              // Try semantic search via Twelve Labs as last resort
-              if (process.env.NODE_ENV !== 'production') {
-                console.log('[DemoExperienceView] Exact match failed, trying semantic search for:', normalizedTitle);
+              // Try fuzzy match with wildcards (partial title match)
+              const fuzzyResult = await supabase
+                .from('demo_videos')
+                .select('storage_url, title, id, metadata')
+                .eq('demo_id', demoId)
+                .ilike('title', `%${normalizedTitle}%`)
+                .limit(1);
+
+              if (fuzzyResult.data && fuzzyResult.data.length > 0) {
+                videoData = fuzzyResult.data[0];
+              } else {
+                // Try matching just the main keywords (before colon if present)
+                const mainKeyword = normalizedTitle.split(':')[0].trim();
+                if (mainKeyword && mainKeyword !== normalizedTitle) {
+                  const keywordResult = await supabase
+                    .from('demo_videos')
+                    .select('storage_url, title, id, metadata')
+                    .eq('demo_id', demoId)
+                    .ilike('title', `%${mainKeyword}%`)
+                    .limit(1);
+
+                  if (keywordResult.data && keywordResult.data.length > 0) {
+                    videoData = keywordResult.data[0];
+                  }
+                }
               }
 
-              try {
-                const searchResponse = await fetch('/api/twelve-labs/search', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ query: normalizedTitle, demoId }),
-                });
+              // Try semantic search via Twelve Labs as last resort
+              if (!videoData) {
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('[DemoExperienceView] Fuzzy match failed, trying semantic search for:', normalizedTitle);
+                }
 
-                if (searchResponse.ok) {
-                  const searchData = await searchResponse.json();
-                  if (searchData.results && searchData.results.length > 0) {
-                    // Get the video with highest confidence from semantic search
-                    const bestMatch = searchData.results[0];
-                    if (bestMatch.demoVideoId) {
-                      const { data: semanticVideo } = await supabase
-                        .from('demo_videos')
-                        .select('storage_url, title, id, metadata')
-                        .eq('id', bestMatch.demoVideoId)
-                        .single();
+                try {
+                  const searchResponse = await fetch('/api/twelve-labs/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: normalizedTitle, demoId }),
+                  });
 
-                      if (semanticVideo) {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('[DemoExperienceView] Semantic search found video:', {
-                            query: normalizedTitle,
-                            foundTitle: semanticVideo.title,
-                            confidence: bestMatch.confidence,
-                          });
+                  if (searchResponse.ok) {
+                    const searchData = await searchResponse.json();
+                    if (searchData.results && searchData.results.length > 0) {
+                      // Get the video with highest confidence from semantic search
+                      const bestMatch = searchData.results[0];
+                      if (bestMatch.demoVideoId) {
+                        const { data: semanticVideo } = await supabase
+                          .from('demo_videos')
+                          .select('storage_url, title, id, metadata')
+                          .eq('id', bestMatch.demoVideoId)
+                          .maybeSingle();
+
+                        if (semanticVideo) {
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.log('[DemoExperienceView] Semantic search found video:', {
+                              query: normalizedTitle,
+                              foundTitle: semanticVideo.title,
+                              confidence: bestMatch.confidence,
+                            });
+                          }
+                          videoData = semanticVideo;
                         }
-                        videoData = semanticVideo;
                       }
                     }
                   }
-                }
-              } catch (searchError) {
-                if (process.env.NODE_ENV !== 'production') {
-                  console.warn('[DemoExperienceView] Semantic search failed:', searchError);
+                } catch (searchError) {
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.warn('[DemoExperienceView] Semantic search failed:', searchError);
+                  }
                 }
               }
 
