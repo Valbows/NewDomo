@@ -85,12 +85,12 @@ function VideoOverlayWithDucking({
     }
   }, [activeSpeakerId, localSessionId, videoPlayerRef]);
 
-  // Ensure volume is set to full on mount
+  // Set video volume to lower level on mount (less distracting)
   useEffect(() => {
     const player = videoPlayerRef.current;
     if (player) {
-      player.setVolume(1);
-      previousVolumeRef.current = 1;
+      player.setVolume(0.3); // 30% volume - less distracting
+      previousVolumeRef.current = 0.3;
     }
   }, [videoPlayerRef]);
 
