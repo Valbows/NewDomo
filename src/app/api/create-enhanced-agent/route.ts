@@ -256,7 +256,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
                 system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
                 objectives_id: DEFAULT_OBJECTIVES_ID,
                 guardrails_id: GUARDRAILS_ID,
-                layers: {
+                        layers: {
                   llm: {
                     model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
                     tools: tools,
@@ -308,7 +308,7 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
               system_prompt: baseSystemPrompt + identitySection, // Just base + identity, no objectives
               objectives_id: objectivesId,
               guardrails_id: GUARDRAILS_ID,
-              layers: {
+                    layers: {
                 llm: {
                   model: process.env.TAVUS_LLM_MODEL || 'tavus-llama-4',
                   tools: tools,
@@ -365,10 +365,35 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
         const personaData = await response.json();
         persona = { persona_id: personaData.persona_id };
       }
-      
+
     } catch (error) {
       console.error('❌ Error creating new persona:', error);
       throw error; // Don't fallback, let the user know it failed
+    }
+
+    // Step 4b: Enable raven-0 perception model (must be done via PATCH after creation)
+    try {
+      const patchResponse = await fetch(`${process.env.TAVUS_BASE_URL}/personas/${persona.persona_id}`, {
+        method: 'PATCH',
+        headers: {
+          'x-api-key': process.env.TAVUS_API_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([
+          { op: 'add', path: '/perception_model', value: 'raven-0' }
+        ]),
+      });
+
+      if (!patchResponse.ok) {
+        // Non-fatal - log warning but continue
+        console.warn('⚠️ Could not enable raven-0 perception:', await patchResponse.text());
+      } else {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✓ Enabled raven-0 perception for persona:', persona.persona_id);
+        }
+      }
+    } catch (patchError) {
+      console.warn('⚠️ Failed to enable raven-0 perception:', patchError);
     }
 
     // Step 5: Update Demo with Agent Configuration

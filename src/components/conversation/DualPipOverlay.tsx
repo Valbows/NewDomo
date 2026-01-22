@@ -27,16 +27,16 @@ export function DualPipOverlay({ visible }: DualPipOverlayProps) {
   if (!visible || !replicaId) return null;
 
   return (
-    <div className="absolute bottom-4 left-4 z-40 flex gap-2">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-auto" style={{ zIndex: 30 }}>
       {/* Domo Agent Video */}
       <div className="relative">
         <div
-          className="w-20 h-20 rounded-full overflow-hidden border-2 border-domo-primary shadow-lg bg-domo-bg-card"
+          className="w-28 h-28 rounded-full overflow-hidden border-3 border-domo-primary shadow-xl bg-domo-bg-card"
           title="Domo AI"
         >
           {replicaVideoState.isOff ? (
             <div className="w-full h-full flex items-center justify-center bg-domo-bg-elevated">
-              <img src="/domo-logo.png" alt="Domo" className="w-12 h-12 object-contain" />
+              <img src="/domo-logo.png" alt="Domo" className="w-16 h-16 object-contain" />
             </div>
           ) : (
             <DailyVideo
@@ -55,12 +55,12 @@ export function DualPipOverlay({ visible }: DualPipOverlayProps) {
       {/* User Video */}
       <div className="relative">
         <div
-          className="w-20 h-20 rounded-full overflow-hidden border-2 border-domo-border shadow-lg bg-domo-bg-card"
+          className="w-28 h-28 rounded-full overflow-hidden border-3 border-domo-border shadow-xl bg-domo-bg-card"
           title="You"
         >
           {localVideoState.isOff ? (
             <div className="w-full h-full flex items-center justify-center bg-domo-bg-elevated">
-              <svg className="w-8 h-8 text-domo-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 text-domo-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>

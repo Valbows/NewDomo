@@ -1,90 +1,164 @@
 /**
  * Custom CSS styles for Picture-in-Picture video layout.
  * Used when video is playing and conversation is minimized.
- * - Hides ALL video previews and containers
- * - Shows ONLY floating control buttons (end, mic, video)
- * - Domo agent + User shown in DualPipOverlay (circular thumbnails on bottom-left)
+ *
+ * DOM Structure when pip-video-layout is applied:
+ * <div class="pip-video-layout">                    -- [1] pip wrapper
+ *   <div class="">                                  -- [2] empty wrapper from DemoExperienceView
+ *     <div class="w-full h-full">                   -- [3] TavusConversationCVI outer wrapper
+ *       <div class="container">                     -- [4] Conversation component (CSS module)
+ *         <div class="videoContainer">              -- [5] holds videos (HIDE)
+ *         </div>
+ *         <div class="footer">                      -- [6] controls bar (SHOW)
+ *           <div class="footerControls">            -- [7] buttons container
+ *         </div>
+ *         <audio />                                 -- DailyAudio
+ *       </div>
+ *       <!-- dev only: debug panel (absolute positioned) -->
+ *     </div>
+ *   </div>
+ * </div>
  */
 export const pipStyles = `
+  /* [1] Main PiP wrapper - transparent, auto-sized */
   .pip-video-layout {
-    position: fixed !important;
-    bottom: 16px !important;
-    right: 16px !important;
     width: auto !important;
     height: auto !important;
     min-width: 0 !important;
     min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    z-index: 50 !important;
+    overflow: visible !important;
   }
 
-  /* Hide the entire main container/wrapper */
-  .pip-video-layout > div:first-child {
+  /* [2] Empty wrapper from DemoExperienceView */
+  .pip-video-layout > div {
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+  }
+
+  /* [3] TavusConversationCVI outer wrapper */
+  .pip-video-layout > div > div {
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+  }
+
+  /* [4] Conversation container - make transparent and shrink */
+  .pip-video-layout > div > div > div:first-child {
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    aspect-ratio: unset !important;
+    animation: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Hide ALL video elements */
+  .pip-video-layout video {
     display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
   }
 
-  /* Hide ALL video elements and their containers */
-  .pip-video-layout [class*="mainVideoContainer"],
-  .pip-video-layout [class*="videoContainer"],
-  .pip-video-layout [class*="selfViewContainer"],
-  .pip-video-layout [class*="Video"],
-  .pip-video-layout [class*="video"],
-  .pip-video-layout video,
-  .pip-video-layout [class*="tile"],
-  .pip-video-layout [class*="Tile"],
-  .pip-video-layout [class*="participant"],
-  .pip-video-layout [class*="Participant"] {
+  /* [5] Hide the videoContainer (first child of Conversation container) */
+  .pip-video-layout > div > div > div:first-child > div:first-child {
     display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
   }
 
-  /* Style the control bar as floating buttons only */
-  .pip-video-layout [class*="footer"],
-  .pip-video-layout [class*="controlBar"],
-  .pip-video-layout [class*="Footer"],
-  .pip-video-layout [class*="ControlBar"],
-  .pip-video-layout [class*="tray"],
-  .pip-video-layout [class*="Tray"] {
+  /* [6] Style the footer (second child of Conversation container) */
+  .pip-video-layout > div > div > div:first-child > div:nth-child(2) {
     position: relative !important;
-    background: rgba(0, 0, 0, 0.6) !important;
-    backdrop-filter: blur(8px) !important;
-    border: none !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    padding: 8px 12px !important;
-    border-radius: 24px !important;
+    bottom: unset !important;
+    left: unset !important;
+    right: unset !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
+    padding: 12px 16px !important;
+    border-radius: 28px !important;
     margin: 0 !important;
     width: auto !important;
-    min-width: 0 !important;
-  }
-
-  /* Button container - horizontal layout */
-  .pip-video-layout [class*="footerControls"],
-  .pip-video-layout [class*="controls"],
-  .pip-video-layout [class*="Controls"] {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
+    gap: 12px !important;
     justify-content: center !important;
     align-items: center !important;
+    z-index: 100 !important;
   }
 
-  /* Style the buttons */
+  /* [7] Footer controls container (inside footer) */
+  .pip-video-layout > div > div > div:first-child > div:nth-child(2) > div {
+    display: flex !important;
+    gap: 12px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Style all buttons in the controls */
   .pip-video-layout button {
-    width: 44px !important;
-    height: 44px !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
     border-radius: 50% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: none !important;
+    transition: background 0.2s ease !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    cursor: pointer !important;
   }
 
-  /* Hide any labels/text on buttons */
-  .pip-video-layout [class*="label"],
-  .pip-video-layout [class*="Label"],
-  .pip-video-layout [class*="text"],
-  .pip-video-layout [class*="name"],
-  .pip-video-layout [class*="Name"] {
+  .pip-video-layout button:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+
+  /* Leave/End button - last button in controls, should be red */
+  .pip-video-layout > div > div > div:first-child > div:nth-child(2) button:last-child {
+    background: rgba(239, 68, 68, 0.9) !important;
+  }
+
+  .pip-video-layout > div > div > div:first-child > div:nth-child(2) button:last-child:hover {
+    background: rgba(239, 68, 68, 1) !important;
+  }
+
+  /* Ensure SVG icons are visible */
+  .pip-video-layout svg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* Hide DailyAudio element */
+  .pip-video-layout audio {
+    display: none !important;
+  }
+
+  /* Hide dev debug panel when in PiP mode (sibling to Conversation container) */
+  .pip-video-layout > div > div > div:not(:first-child) {
     display: none !important;
   }
 `;

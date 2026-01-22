@@ -287,7 +287,6 @@ async function handlePOST(req: NextRequest) {
         pipeline_mode: 'full',
         system_prompt: enhancedSystemPrompt,
         persona_name: agentName,
-        perception_model: 'raven-0', // Enable perception analysis for all new personas
         layers: {
           llm: {
             model: tavusLlmModel,
@@ -305,6 +304,26 @@ async function handlePOST(req: NextRequest) {
 
     const personaData = await personaResponse.json();
     const personaId = personaData.persona_id;
+
+    // Enable raven-0 perception model via PATCH (Tavus doesn't accept it in POST)
+    try {
+      const patchResponse = await fetch(`https://tavusapi.com/v2/personas/${personaId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': tavusApiKey,
+        },
+        body: JSON.stringify([
+          { op: 'add', path: '/perception_model', value: 'raven-0' }
+        ]),
+      });
+
+      if (!patchResponse.ok) {
+        console.warn('Could not enable raven-0 perception:', await patchResponse.text());
+      }
+    } catch (patchError) {
+      console.warn('Failed to enable raven-0 perception:', patchError);
+    }
 
     const { error: updateError } = await supabase
       .from('demos')
