@@ -4,5 +4,6 @@ export { ConversationEndedScreen } from './ConversationEndedScreen';
 export { PreCallLobby } from './PreCallLobby';
 export { pipStyles } from './pipStyles';
 export { DualPipOverlay } from './DualPipOverlay';
+export { VideoOverlayControls } from './VideoOverlayControls';
 export { DemoExperienceView } from './DemoExperienceView';
 export type { DemoExperienceViewProps, DemoExperienceViewHandle } from './DemoExperienceView';

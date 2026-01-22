@@ -231,17 +231,42 @@ async function handlePOST(
       await startLocks.get(sessionId);
     }
 
-    // Get replica ID
+    // Get replica ID AND ensure raven-0 perception is enabled
     let replicaId = (process.env.TAVUS_REPLICA_ID || '').trim();
-    if (!replicaId) {
+    try {
       const personaResp = await fetch(
         `https://tavusapi.com/v2/personas/${demo.tavus_persona_id}`,
         { headers: { 'Content-Type': 'application/json', 'x-api-key': tavusApiKey } }
       );
       if (personaResp.ok) {
         const persona = await personaResp.json();
-        replicaId = (persona?.default_replica_id || '').trim();
+        if (!replicaId) {
+          replicaId = (persona?.default_replica_id || '').trim();
+        }
+
+        // Auto-enable raven-0 perception if not set (ensures perception_analysis is captured)
+        if (persona.perception_model !== 'raven-0') {
+          try {
+            await fetch(`https://tavusapi.com/v2/personas/${demo.tavus_persona_id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': tavusApiKey,
+              },
+              body: JSON.stringify([
+                { op: 'add', path: '/perception_model', value: 'raven-0' }
+              ])
+            });
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`[Embed] Auto-enabled raven-0 for persona ${demo.tavus_persona_id}`);
+            }
+          } catch (patchErr) {
+            logger.warn('[Embed] Failed to auto-enable raven-0 perception:', { error: patchErr });
+          }
+        }
       }
+    } catch (e) {
+      logger.warn('[Embed] Error fetching persona:', { error: e });
     }
 
     if (!replicaId) {

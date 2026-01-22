@@ -2,13 +2,11 @@
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
-import { useActiveSpeakerId, useLocalSessionId } from '@daily-co/daily-react';
 import { TavusConversationCVI } from '@/app/demos/[demoId]/experience/components/TavusConversationCVI';
 import { InlineVideoPlayer } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
-import { BusyErrorScreen, CTABanner, ConversationEndedScreen, PreCallLobby, pipStyles, DualPipOverlay } from '@/components/conversation';
-import { useReplicaIDs } from '@/components/cvi/hooks/use-replica-ids';
+import { BusyErrorScreen, CTABanner, ConversationEndedScreen, PreCallLobby, DualPipOverlay, VideoOverlayControls } from '@/components/conversation';
 import { analytics } from '@/lib/mixpanel';
 import {
   formatTime,
@@ -23,124 +21,6 @@ interface CurrentVideoMetadata {
   demoVideoId?: string;
   generatedContext?: string;
   chapters?: VideoChapter[];
-}
-
-/**
- * Video overlay component with audio ducking
- * Needs to be inside CVIProvider to use Daily hooks
- */
-interface VideoOverlayWithDuckingProps {
-  videoUrl: string;
-  videoTitle?: string;
-  chapters?: VideoChapter[];
-  videoPlayerRef: React.MutableRefObject<InlineVideoPlayerHandle | null>;
-  onClose: () => void;
-  onVideoEnd: () => void;
-  onPause: (currentTime: number) => void;
-  onSeek: (currentTime: number) => void;
-  onTimeUpdate: (currentTime: number, isPaused: boolean) => void;
-}
-
-function VideoOverlayWithDucking({
-  videoUrl,
-  videoTitle,
-  chapters,
-  videoPlayerRef,
-  onClose,
-  onVideoEnd,
-  onPause,
-  onSeek,
-  onTimeUpdate,
-}: VideoOverlayWithDuckingProps) {
-  const replicaIds = useReplicaIDs();
-  const localSessionId = useLocalSessionId();
-  const activeSpeakerId = useActiveSpeakerId();
-  const previousVolumeRef = useRef<number>(1);
-  const isDuckedRef = useRef<boolean>(false);
-
-  // Audio ducking: lower video volume ONLY when USER is speaking
-  // This helps the agent hear the user better
-  // When agent speaks, keep video at normal volume (agent voice comes separately)
-  useEffect(() => {
-    const player = videoPlayerRef.current;
-    if (!player) return;
-
-    const isUserSpeaking = activeSpeakerId === localSessionId && localSessionId !== undefined;
-
-    if (isUserSpeaking && !isDuckedRef.current) {
-      // User started speaking - duck the video audio so agent can hear
-      previousVolumeRef.current = player.getVolume();
-      player.setVolume(0.1); // Low but not muted
-      isDuckedRef.current = true;
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[AudioDucking] Ducking video - user speaking');
-      }
-    } else if (!isUserSpeaking && isDuckedRef.current) {
-      // User stopped speaking - restore volume
-      player.setVolume(previousVolumeRef.current || 1);
-      isDuckedRef.current = false;
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[AudioDucking] Restoring video volume');
-      }
-    }
-  }, [activeSpeakerId, localSessionId, videoPlayerRef]);
-
-  // Ensure volume is set to full on mount
-  useEffect(() => {
-    const player = videoPlayerRef.current;
-    if (player) {
-      player.setVolume(1);
-      previousVolumeRef.current = 1;
-    }
-  }, [videoPlayerRef]);
-
-  return (
-    <div
-      className="absolute inset-0 bg-black flex flex-col z-30"
-      data-testid="video-overlay"
-    >
-      <div className="flex-shrink-0 bg-domo-bg-elevated text-white p-4 flex justify-between items-center border-b border-domo-border">
-        <h2 className="text-lg font-semibold">Demo Video</h2>
-        <button
-          data-testid="button-close-video"
-          onClick={onClose}
-          className="text-domo-text-secondary hover:text-white p-2 transition-colors"
-          title="Close video"
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-      <div className="flex-1 p-4 bg-domo-bg-dark relative">
-        <div className="w-full h-full max-w-6xl mx-auto">
-          <InlineVideoPlayer
-            ref={videoPlayerRef}
-            videoUrl={videoUrl}
-            videoTitle={videoTitle}
-            chapters={chapters}
-            onClose={onClose}
-            onVideoEnd={onVideoEnd}
-            onPause={onPause}
-            onSeek={onSeek}
-            onTimeUpdate={onTimeUpdate}
-          />
-        </div>
-        {/* Dual PiP overlay showing Domo agent and User */}
-        <DualPipOverlay visible={true} />
-      </div>
-    </div>
-  );
 }
 
 export interface DemoExperienceViewProps {
@@ -266,6 +146,13 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       }
     }, [error, demoId, source]);
 
+    // Mute video when playing - agent provides voiceover
+    useEffect(() => {
+      if (uiState === UIState.VIDEO_PLAYING && videoPlayerRef.current) {
+        videoPlayerRef.current.setVolume(0);
+      }
+    }, [uiState, playingVideoUrl]);
+
     // Handle tool calls from conversation
     // Note: TavusConversationCVI calls onToolCall(toolName, args) with two arguments
     const handleToolCall = useCallback(
@@ -285,13 +172,13 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           const { supabase } = await import('@/lib/supabase');
           const normalizedTitle = videoTitle.trim().replace(/^['"]|['"]$/g, '');
 
-          // Try case-insensitive match first
+          // Try case-insensitive match first (use maybeSingle to avoid 406 errors)
           let { data: videoData, error: videoError } = await supabase
             .from('demo_videos')
             .select('storage_url, title, id, metadata')
             .eq('demo_id', demoId)
             .ilike('title', normalizedTitle)
-            .single();
+            .maybeSingle();
 
           if (videoError || !videoData) {
             // Try exact match as fallback
@@ -300,49 +187,78 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               .select('storage_url, title, id, metadata')
               .eq('demo_id', demoId)
               .eq('title', normalizedTitle)
-              .single();
+              .maybeSingle();
 
             if (exactResult.error || !exactResult.data) {
-              // Try semantic search via Twelve Labs as last resort
-              if (process.env.NODE_ENV !== 'production') {
-                console.log('[DemoExperienceView] Exact match failed, trying semantic search for:', normalizedTitle);
+              // Try fuzzy match with wildcards (partial title match)
+              const fuzzyResult = await supabase
+                .from('demo_videos')
+                .select('storage_url, title, id, metadata')
+                .eq('demo_id', demoId)
+                .ilike('title', `%${normalizedTitle}%`)
+                .limit(1);
+
+              if (fuzzyResult.data && fuzzyResult.data.length > 0) {
+                videoData = fuzzyResult.data[0];
+              } else {
+                // Try matching just the main keywords (before colon if present)
+                const mainKeyword = normalizedTitle.split(':')[0].trim();
+                if (mainKeyword && mainKeyword !== normalizedTitle) {
+                  const keywordResult = await supabase
+                    .from('demo_videos')
+                    .select('storage_url, title, id, metadata')
+                    .eq('demo_id', demoId)
+                    .ilike('title', `%${mainKeyword}%`)
+                    .limit(1);
+
+                  if (keywordResult.data && keywordResult.data.length > 0) {
+                    videoData = keywordResult.data[0];
+                  }
+                }
               }
 
-              try {
-                const searchResponse = await fetch('/api/twelve-labs/search', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ query: normalizedTitle, demoId }),
-                });
+              // Try semantic search via Twelve Labs as last resort
+              if (!videoData) {
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('[DemoExperienceView] Fuzzy match failed, trying semantic search for:', normalizedTitle);
+                }
 
-                if (searchResponse.ok) {
-                  const searchData = await searchResponse.json();
-                  if (searchData.results && searchData.results.length > 0) {
-                    // Get the video with highest confidence from semantic search
-                    const bestMatch = searchData.results[0];
-                    if (bestMatch.demoVideoId) {
-                      const { data: semanticVideo } = await supabase
-                        .from('demo_videos')
-                        .select('storage_url, title, id, metadata')
-                        .eq('id', bestMatch.demoVideoId)
-                        .single();
+                try {
+                  const searchResponse = await fetch('/api/twelve-labs/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: normalizedTitle, demoId }),
+                  });
 
-                      if (semanticVideo) {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('[DemoExperienceView] Semantic search found video:', {
-                            query: normalizedTitle,
-                            foundTitle: semanticVideo.title,
-                            confidence: bestMatch.confidence,
-                          });
+                  if (searchResponse.ok) {
+                    const searchData = await searchResponse.json();
+                    if (searchData.results && searchData.results.length > 0) {
+                      // Get the video with highest confidence from semantic search
+                      const bestMatch = searchData.results[0];
+                      if (bestMatch.demoVideoId) {
+                        const { data: semanticVideo } = await supabase
+                          .from('demo_videos')
+                          .select('storage_url, title, id, metadata')
+                          .eq('id', bestMatch.demoVideoId)
+                          .maybeSingle();
+
+                        if (semanticVideo) {
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.log('[DemoExperienceView] Semantic search found video:', {
+                              query: normalizedTitle,
+                              foundTitle: semanticVideo.title,
+                              confidence: bestMatch.confidence,
+                            });
+                          }
+                          videoData = semanticVideo;
                         }
-                        videoData = semanticVideo;
                       }
                     }
                   }
-                }
-              } catch (searchError) {
-                if (process.env.NODE_ENV !== 'production') {
-                  console.warn('[DemoExperienceView] Semantic search failed:', searchError);
+                } catch (searchError) {
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.warn('[DemoExperienceView] Semantic search failed:', searchError);
+                  }
                 }
               }
 
@@ -736,7 +652,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     return (
       <CVIProvider>
-        <style dangerouslySetInnerHTML={{ __html: pipStyles }} />
         <div className="min-h-screen bg-domo-bg-dark flex flex-col">
           {/* Main Content */}
           <main className="flex-1 relative">
@@ -750,90 +665,78 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                 onClose={onClose}
               />
             ) : (
-              /* Conversation View */
-              <div
-                data-testid="conversation-container"
-                data-pip={uiState === UIState.VIDEO_PLAYING ? 'true' : 'false'}
-                className={`${
-                  uiState === UIState.VIDEO_PLAYING
-                    ? 'fixed bottom-4 right-4 w-96 h-72 z-50 shadow-2xl'
-                    : 'w-full h-full flex items-center justify-center p-4'
-                } transition-all duration-300`}
-              >
-                <div className="bg-domo-bg-card border border-domo-border rounded-xl shadow-lg overflow-hidden w-full h-full flex flex-col">
-                  {/* Minimal header - only show expand button in PiP mode */}
-                  {uiState === UIState.VIDEO_PLAYING && (
-                    <div className="p-2 bg-domo-primary text-white flex justify-end items-center flex-shrink-0">
+              /* Conversation View - SINGLE instance that stays mounted, changes position */
+              <>
+                {/* Video overlay - shows when video is playing */}
+                {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
+                  <div className="absolute inset-0 bg-black flex flex-col" style={{ zIndex: 10 }} data-testid="video-overlay">
+                    {/* Video header */}
+                    <div className="flex-shrink-0 bg-domo-bg-elevated/90 backdrop-blur text-white p-3 flex justify-between items-center border-b border-domo-border">
+                      <h2 className="text-base font-semibold">{currentVideoRef.current?.title || 'Demo Video'}</h2>
                       <button
-                        data-testid="button-expand-conversation"
-                        onClick={() => {
-                          setPlayingVideoUrl(null);
-                          setUiState(UIState.CONVERSATION);
-                        }}
-                        className="text-white hover:text-white/80 p-1"
-                        title="Expand conversation"
+                        onClick={handleVideoClose}
+                        className="text-domo-text-secondary hover:text-white p-1.5 transition-colors rounded-full hover:bg-white/10"
+                        title="Close video"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                          />
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
-                  )}
-                  <div
-                    className={`relative flex-1 ${uiState === UIState.VIDEO_PLAYING ? 'bg-transparent' : 'bg-domo-bg-dark'}`}
-                    style={{
-                      height: uiState === UIState.VIDEO_PLAYING ? '60px' : '75vh',
-                      minHeight: uiState === UIState.VIDEO_PLAYING ? '60px' : '400px',
-                      position: uiState === UIState.VIDEO_PLAYING ? 'fixed' : 'relative',
-                      bottom: uiState === UIState.VIDEO_PLAYING ? '16px' : 'auto',
-                      right: uiState === UIState.VIDEO_PLAYING ? '16px' : 'auto',
-                      left: uiState === UIState.VIDEO_PLAYING ? 'auto' : undefined,
-                      width: uiState === UIState.VIDEO_PLAYING ? 'auto' : undefined,
-                      zIndex: uiState === UIState.VIDEO_PLAYING ? 50 : undefined,
-                    }}
-                  >
-                    {conversationUrl ? (
-                      <div className={uiState === UIState.VIDEO_PLAYING ? 'pip-video-layout' : ''}>
+
+                    {/* Video player area */}
+                    <div className="flex-1 bg-black relative overflow-hidden">
+                      <InlineVideoPlayer
+                        ref={videoPlayerRef}
+                        videoUrl={playingVideoUrl}
+                        videoTitle={currentVideoRef.current?.title}
+                        chapters={currentVideoRef.current?.chapters}
+                        onClose={handleVideoClose}
+                        onVideoEnd={handleVideoEnd}
+                        onPause={handleVideoPause}
+                        onSeek={handleVideoSeek}
+                        onTimeUpdate={handleVideoTimeUpdate}
+                      />
+
+                      {/* Circular thumbnails - bottom center */}
+                      <DualPipOverlay visible={true} />
+
+                      {/* Control buttons - bottom right, same line as thumbnails */}
+                      <VideoOverlayControls onLeave={handleConversationEnd} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversation - hidden when video is playing, but stays mounted for WebRTC/audio */}
+                <div
+                  data-testid="conversation-container"
+                  className={uiState === UIState.VIDEO_PLAYING
+                    ? 'absolute -left-[9999px] -top-[9999px] w-1 h-1 overflow-hidden'
+                    : 'w-full h-full flex items-center justify-center p-4'
+                  }
+                  aria-hidden={uiState === UIState.VIDEO_PLAYING}
+                >
+                  <div className="overflow-hidden flex flex-col bg-domo-bg-card border border-domo-border rounded-xl shadow-lg w-full h-full">
+                    <div
+                      className="relative flex-1 bg-domo-bg-dark"
+                      style={{ height: '75vh', minHeight: '400px' }}
+                    >
+                      {conversationUrl ? (
                         <TavusConversationCVI
                           conversationUrl={conversationUrl}
                           onLeave={handleConversationEnd}
                           onToolCall={handleToolCall}
                           debugVideoTitles={debugVideoTitles}
                         />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white">
-                        Connecting...
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white">
+                          Connecting...
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Video Player - Full screen when playing with dual PiP and audio ducking */}
-            {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
-              <VideoOverlayWithDucking
-                videoUrl={playingVideoUrl}
-                videoTitle={currentVideoRef.current?.title}
-                chapters={currentVideoRef.current?.chapters}
-                videoPlayerRef={videoPlayerRef}
-                onClose={handleVideoClose}
-                onVideoEnd={handleVideoEnd}
-                onPause={handleVideoPause}
-                onSeek={handleVideoSeek}
-                onTimeUpdate={handleVideoTimeUpdate}
-              />
+              </>
             )}
           </main>
 

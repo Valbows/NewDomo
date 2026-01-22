@@ -187,24 +187,45 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
       await startLocks.get(sessionId);
     }
 
-    // Determine replica_id: prefer env override, else fetch persona default
+    // Determine replica_id AND ensure raven-0 perception is enabled
     let finalReplicaId = (process.env.TAVUS_REPLICA_ID || '').trim();
-    if (!finalReplicaId) {
-      try {
-        const personaResp = await fetch(`https://tavusapi.com/v2/personas/${demo.tavus_persona_id}` , {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': tavusApiKey,
-          },
-        });
-        if (personaResp.ok) {
-          const persona = await personaResp.json();
+    try {
+      const personaResp = await fetch(`https://tavusapi.com/v2/personas/${demo.tavus_persona_id}` , {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': tavusApiKey,
+        },
+      });
+      if (personaResp.ok) {
+        const persona = await personaResp.json();
+        if (!finalReplicaId) {
           finalReplicaId = (persona?.default_replica_id || '').trim();
         }
-      } catch (e) {
-        logger.warn('Error fetching persona default_replica_id:', { error: e });
+
+        // Auto-enable raven-0 perception if not set (ensures perception_analysis is captured)
+        if (persona.perception_model !== 'raven-0') {
+          try {
+            await fetch(`https://tavusapi.com/v2/personas/${demo.tavus_persona_id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': tavusApiKey,
+              },
+              body: JSON.stringify([
+                { op: 'add', path: '/perception_model', value: 'raven-0' }
+              ])
+            });
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`[start-conversation] Auto-enabled raven-0 for persona ${demo.tavus_persona_id}`);
+            }
+          } catch (patchErr) {
+            logger.warn('Failed to auto-enable raven-0 perception:', { error: patchErr });
+          }
+        }
       }
+    } catch (e) {
+      logger.warn('Error fetching persona:', { error: e });
     }
 
     // Per Tavus docs, conversations accept callback_url for webhooks
