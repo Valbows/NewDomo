@@ -1,19 +1,74 @@
+/**
+ * ============================================================================
+ * DEMO EXPERIENCE VIEW - Main Conversation UI Component
+ * ============================================================================
+ *
+ * This is the primary UI component for the demo experience. It orchestrates:
+ *   - Agent video conversation (via AgentConversationView + Daily.co)
+ *   - Product video playback with chapter tracking
+ *   - CTA display and tracking
+ *   - Real-time transcript and insights panel
+ *   - Analytics event tracking
+ *
+ * KEY ARCHITECTURE DECISIONS:
+ *
+ * 1. VIDEO LOOKUP FALLBACK STRATEGY (handleToolCall → fetch_video)
+ *    When the AI calls fetch_video with a title, we try 5 levels of matching:
+ *      Level 1: Case-insensitive exact match (ilike)
+ *      Level 2: Exact match (eq)
+ *      Level 3: Fuzzy match with wildcards (%title%)
+ *      Level 4: Keyword extraction (first part before ":")
+ *      Level 5: Semantic search via Twelve Labs API
+ *    This ensures videos are found even with slight title variations.
+ *
+ * 2. VIDEO CONTEXT TRACKING (currentVideoRef, lastSentContextRef)
+ *    - currentVideoRef: Holds metadata of the currently playing video
+ *    - lastSentContextRef: Prevents duplicate context messages to analytics
+ *    When user pauses/seeks, we send context about their position to analytics.
+ *
+ * 3. STATE MANAGEMENT
+ *    - uiState: Controls which view is shown (IDLE, CONVERSATION, VIDEO_PLAYING)
+ *    - transcript: Maintained here and synced from AgentConversationView
+ *    - pendingTextMessage: Bridge for text input → Daily message sending
+ *
+ * RELATED FILES:
+ *   - AgentConversationView.tsx: Daily.co integration and subtitle handling
+ *   - useToolCallHandler.ts: Hook version of tool handling (for other pages)
+ *   - InlineVideoPlayer.tsx: Video player with chapter support
+ *
+ * ============================================================================
+ */
+
 'use client';
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { CVIProvider } from '@/components/cvi/components/cvi-provider';
-import { TavusConversationCVI } from '@/app/demos/[demoId]/experience/components/TavusConversationCVI';
 import { InlineVideoPlayer } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import type { InlineVideoPlayerHandle } from '@/app/demos/[demoId]/experience/components/InlineVideoPlayer';
 import { UIState } from '@/lib/tavus/UI_STATES';
-import { BusyErrorScreen, CTABanner, ConversationEndedScreen, PreCallLobby, DualPipOverlay, VideoOverlayControls } from '@/components/conversation';
+import {
+  BusyErrorScreen,
+  CTABanner,
+  ConversationEndedScreen,
+  PreCallLobby,
+  DualPipOverlay,
+  VideoOverlayControls,
+  AgentHeader,
+  AgentConversationView,
+  TextInputBar,
+  HelpModal,
+  SubtitleDisplay,
+} from '@/components/conversation';
+import { ResourcesPanel } from '@/components/resources';
+import { useInsightsData } from '@/app/demos/[demoId]/experience/hooks/useInsightsData';
 import { analytics } from '@/lib/mixpanel';
 import {
   formatTime,
   parseChaptersFromContext,
   findChapterAtTimestamp,
-  type VideoChapter
+  type VideoChapter,
 } from '@/lib/video-context';
+import type { TranscriptMessage } from './types';
 
 interface CurrentVideoMetadata {
   title: string;
@@ -49,10 +104,10 @@ export interface DemoExperienceViewProps {
   ctaButtonUrl?: string;
 
   // Post-conversation redirect
-  returnUrl?: string; // Customer's website to redirect back to after conversation ends
-  isPopup?: boolean; // Different behavior for popup embeds
-  onClose?: () => void; // For popup - close the modal
-  skipEndedScreen?: boolean; // Skip ConversationEndedScreen and just call onConversationEnd (for dashboard)
+  returnUrl?: string;
+  isPopup?: boolean;
+  onClose?: () => void;
+  skipEndedScreen?: boolean;
 
   // Callbacks
   onConversationEnd: () => void;
@@ -67,6 +122,9 @@ export interface DemoExperienceViewProps {
   // Analytics source
   source?: 'embed' | 'experience';
   embedToken?: string;
+
+  // Layout mode
+  useNewLayout?: boolean;
 }
 
 export interface DemoExperienceViewHandle {
@@ -102,6 +160,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       debugVideoTitles = [],
       source = 'experience',
       embedToken,
+      useNewLayout = true,
     },
     ref
   ) {
@@ -111,10 +170,28 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     const [showCTA, setShowCTA] = useState(false);
     const [conversationEnded, setConversationEnded] = useState(false);
     const [startTime] = useState<number>(Date.now());
+    const [currentVideoTime, setCurrentVideoTime] = useState<number>(0);
+
+    // Transcript state for new layout
+    const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
+    const [isMicActive, setIsMicActive] = useState(true);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
+    const [pendingTextMessage, setPendingTextMessage] = useState<string | null>(null);
 
     const videoPlayerRef = useRef<InlineVideoPlayerHandle | null>(null);
 
-    // Video context tracking
+    // Insights data hook
+    const { insightsData, addVideoWatched } = useInsightsData({
+      conversationId: conversationId || null,
+      demoId,
+    });
+
+    // Video context tracking refs
+    // currentVideoRef: Stores metadata of currently playing video (title, chapters, etc.)
+    //                  Reset to null when video closes. Used for context-aware analytics.
+    // lastSentContextRef: Prevents duplicate analytics messages when user repeatedly
+    //                     pauses/seeks to same position. Only sends if context changed.
     const currentVideoRef = useRef<CurrentVideoMetadata | null>(null);
     const lastSentContextRef = useRef<string>('');
 
@@ -122,6 +199,18 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     useImperativeHandle(ref, () => ({
       setShowCTA,
     }));
+
+    // Track page view immediately on mount
+    useEffect(() => {
+      analytics.pageViewed({
+        demoId,
+        demoName,
+        source,
+        embedToken,
+        referrer: typeof window !== 'undefined' ? document.referrer : undefined,
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty deps = fire once on mount
 
     // Track demo started when conversation URL is available
     useEffect(() => {
@@ -135,14 +224,23 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       }
     }, [conversationUrl, demoId, demoName, source, embedToken]);
 
-    // Track errors
+    // Track errors - distinguish generation failures from other errors
     useEffect(() => {
       if (error) {
-        analytics.demoError({
-          demoId,
-          error,
-          source,
-        });
+        // Check if this is a generation/conversation start failure
+        if (error.includes('Failed to start') || error.includes('conversation') || error.includes('Tavus')) {
+          analytics.generationFailed({
+            demoId,
+            errorMessage: error,
+            source,
+          });
+        } else {
+          analytics.demoError({
+            demoId,
+            error,
+            source,
+          });
+        }
       }
     }, [error, demoId, source]);
 
@@ -154,7 +252,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     }, [uiState, playingVideoUrl]);
 
     // Handle tool calls from conversation
-    // Note: TavusConversationCVI calls onToolCall(toolName, args) with two arguments
     const handleToolCall = useCallback(
       async (toolName: string, args: any) => {
         // Handle fetch_video - look up the video by title and play it
@@ -168,11 +265,12 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             return;
           }
 
-          // Look up video from database (including metadata for Twelve Labs chapters)
+          // Look up video from database using 5-level fallback strategy
+          // This ensures we find videos even when the AI uses slight title variations
           const { supabase } = await import('@/lib/supabase');
           const normalizedTitle = videoTitle.trim().replace(/^['"]|['"]$/g, '');
 
-          // Try case-insensitive match first (use maybeSingle to avoid 406 errors)
+          // LEVEL 1: Case-insensitive exact match (most common success path)
           let { data: videoData, error: videoError } = await supabase
             .from('demo_videos')
             .select('storage_url, title, id, metadata')
@@ -181,7 +279,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             .maybeSingle();
 
           if (videoError || !videoData) {
-            // Try exact match as fallback
+            // LEVEL 2: Exact match (handles case where ilike fails but exact works)
             const exactResult = await supabase
               .from('demo_videos')
               .select('storage_url, title, id, metadata')
@@ -190,7 +288,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               .maybeSingle();
 
             if (exactResult.error || !exactResult.data) {
-              // Try fuzzy match with wildcards (partial title match)
+              // LEVEL 3: Fuzzy match - handles partial titles or extra words
               const fuzzyResult = await supabase
                 .from('demo_videos')
                 .select('storage_url, title, id, metadata')
@@ -201,7 +299,8 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               if (fuzzyResult.data && fuzzyResult.data.length > 0) {
                 videoData = fuzzyResult.data[0];
               } else {
-                // Try matching just the main keywords (before colon if present)
+                // LEVEL 4: Keyword extraction - for titles like "Product: Feature Overview"
+                // extracts "Product" and searches for videos containing that keyword
                 const mainKeyword = normalizedTitle.split(':')[0].trim();
                 if (mainKeyword && mainKeyword !== normalizedTitle) {
                   const keywordResult = await supabase
@@ -217,10 +316,15 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                 }
               }
 
-              // Try semantic search via Twelve Labs as last resort
+              // LEVEL 5: Semantic search via Twelve Labs (last resort)
+              // Uses AI-powered video understanding to find videos by content/meaning
+              // e.g., "pricing overview" might match "Cost and Plans Breakdown"
               if (!videoData) {
                 if (process.env.NODE_ENV !== 'production') {
-                  console.log('[DemoExperienceView] Fuzzy match failed, trying semantic search for:', normalizedTitle);
+                  console.log(
+                    '[DemoExperienceView] Fuzzy match failed, trying semantic search for:',
+                    normalizedTitle
+                  );
                 }
 
                 try {
@@ -233,7 +337,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                   if (searchResponse.ok) {
                     const searchData = await searchResponse.json();
                     if (searchData.results && searchData.results.length > 0) {
-                      // Get the video with highest confidence from semantic search
                       const bestMatch = searchData.results[0];
                       if (bestMatch.demoVideoId) {
                         const { data: semanticVideo } = await supabase
@@ -270,7 +373,10 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                     .from('demo_videos')
                     .select('title')
                     .eq('demo_id', demoId);
-                  console.log('[DemoExperienceView] Available videos for this demo:', allVideos?.map(v => v.title));
+                  console.log(
+                    '[DemoExperienceView] Available videos for this demo:',
+                    allVideos?.map((v) => v.title)
+                  );
                 }
                 return;
               }
@@ -287,11 +393,9 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           let finalVideoUrl: string;
           const storagePath = videoData.storage_url;
 
-          // If storage_url is already a full URL, use it directly
           if (/^https?:\/\//i.test(storagePath)) {
             finalVideoUrl = storagePath;
           } else {
-            // Get signed URL for storage path
             const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from('demo-videos')
               .createSignedUrl(storagePath, 3600);
@@ -303,7 +407,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             finalVideoUrl = signedUrlData.signedUrl;
           }
 
-          // Parse chapters from Twelve Labs generated context (if available)
+          // Parse chapters from Twelve Labs generated context
           let chapters: VideoChapter[] = [];
           const generatedContext = videoData.metadata?.twelvelabs?.generatedContext;
           if (generatedContext) {
@@ -323,7 +427,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           };
 
           currentVideoRef.current = videoMetadata;
-          lastSentContextRef.current = ''; // Reset last sent context for new video
+          lastSentContextRef.current = '';
 
           setPlayingVideoUrl(finalVideoUrl);
           setUiState(UIState.VIDEO_PLAYING);
@@ -335,6 +439,9 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             videoUrl: finalVideoUrl,
             videoTitle: videoData.title,
           });
+
+          // Add to insights panel videos watched
+          addVideoWatched(videoData.title);
 
           // Also call parent handler
           onToolCall({ name: toolName, args });
@@ -355,11 +462,10 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           return;
         }
 
-        // Handle seek_video - jump to a specific timestamp
+        // Handle seek_video
         if (toolName === 'seek_video') {
           if (uiState === UIState.VIDEO_PLAYING && videoPlayerRef.current?.seekTo) {
             const timestampStr = args?.timestamp || args?.time || '';
-            // Parse timestamp in MM:SS or M:SS format
             const parts = timestampStr.toString().split(':');
             let seconds = 0;
             if (parts.length === 2) {
@@ -384,10 +490,9 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
           setPlayingVideoUrl(null);
           setUiState(UIState.CONVERSATION);
 
-          // Auto-show CTA when AI closes video (usually means trial request)
+          // Auto-show CTA when AI closes video
           setShowCTA(true);
 
-          // Track CTA shown
           analytics.ctaShown({
             demoId,
             ctaTitle,
@@ -400,7 +505,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
         // Handle show_trial_cta
         if (toolName === 'show_trial_cta' || toolName === 'show_cta') {
-          // Silently close any playing video first
           if (playingVideoUrl) {
             currentVideoRef.current = null;
             lastSentContextRef.current = '';
@@ -408,10 +512,8 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
             setUiState(UIState.CONVERSATION);
           }
 
-          // Show CTA immediately
           setShowCTA(true);
 
-          // Track CTA shown
           analytics.ctaShown({
             demoId,
             ctaTitle,
@@ -425,14 +527,13 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         // Unknown tool call - pass to parent
         onToolCall({ name: toolName, args });
       },
-      [onToolCall, demoId, ctaTitle, ctaButtonText, playingVideoUrl]
+      [onToolCall, demoId, ctaTitle, ctaButtonText, playingVideoUrl, addVideoWatched]
     );
 
     // Handle conversation end
     const handleConversationEnd = useCallback(() => {
       const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
 
-      // Track demo ended
       analytics.demoEnded({
         demoId,
         demoName,
@@ -441,13 +542,11 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         conversationId: conversationId || undefined,
       });
 
-      // For dashboard experience page, skip the ended screen and redirect immediately
       if (skipEndedScreen) {
         onConversationEnd();
         return;
       }
 
-      // For embedded demos, show the ended screen with CTA and countdown
       setConversationEnded(true);
       setUiState(UIState.IDLE);
       setShowCTA(true);
@@ -461,7 +560,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       setShowCTA(false);
       setUiState(UIState.IDLE);
 
-      // Track restart
       analytics.conversationRestarted({
         demoId,
         source,
@@ -472,7 +570,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     // Handle video end
     const handleVideoEnd = useCallback(() => {
-      // Track video ended
       if (playingVideoUrl) {
         analytics.videoEnded({
           demoId,
@@ -480,7 +577,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         });
       }
 
-      // Clear video context tracking
       currentVideoRef.current = null;
       lastSentContextRef.current = '';
 
@@ -490,7 +586,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     // Handle video close
     const handleVideoClose = useCallback(() => {
-      // Track video closed
       if (playingVideoUrl) {
         analytics.videoClosed({
           demoId,
@@ -498,7 +593,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         });
       }
 
-      // Clear video context tracking
       currentVideoRef.current = null;
       lastSentContextRef.current = '';
 
@@ -508,7 +602,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     // Handle CTA click
     const handleCTAClick = useCallback(() => {
-      // Track CTA clicked
       analytics.ctaClicked({
         demoId,
         ctaTitle,
@@ -524,101 +617,151 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       setShowCTA(false);
     }, [demoId]);
 
-    // ====== Video Context Tracking ======
-
-    // Send video context to the API (which can forward to the agent)
-    const sendVideoContext = useCallback(async (contextMessage: string) => {
-      // Avoid duplicate messages
-      if (contextMessage === lastSentContextRef.current) return;
-      lastSentContextRef.current = contextMessage;
-
-      // Log for debugging
-
-      // Track the video context event
-      analytics.videoContextSent({
-        demoId,
-        context: contextMessage,
-        conversationId: conversationId || undefined,
-      });
-    }, [demoId, conversationId]);
-
-    // Handle video pause - send context about where user paused
-    const handleVideoPause = useCallback((currentTime: number) => {
-      const video = currentVideoRef.current;
-      if (!video) return;
-
-      const formattedTime = formatTime(currentTime);
-      let contextMessage = `User paused "${video.title}" at ${formattedTime}`;
-
-      // Find current chapter if available
-      if (video.chapters && video.chapters.length > 0) {
-        const chapter = findChapterAtTimestamp(video.chapters, currentTime);
-        if (chapter) {
-          contextMessage += `. Currently viewing: "${chapter.title}"`;
-        }
+    // Handle chapter click from resources panel
+    const handleChapterClick = useCallback((timestamp: number) => {
+      if (videoPlayerRef.current?.seekTo) {
+        videoPlayerRef.current.seekTo(timestamp);
       }
+    }, []);
 
-      sendVideoContext(contextMessage);
+    // Handle transcript updates from AgentConversationView
+    const handleTranscriptUpdate = useCallback((messages: TranscriptMessage[]) => {
+      setTranscript(messages);
+    }, []);
 
-      // Track pause analytics
-      analytics.videoPaused({
-        demoId,
-        videoUrl: video.url,
-        videoTitle: video.title,
-        pausedAt: currentTime,
-        formattedTime,
-      });
-    }, [demoId, sendVideoContext]);
+    // Handle subtitle changes from AgentConversationView
+    const handleSubtitleChange = useCallback((text: string | null) => {
+      setCurrentSubtitle(text);
+    }, []);
 
-    // Handle video seek - send context about new position
-    const handleVideoSeek = useCallback((currentTime: number) => {
-      const video = currentVideoRef.current;
-      if (!video) return;
+    // Handle text message sent confirmation
+    const handleTextMessageSent = useCallback(() => {
+      setPendingTextMessage(null);
+    }, []);
 
-      const formattedTime = formatTime(currentTime);
-      let contextMessage = `User seeked to ${formattedTime} in "${video.title}"`;
+    // Handle text input message send
+    const handleSendMessage = useCallback((message: string) => {
+      // Add to local transcript
+      const newMessage: TranscriptMessage = {
+        id: `user-input-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+      };
+      setTranscript((prev) => [...prev, newMessage]);
 
-      // Find current chapter if available
-      if (video.chapters && video.chapters.length > 0) {
-        const chapter = findChapterAtTimestamp(video.chapters, currentTime);
-        if (chapter) {
-          contextMessage += `. Now viewing: "${chapter.title}"`;
-        }
+      // Send message to the agent via Daily
+      setPendingTextMessage(message);
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[DemoExperienceView] Sending text message to agent:', message);
       }
+    }, []);
 
-      sendVideoContext(contextMessage);
+    // Handle mic toggle - user clicked the button
+    const handleMicToggle = useCallback(() => {
+      setIsMicActive((prev) => !prev);
+    }, []);
 
-      // Track seek analytics
-      analytics.videoSeeked({
-        demoId,
-        videoUrl: video.url,
-        videoTitle: video.title,
-        seekedTo: currentTime,
-        formattedTime,
-      });
-    }, [demoId, sendVideoContext]);
+    // Handle help click
+    const handleHelpClick = useCallback(() => {
+      setIsHelpOpen(true);
+    }, []);
 
-    // Handle periodic time updates (only when paused - user is examining content)
-    const handleVideoTimeUpdate = useCallback((currentTime: number, isPaused: boolean) => {
-      // Only send updates when paused (user is likely reading/examining)
-      if (!isPaused) return;
+    // Video context tracking
+    const sendVideoContext = useCallback(
+      async (contextMessage: string) => {
+        if (contextMessage === lastSentContextRef.current) return;
+        lastSentContextRef.current = contextMessage;
 
-      const video = currentVideoRef.current;
-      if (!video) return;
+        analytics.videoContextSent({
+          demoId,
+          context: contextMessage,
+          conversationId: conversationId || undefined,
+        });
+      },
+      [demoId, conversationId]
+    );
 
-      const formattedTime = formatTime(currentTime);
+    const handleVideoPause = useCallback(
+      (currentTime: number) => {
+        const video = currentVideoRef.current;
+        if (!video) return;
 
-      // Find current chapter if available
-      if (video.chapters && video.chapters.length > 0) {
-        const chapter = findChapterAtTimestamp(video.chapters, currentTime);
-        if (chapter) {
-          const contextMessage = `User is examining "${chapter.title}" at ${formattedTime} in "${video.title}"`;
-          sendVideoContext(contextMessage);
+        const formattedTime = formatTime(currentTime);
+        let contextMessage = `User paused "${video.title}" at ${formattedTime}`;
+
+        if (video.chapters && video.chapters.length > 0) {
+          const chapter = findChapterAtTimestamp(video.chapters, currentTime);
+          if (chapter) {
+            contextMessage += `. Currently viewing: "${chapter.title}"`;
+          }
         }
-      }
-    }, [sendVideoContext]);
 
-    // Initial loading state (fetching config)
+        sendVideoContext(contextMessage);
+
+        analytics.videoPaused({
+          demoId,
+          videoUrl: video.url,
+          videoTitle: video.title,
+          pausedAt: currentTime,
+          formattedTime,
+        });
+      },
+      [demoId, sendVideoContext]
+    );
+
+    const handleVideoSeek = useCallback(
+      (currentTime: number) => {
+        const video = currentVideoRef.current;
+        if (!video) return;
+
+        const formattedTime = formatTime(currentTime);
+        let contextMessage = `User seeked to ${formattedTime} in "${video.title}"`;
+
+        if (video.chapters && video.chapters.length > 0) {
+          const chapter = findChapterAtTimestamp(video.chapters, currentTime);
+          if (chapter) {
+            contextMessage += `. Now viewing: "${chapter.title}"`;
+          }
+        }
+
+        sendVideoContext(contextMessage);
+
+        analytics.videoSeeked({
+          demoId,
+          videoUrl: video.url,
+          videoTitle: video.title,
+          seekedTo: currentTime,
+          formattedTime,
+        });
+      },
+      [demoId, sendVideoContext]
+    );
+
+    const handleVideoTimeUpdate = useCallback(
+      (currentTime: number, isPaused: boolean) => {
+        setCurrentVideoTime(currentTime);
+
+        if (!isPaused) return;
+
+        const video = currentVideoRef.current;
+        if (!video) return;
+
+        const formattedTime = formatTime(currentTime);
+
+        if (video.chapters && video.chapters.length > 0) {
+          const chapter = findChapterAtTimestamp(video.chapters, currentTime);
+          if (chapter) {
+            const contextMessage = `User is examining "${chapter.title}" at ${formattedTime} in "${video.title}"`;
+            sendVideoContext(contextMessage);
+          }
+        }
+      },
+      [sendVideoContext]
+    );
+
+    // Initial loading state
     if (loading && !joiningCall) {
       return (
         <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center">
@@ -627,17 +770,12 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       );
     }
 
-    // Error state (but not if we're in lobby - show error in lobby instead)
+    // Error state
     if (error && !showLobby) {
-      return (
-        <BusyErrorScreen
-          error={error}
-          onRetry={onRetry || (() => window.location.reload())}
-        />
-      );
+      return <BusyErrorScreen error={error} onRetry={onRetry || (() => window.location.reload())} />;
     }
 
-    // Pre-call lobby - show when lobby is enabled and no conversation URL yet
+    // Pre-call lobby
     if (showLobby && !conversationUrl && onJoinCall) {
       return (
         <PreCallLobby
@@ -652,105 +790,197 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     return (
       <CVIProvider>
-        <div className="min-h-screen bg-domo-bg-dark flex flex-col">
-          {/* Main Content */}
-          <main className="flex-1 relative">
-            {/* Conversation Ended State */}
-            {conversationEnded ? (
-              <ConversationEndedScreen
-                ctaUrl={ctaButtonUrl}
-                ctaButtonText={ctaButtonText || 'Learn More'}
-                returnUrl={returnUrl}
-                isPopup={isPopup}
-                onClose={onClose}
+        <div className="h-screen bg-domo-bg-dark flex flex-col overflow-hidden">
+          {/* Header */}
+          <AgentHeader agentName={agentName || demoName} onHelpClick={handleHelpClick} />
+
+          {/* Main content area */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left sidebar - Resources Panel */}
+            <aside className="w-80 flex-shrink-0 border-r border-domo-border overflow-hidden">
+              <ResourcesPanel
+                insightsData={insightsData}
+                currentVideoChapters={currentVideoRef.current?.chapters || []}
+                currentVideoTime={currentVideoTime}
+                currentVideoTitle={currentVideoRef.current?.title}
+                isVideoPlaying={uiState === UIState.VIDEO_PLAYING}
+                onChapterClick={handleChapterClick}
+                transcript={transcript}
               />
-            ) : (
-              /* Conversation View - SINGLE instance that stays mounted, changes position */
-              <>
-                {/* Video overlay - shows when video is playing */}
-                {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
-                  <div className="absolute inset-0 bg-black flex flex-col" style={{ zIndex: 10 }} data-testid="video-overlay">
-                    {/* Video header */}
-                    <div className="flex-shrink-0 bg-domo-bg-elevated/90 backdrop-blur text-white p-3 flex justify-between items-center border-b border-domo-border">
-                      <h2 className="text-base font-semibold">{currentVideoRef.current?.title || 'Demo Video'}</h2>
-                      <button
-                        onClick={handleVideoClose}
-                        className="text-domo-text-secondary hover:text-white p-1.5 transition-colors rounded-full hover:bg-white/10"
-                        title="Close video"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+            </aside>
 
-                    {/* Video player area */}
-                    <div className="flex-1 bg-black relative overflow-hidden">
-                      <InlineVideoPlayer
-                        ref={videoPlayerRef}
-                        videoUrl={playingVideoUrl}
-                        videoTitle={currentVideoRef.current?.title}
-                        chapters={currentVideoRef.current?.chapters}
-                        onClose={handleVideoClose}
-                        onVideoEnd={handleVideoEnd}
-                        onPause={handleVideoPause}
-                        onSeek={handleVideoSeek}
-                        onTimeUpdate={handleVideoTimeUpdate}
-                      />
-
-                      {/* Circular thumbnails - bottom center */}
-                      <DualPipOverlay visible={true} />
-
-                      {/* Control buttons - bottom right, same line as thumbnails */}
-                      <VideoOverlayControls onLeave={handleConversationEnd} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Conversation - hidden when video is playing, but stays mounted for WebRTC/audio */}
-                <div
-                  data-testid="conversation-container"
-                  className={uiState === UIState.VIDEO_PLAYING
-                    ? 'absolute -left-[9999px] -top-[9999px] w-1 h-1 overflow-hidden'
-                    : 'w-full h-full flex items-center justify-center p-4'
-                  }
-                  aria-hidden={uiState === UIState.VIDEO_PLAYING}
-                >
-                  <div className="overflow-hidden flex flex-col bg-domo-bg-card border border-domo-border rounded-xl shadow-lg w-full h-full">
+            {/* Main content */}
+            <main className="flex-1 flex flex-col relative overflow-hidden">
+              {/* Conversation Ended State */}
+              {conversationEnded ? (
+                <ConversationEndedScreen
+                  ctaUrl={ctaButtonUrl}
+                  ctaButtonText={ctaButtonText || 'Learn More'}
+                  returnUrl={returnUrl}
+                  isPopup={isPopup}
+                  onClose={onClose}
+                />
+              ) : (
+                <>
+                  {/* Video overlay - shows when video is playing */}
+                  {uiState === UIState.VIDEO_PLAYING && playingVideoUrl && (
                     <div
-                      className="relative flex-1 bg-domo-bg-dark"
-                      style={{ height: '75vh', minHeight: '400px' }}
+                      className="absolute inset-0 bg-black flex flex-col"
+                      style={{ zIndex: 10 }}
+                      data-testid="video-overlay"
                     >
-                      {conversationUrl ? (
-                        <TavusConversationCVI
-                          conversationUrl={conversationUrl}
-                          onLeave={handleConversationEnd}
-                          onToolCall={handleToolCall}
-                          debugVideoTitles={debugVideoTitles}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white">
-                          Connecting...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </main>
+                      {/* Video header */}
+                      <div className="flex-shrink-0 bg-domo-bg-elevated/90 backdrop-blur text-white p-3 flex justify-between items-center border-b border-domo-border">
+                        <h2 className="text-base font-semibold">
+                          {currentVideoRef.current?.title || 'Demo Video'}
+                        </h2>
+                        <button
+                          onClick={handleVideoClose}
+                          className="text-domo-text-secondary hover:text-white p-1.5 transition-colors rounded-full hover:bg-white/10"
+                          title="Close video"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
 
-          {/* CTA Banner */}
-          {showCTA && ctaButtonUrl && (
-            <CTABanner
-              title={ctaTitle}
-              message={ctaMessage}
-              buttonText={ctaButtonText}
-              buttonUrl={ctaButtonUrl}
-              onButtonClick={handleCTAClick}
-              onClose={handleCTAClose}
+                      {/* Video player area */}
+                      <div className="flex-1 bg-black relative overflow-hidden">
+                        <InlineVideoPlayer
+                          ref={videoPlayerRef}
+                          videoUrl={playingVideoUrl}
+                          videoTitle={currentVideoRef.current?.title}
+                          chapters={currentVideoRef.current?.chapters}
+                          onClose={handleVideoClose}
+                          onVideoEnd={handleVideoEnd}
+                          onPause={handleVideoPause}
+                          onSeek={handleVideoSeek}
+                          onTimeUpdate={handleVideoTimeUpdate}
+                          // Analytics callbacks
+                          onVideoError={(err) => {
+                            analytics.videoLoadFailure({
+                              demoId,
+                              videoUrl: playingVideoUrl || '',
+                              errorCode: err.code,
+                              errorMessage: err.message,
+                              networkState: err.networkState,
+                              source,
+                            });
+                          }}
+                          onVideoStalled={(details) => {
+                            analytics.videoStalled({
+                              demoId,
+                              videoUrl: playingVideoUrl || '',
+                              currentTime: details.currentTime,
+                              duration: details.duration,
+                              source,
+                            });
+                          }}
+                          onVideoStarted={(details) => {
+                            analytics.videoStarted({
+                              demoId,
+                              videoUrl: playingVideoUrl || '',
+                              latency_ms: details.latency_ms,
+                              source,
+                            });
+                          }}
+                          onVideoProgress={(details) => {
+                            analytics.videoProgress({
+                              demoId,
+                              videoUrl: playingVideoUrl || '',
+                              depth_percentage: details.depth_percentage,
+                              currentTime: details.currentTime,
+                              duration: details.duration,
+                              source,
+                            });
+                          }}
+                        />
+
+                        {/* Circular thumbnails - bottom center */}
+                        <DualPipOverlay visible={true} />
+
+                        {/* Control buttons - bottom right */}
+                        <VideoOverlayControls onLeave={handleConversationEnd} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Agent Conversation View - main content area */}
+                  <div
+                    data-testid="conversation-container"
+                    className={
+                      uiState === UIState.VIDEO_PLAYING
+                        ? 'absolute -left-[9999px] -top-[9999px] w-1 h-1 overflow-hidden'
+                        : 'flex-1 flex flex-col'
+                    }
+                    aria-hidden={uiState === UIState.VIDEO_PLAYING}
+                  >
+                    {conversationUrl ? (
+                      <AgentConversationView
+                        conversationUrl={conversationUrl}
+                        agentName={agentName}
+                        onLeave={handleConversationEnd}
+                        onToolCall={handleToolCall}
+                        onTranscriptUpdate={handleTranscriptUpdate}
+                        onSubtitleChange={handleSubtitleChange}
+                        isMicMuted={!isMicActive}
+                        debugVideoTitles={debugVideoTitles}
+                        pendingTextMessage={pendingTextMessage}
+                        onTextMessageSent={handleTextMessageSent}
+                      />
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center text-white">Connecting...</div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* CTA Banner */}
+              {showCTA && ctaButtonUrl && (
+                <CTABanner
+                  title={ctaTitle}
+                  message={ctaMessage}
+                  buttonText={ctaButtonText}
+                  buttonUrl={ctaButtonUrl}
+                  onButtonClick={handleCTAClick}
+                  onClose={handleCTAClose}
+                />
+              )}
+            </main>
+          </div>
+
+          {/* Subtitles - positioned above input bar, always visible during conversation */}
+          {!conversationEnded && currentSubtitle && (
+            <div className="relative z-50 px-4 pb-2">
+              <div className="max-w-2xl mx-auto">
+                <div className="bg-black/80 backdrop-blur-md rounded-2xl px-6 py-4 shadow-xl border border-white/10">
+                  <p className="text-white text-lg leading-relaxed text-center font-medium">
+                    &ldquo;{currentSubtitle}&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bottom input bar - always visible when not ended */}
+          {!conversationEnded && (
+            <TextInputBar
+              onSendMessage={handleSendMessage}
+              onMicToggle={handleMicToggle}
+              onEndCall={handleConversationEnd}
+              isMicActive={isMicActive}
+              disabled={!conversationUrl}
             />
           )}
+
+          {/* Help Modal */}
+          <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} agentName={agentName} />
         </div>
       </CVIProvider>
     );

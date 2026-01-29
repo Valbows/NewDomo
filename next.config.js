@@ -49,4 +49,25 @@ try {
   // Sentry not installed; proceed without wrapping
 }
 
-module.exports = withSentry(nextConfig, { silent: true }, {});
+const sentryWebpackPluginOptions = {
+  // Suppress source map upload logs in CI
+  silent: !process.env.CI,
+
+  // Upload source maps to Sentry
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Auth token for uploading source maps
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Only upload source maps in production builds
+  dryRun: process.env.NODE_ENV !== 'production' || !process.env.SENTRY_AUTH_TOKEN,
+
+  // Hide source maps from browser devtools in production
+  hideSourceMaps: true,
+
+  // Automatically instrument server functions
+  automaticVercelMonitors: true,
+};
+
+module.exports = withSentry(nextConfig, sentryWebpackPluginOptions);

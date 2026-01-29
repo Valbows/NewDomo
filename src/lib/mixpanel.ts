@@ -189,6 +189,77 @@ export const analytics = {
   }) => {
     track('Demo Error', props);
   },
+
+  // ============================================
+  // Phase 1: Technical Metrics
+  // ============================================
+
+  // Video error events
+  videoLoadFailure: (props: {
+    demoId: string;
+    videoUrl: string;
+    errorCode?: number;
+    errorMessage?: string;
+    networkState?: number;
+    source: 'embed' | 'experience';
+  }) => {
+    track('Video Load Failure', props);
+  },
+
+  videoStalled: (props: {
+    demoId: string;
+    videoUrl: string;
+    currentTime: number;
+    duration?: number;
+    source: 'embed' | 'experience';
+  }) => {
+    track('Video Stalled', props);
+  },
+
+  generationFailed: (props: {
+    demoId: string;
+    errorMessage: string;
+    httpStatus?: number;
+    source: 'embed' | 'experience';
+  }) => {
+    track('Generation Failed', props);
+  },
+
+  pageViewed: (props: {
+    demoId: string;
+    demoName?: string;
+    source: 'embed' | 'experience';
+    embedToken?: string;
+    referrer?: string;
+  }) => {
+    track('Page Viewed', props);
+  },
+
+  // ============================================
+  // Phase 2: Business Metrics
+  // ============================================
+
+  // Time-to-Value tracking
+  videoStarted: (props: {
+    demoId: string;
+    videoUrl: string;
+    latency_ms: number;
+    source: 'embed' | 'experience';
+  }) => {
+    track('Video Started', props);
+  },
+
+  // Engagement tracking (quartiles)
+  videoProgress: (props: {
+    demoId: string;
+    videoUrl: string;
+    depth_percentage: 25 | 50 | 75;
+    currentTime: number;
+    duration: number;
+    source: 'embed' | 'experience';
+  }) => {
+    track('Video Progress', props);
+  },
 };
 
 export default mixpanel;

@@ -12,6 +12,11 @@ interface InlineVideoPlayerProps {
   onTimeUpdate?: (currentTime: number, isPaused: boolean) => void;
   onPause?: (currentTime: number) => void;
   onSeek?: (currentTime: number) => void;
+  // Analytics callbacks
+  onVideoError?: (error: { code?: number; message?: string; networkState?: number }) => void;
+  onVideoStalled?: (details: { currentTime: number; duration?: number }) => void;
+  onVideoStarted?: (details: { latency_ms: number }) => void;
+  onVideoProgress?: (details: { depth_percentage: 25 | 50 | 75; currentTime: number; duration: number }) => void;
 }
 
 export type InlineVideoPlayerHandle = {
@@ -25,7 +30,20 @@ export type InlineVideoPlayerHandle = {
 };
 
 export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideoPlayerProps>(function InlineVideoPlayer(
-  { videoUrl, videoTitle, chapters = [], onClose, onVideoEnd, onTimeUpdate, onPause, onSeek }: InlineVideoPlayerProps,
+  {
+    videoUrl,
+    videoTitle,
+    chapters = [],
+    onClose,
+    onVideoEnd,
+    onTimeUpdate,
+    onPause,
+    onSeek,
+    onVideoError,
+    onVideoStalled,
+    onVideoStarted,
+    onVideoProgress,
+  }: InlineVideoPlayerProps,
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,6 +54,10 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [showChapterList, setShowChapterList] = useState<boolean>(false);
+
+  // Refs for analytics tracking (prevent duplicate events)
+  const hasTrackedStartRef = useRef<boolean>(false);
+  const quartilesFiredRef = useRef<Set<number>>(new Set());
 
   // Find current chapter based on playback position
   const currentChapter = useMemo(() => {
@@ -109,6 +131,10 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     // New source should autoplay by default unless paused via tool command
     shouldAutoplayRef.current = true;
 
+    // Reset analytics tracking refs for new video
+    hasTrackedStartRef.current = false;
+    quartilesFiredRef.current = new Set();
+
     // Ensure browser initializes network fetch for the new src
     try {
       // Pause before swapping sources
@@ -174,14 +200,37 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
         console.error('Video error details:', errorDetails);
         setHasError(true);
         setErrorMessage(`Video loading failed (Code: ${videoElement.error.code}): ${videoElement.error.message}`);
+
+        // Track video load failure
+        if (onVideoError) {
+          onVideoError({
+            code: videoElement.error.code,
+            message: videoElement.error.message,
+            networkState: videoElement.networkState,
+          });
+        }
       } else {
         setHasError(true);
         setErrorMessage('Unknown video error occurred');
+
+        // Track unknown error
+        if (onVideoError) {
+          onVideoError({ message: 'Unknown video error occurred' });
+        }
       }
       setPaused(true);
     };
 
-    const handlePlay = () => setPaused(false);
+    const handlePlay = () => {
+      setPaused(false);
+
+      // Track Video Started only once per video load
+      if (!hasTrackedStartRef.current && onVideoStarted) {
+        const latency_ms = Math.round(performance.now()); // ms since page load
+        onVideoStarted({ latency_ms });
+        hasTrackedStartRef.current = true;
+      }
+    };
     const handlePause = () => {
       setPaused(true);
       // Notify parent of pause with current time
@@ -195,13 +244,35 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     let lastTimeUpdate = 0;
     const handleTimeUpdate = () => {
       if (!videoElement) return;
+      const videoDuration = videoElement.duration;
+      const videoCurrentTime = videoElement.currentTime;
+
       // Always update local time for chapter display
-      setCurrentTime(videoElement.currentTime);
+      setCurrentTime(videoCurrentTime);
+
       // Throttle parent callback
       const now = Date.now();
       if (now - lastTimeUpdate > 2000) {
         lastTimeUpdate = now;
-        onTimeUpdate?.(videoElement.currentTime, videoElement.paused);
+        onTimeUpdate?.(videoCurrentTime, videoElement.paused);
+      }
+
+      // Track quartile progress for analytics
+      if (videoDuration && videoDuration > 0 && onVideoProgress) {
+        const progressPercent = (videoCurrentTime / videoDuration) * 100;
+
+        // Check each quartile threshold
+        const quartiles = [25, 50, 75] as const;
+        for (const quartile of quartiles) {
+          if (progressPercent >= quartile && !quartilesFiredRef.current.has(quartile)) {
+            quartilesFiredRef.current.add(quartile);
+            onVideoProgress({
+              depth_percentage: quartile,
+              currentTime: Math.round(videoCurrentTime),
+              duration: Math.round(videoDuration),
+            });
+          }
+        }
       }
     };
 
@@ -209,6 +280,28 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     const handleSeeked = () => {
       if (!videoElement) return;
       onSeek?.(videoElement.currentTime);
+    };
+
+    // Track stalled/buffering events
+    const handleStalled = () => {
+      console.warn('Video stalled at', videoElement.currentTime);
+      if (onVideoStalled) {
+        onVideoStalled({
+          currentTime: videoElement.currentTime,
+          duration: videoElement.duration || undefined,
+        });
+      }
+    };
+
+    const handleWaiting = () => {
+      console.warn('Video buffering at', videoElement.currentTime);
+      // Waiting event also indicates buffering - track it as stalled
+      if (onVideoStalled) {
+        onVideoStalled({
+          currentTime: videoElement.currentTime,
+          duration: videoElement.duration || undefined,
+        });
+      }
     };
 
     videoElement.addEventListener('canplay', handleCanPlay);
@@ -219,6 +312,8 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
     videoElement.addEventListener('pause', handlePause);
     videoElement.addEventListener('timeupdate', handleTimeUpdate);
     videoElement.addEventListener('seeked', handleSeeked);
+    videoElement.addEventListener('stalled', handleStalled);
+    videoElement.addEventListener('waiting', handleWaiting);
 
     // Clean up event listeners
     return () => {
@@ -230,8 +325,10 @@ export const InlineVideoPlayer = forwardRef<InlineVideoPlayerHandle, InlineVideo
       videoElement.removeEventListener('pause', handlePause);
       videoElement.removeEventListener('timeupdate', handleTimeUpdate);
       videoElement.removeEventListener('seeked', handleSeeked);
+      videoElement.removeEventListener('stalled', handleStalled);
+      videoElement.removeEventListener('waiting', handleWaiting);
     };
-  }, [videoUrl, onTimeUpdate, onPause, onSeek]);
+  }, [videoUrl, onTimeUpdate, onPause, onSeek, onVideoError, onVideoStalled, onVideoStarted, onVideoProgress]);
 
   // Handle chapter click - seek to chapter start
   const handleChapterClick = (chapter: VideoChapter) => {

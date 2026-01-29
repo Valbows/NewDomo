@@ -68,13 +68,17 @@ jest.mock('@/lib/supabase', () => ({
               mockEq(...args);
               return {
                 single: () => mockSingle(),
+                maybeSingle: () => mockSingle(),
                 ilike: (...args: any[]) => {
                   mockIlike(...args);
                   return {
                     single: () => mockSingle(),
+                    maybeSingle: () => mockSingle(),
+                    limit: jest.fn().mockResolvedValue({ data: [], error: null }),
                   };
                 },
                 order: jest.fn().mockResolvedValue({ data: [], error: null }),
+                limit: jest.fn().mockResolvedValue({ data: [], error: null }),
               };
             },
           };
@@ -99,11 +103,26 @@ jest.mock('@/components/cvi/components/cvi-provider', () => ({
   CVIProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="cvi-provider">{children}</div>,
 }));
 
-// Mock TavusConversationCVI
+// Mock ResourcesPanel
+jest.mock('@/components/resources', () => ({
+  ResourcesPanel: () => <div data-testid="resources-panel">Resources Panel</div>,
+}));
+
+// Mock AgentHeader
+jest.mock('@/components/conversation/AgentHeader', () => ({
+  AgentHeader: () => <div data-testid="agent-header">Agent Header</div>,
+}));
+
+// Mock TextInputBar
+jest.mock('@/components/conversation/TextInputBar', () => ({
+  TextInputBar: () => <div data-testid="text-input-bar">Text Input Bar</div>,
+}));
+
+// Mock AgentConversationView (replaced TavusConversationCVI)
 // Note: onToolCall is called as onToolCall(toolName, args) with two arguments
-jest.mock('@/app/demos/[demoId]/experience/components/TavusConversationCVI', () => ({
-  TavusConversationCVI: ({ onLeave, onToolCall }: any) => (
-    <div data-testid="tavus-cvi">
+jest.mock('@/components/conversation/AgentConversationView', () => ({
+  AgentConversationView: ({ onLeave, onToolCall }: any) => (
+    <div data-testid="agent-conversation">
       <button data-testid="trigger-leave" onClick={onLeave}>Leave</button>
       <button data-testid="trigger-fetch-video" onClick={() => onToolCall('fetch_video', { title: 'Test Video' })}>Fetch Video</button>
       <button data-testid="trigger-pause-video" onClick={() => onToolCall('pause_video', {})}>Pause Video</button>
@@ -120,6 +139,7 @@ jest.mock('@/app/demos/[demoId]/experience/components/TavusConversationCVI', () 
 const mockVideoPlayerPlay = jest.fn().mockResolvedValue(undefined);
 const mockVideoPlayerPause = jest.fn();
 const mockVideoPlayerGetCurrentTime = jest.fn().mockReturnValue(0);
+const mockVideoPlayerSetVolume = jest.fn();
 
 jest.mock('@/app/demos/[demoId]/experience/components/InlineVideoPlayer', () => ({
   InlineVideoPlayer: React.forwardRef(({ onClose, onVideoEnd }: any, ref: any) => {
@@ -129,6 +149,7 @@ jest.mock('@/app/demos/[demoId]/experience/components/InlineVideoPlayer', () => 
       isPaused: jest.fn().mockReturnValue(false),
       getCurrentTime: mockVideoPlayerGetCurrentTime,
       seekTo: jest.fn(),
+      setVolume: mockVideoPlayerSetVolume,
     }));
     return (
       <div data-testid="inline-video-player">
@@ -267,7 +288,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger beforeunload event
@@ -284,7 +305,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       const event = new Event('beforeunload');
@@ -370,7 +391,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger fetch_video tool call
@@ -387,7 +408,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       await act(async () => {
@@ -401,7 +422,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       await act(async () => {
@@ -417,7 +438,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       await act(async () => {
@@ -434,7 +455,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger CTA display
@@ -453,7 +474,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Show CTA
@@ -482,7 +503,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Show CTA
@@ -511,7 +532,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger leave
@@ -533,7 +554,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger leave
@@ -557,7 +578,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger leave
@@ -579,7 +600,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       // Trigger play_video tool call (not fetch_video)
@@ -596,7 +617,7 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
       await act(async () => {
@@ -619,25 +640,26 @@ describe('DemoExperiencePage', () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
     });
 
-    it('transitions to PiP mode when video starts playing', async () => {
+    it('hides conversation container when video starts playing', async () => {
       render(<DemoExperiencePage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tavus-cvi')).toBeInTheDocument();
+        expect(screen.getByTestId('agent-conversation')).toBeInTheDocument();
       });
 
-      // Use play_video tool call to trigger video and PiP mode
+      // Use play_video tool call to trigger video playing mode
       await act(async () => {
         fireEvent.click(screen.getByTestId('trigger-play-video'));
       });
 
       await waitFor(() => {
         const container = screen.getByTestId('conversation-container');
-        expect(container).toHaveAttribute('data-pip', 'true');
+        // In the new layout, the conversation is visually hidden (moved off-screen) when video is playing
+        expect(container).toHaveAttribute('aria-hidden', 'true');
       });
     });
   });
