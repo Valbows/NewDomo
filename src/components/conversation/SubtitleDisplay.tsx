@@ -72,7 +72,7 @@ export const SubtitleDisplay = memo(function SubtitleDisplay({
   }
 
   return (
-    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-10">
+    <div className="absolute bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-[calc(100%-2rem)] sm:max-w-xl md:max-w-2xl px-2 sm:px-4 z-10">
       <AnimatePresence mode="wait">
         {(displayText || isTyping) && (
           <motion.div
@@ -81,14 +81,14 @@ export const SubtitleDisplay = memo(function SubtitleDisplay({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -5, scale: 0.98 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="bg-black/75 backdrop-blur-md rounded-2xl px-6 py-4 shadow-xl border border-white/5"
+            className="bg-black/75 backdrop-blur-md rounded-xl sm:rounded-2xl px-3 sm:px-6 py-2 sm:py-4 shadow-xl border border-white/5"
           >
             {isTyping ? (
               <div className="flex items-center justify-center gap-1.5">
                 {[0, 1, 2].map((i) => (
                   <motion.span
                     key={i}
-                    className="w-2 h-2 bg-white/70 rounded-full"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/70 rounded-full"
                     animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1, 0.8] }}
                     transition={{
                       duration: 0.8,
@@ -100,7 +100,7 @@ export const SubtitleDisplay = memo(function SubtitleDisplay({
               </div>
             ) : (
               <motion.p
-                className="text-white text-lg leading-relaxed text-center font-medium"
+                className="text-white text-sm sm:text-base md:text-lg leading-relaxed text-center font-medium"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.15 }}

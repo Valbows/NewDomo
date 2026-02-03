@@ -12,6 +12,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getWebhookUrl } from '@/lib/tavus/webhook-objectives';
 import { getToolsWithVideoTitles } from '@/lib/tavus/tool-definitions';
+import {
+  buildModuleContentSection,
+  buildModulesObjectivesSection,
+} from '@/lib/modules';
 
 async function handlePOST(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
@@ -66,21 +70,41 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // Enhanced identity section
     const identitySection = `\n\n## AGENT IDENTITY\nYou are ${agentName}, ${agentPersonality || 'a friendly and knowledgeable assistant'}.\nGreeting: "${agentGreeting || 'Hello! How can I help you with the demo today?'}"\n`;
 
-    // Step 3a: Get video context from Twelve Labs (if available) and video titles for tools
+    // Step 3a: Get videos and knowledge chunks with module info
     let videoContextSection = '';
+    let moduleContentSection = '';
+    let modulesObjectivesSection = '';
     let videoTitles: string[] = [];
+
     try {
+      // Fetch videos with module_id
       const { data: demoVideos } = await supabase
         .from('demo_videos')
-        .select('title, metadata')
+        .select('title, metadata, module_id')
         .eq('demo_id', demoId)
         .order('order_index', { ascending: true });
+
+      // Fetch knowledge chunks with module_id
+      const { data: knowledgeChunks } = await supabase
+        .from('knowledge_chunks')
+        .select('content, chunk_type, source, module_id')
+        .eq('demo_id', demoId);
 
       // Extract video titles for tool configuration
       if (demoVideos && demoVideos.length > 0) {
         videoTitles = demoVideos.map(v => v.title).filter(Boolean);
       }
 
+      // Build module-structured content section
+      moduleContentSection = buildModuleContentSection(
+        knowledgeChunks || [],
+        demoVideos || []
+      );
+
+      // Build modules and objectives overview section
+      modulesObjectivesSection = buildModulesObjectivesSection();
+
+      // Keep detailed video context for Twelve Labs indexed videos
       if (demoVideos && demoVideos.length > 0) {
         const indexedVideos = demoVideos.filter((v) => v.metadata?.twelvelabs?.generatedContext);
 
@@ -93,10 +117,11 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
           }
 
           videoContextSection += `**IMPORTANT**: When users ask about video content, you can now reference specific timestamps and what happens at each point. Guide users to the most relevant sections.\n`;
-        } else {
         }
       }
     } catch (error) {
+      // Non-fatal - continue with basic prompt
+      console.error('Failed to fetch module content:', error);
     }
 
     // Enhanced but concise objectives section
@@ -118,8 +143,15 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     // Language handling section
     const languageSection = `\n\n## LANGUAGE SUPPORT\nAutomatically detect and respond in the user's language while keeping all tool calls (fetch_video, show_trial_cta) in English with exact titles.\n`;
 
-    // Build enhanced system prompt
-    const enhancedSystemPrompt = baseSystemPrompt + identitySection + objectivesSection + videoContextSection + languageSection;
+    // Build enhanced system prompt with module-structured content
+    // Order: base prompt -> identity -> modules overview -> objectives -> module content -> video context -> language
+    const enhancedSystemPrompt = baseSystemPrompt
+      + identitySection
+      + modulesObjectivesSection
+      + objectivesSection
+      + moduleContentSection
+      + videoContextSection
+      + languageSection;
 
     // Step 4: Always Create New Persona
     

@@ -115,17 +115,17 @@ export const HelpModal = memo(function HelpModal({ isOpen, onClose, agentName }:
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none"
+            className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4 pointer-events-none"
           >
             <div
-              className="bg-domo-bg-card border border-domo-border rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden pointer-events-auto"
+              className="bg-domo-bg-card border border-domo-border rounded-xl sm:rounded-2xl shadow-2xl max-w-[calc(100%-1.5rem)] sm:max-w-md md:max-w-lg w-full max-h-[85vh] overflow-hidden pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-domo-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-domo-primary/20 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-domo-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-domo-border">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-domo-primary/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-domo-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -134,16 +134,16 @@ export const HelpModal = memo(function HelpModal({ isOpen, onClose, agentName }:
                       />
                     </svg>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-domo-text-primary">How to use this demo</h2>
-                    <p className="text-sm text-domo-text-secondary">
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-semibold text-domo-text-primary truncate">How to use this demo</h2>
+                    <p className="text-xs sm:text-sm text-domo-text-secondary truncate">
                       {agentName ? `Chat with ${agentName}` : 'Interactive AI demo guide'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-domo-bg-elevated text-domo-text-secondary hover:text-domo-text-primary transition-colors"
+                  className="p-2 rounded-full hover:bg-domo-bg-elevated text-domo-text-secondary hover:text-domo-text-primary transition-colors flex-shrink-0"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -152,7 +152,7 @@ export const HelpModal = memo(function HelpModal({ isOpen, onClose, agentName }:
               </div>
 
               {/* Content */}
-              <div className="p-5 overflow-y-auto max-h-[60vh] space-y-5">
+              <div className="p-4 sm:p-5 overflow-y-auto max-h-[55vh] sm:max-h-[60vh] space-y-4 sm:space-y-5">
                 {/* Help sections */}
                 {helpSections.map((section, sectionIndex) => (
                   <motion.div
@@ -209,10 +209,10 @@ export const HelpModal = memo(function HelpModal({ isOpen, onClose, agentName }:
               </div>
 
               {/* Footer */}
-              <div className="p-4 border-t border-domo-border bg-domo-bg-elevated/50">
+              <div className="p-3 sm:p-4 border-t border-domo-border bg-domo-bg-elevated/50">
                 <button
                   onClick={onClose}
-                  className="w-full py-2.5 bg-domo-primary hover:bg-domo-secondary text-white rounded-lg font-medium transition-colors"
+                  className="w-full py-3 sm:py-2.5 bg-domo-primary hover:bg-domo-secondary text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
                 >
                   Got it, let's start!
                 </button>

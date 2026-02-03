@@ -68,19 +68,19 @@ export const TextInputBar = memo(function TextInputBar({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="bg-domo-bg-card border-t border-domo-border px-4 py-4"
+      className="bg-domo-bg-card border-t border-domo-border px-2 sm:px-4 py-3 sm:py-4"
     >
-      <div className="max-w-4xl mx-auto flex items-center gap-3">
+      <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3">
         {/* End Call button */}
         {onEndCall && (
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onEndCall}
-            className="p-3 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors shadow-lg"
+            className="p-2.5 sm:p-3 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors shadow-lg flex-shrink-0"
             title="End call"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -116,7 +116,7 @@ export const TextInputBar = memo(function TextInputBar({
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
             disabled={disabled}
-            className={`w-full px-5 py-3.5 bg-domo-bg-dark border-2 rounded-full text-domo-text-primary placeholder-domo-text-secondary/60 transition-all duration-200 ${
+            className={`w-full px-3 sm:px-5 py-3 sm:py-3.5 bg-domo-bg-dark border-2 rounded-full text-sm sm:text-base text-domo-text-primary placeholder-domo-text-secondary/60 transition-all duration-200 ${
               isFocused
                 ? 'border-domo-primary shadow-lg shadow-domo-primary/10'
                 : 'border-domo-border hover:border-domo-border/80'
@@ -143,7 +143,7 @@ export const TextInputBar = memo(function TextInputBar({
         <button
           onClick={onMicToggle}
           disabled={disabled}
-          className={`relative p-3.5 rounded-full transition-all duration-300 ${
+          className={`relative p-2.5 sm:p-3.5 rounded-full transition-all duration-300 flex-shrink-0 ${
             isMicActive
               ? 'bg-domo-primary text-white shadow-lg shadow-domo-primary/30'
               : 'bg-domo-bg-elevated text-domo-text-secondary hover:text-domo-text-primary hover:bg-domo-border'
@@ -151,7 +151,7 @@ export const TextInputBar = memo(function TextInputBar({
           title={isMicActive ? 'Mute microphone' : 'Unmute microphone'}
         >
           {isMicActive ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -160,7 +160,7 @@ export const TextInputBar = memo(function TextInputBar({
               />
             </svg>
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -183,21 +183,21 @@ export const TextInputBar = memo(function TextInputBar({
           whileTap={hasMessage ? { scale: 0.95 } : {}}
           onClick={handleSend}
           disabled={disabled || !hasMessage}
-          className={`p-3.5 rounded-full transition-all duration-200 ${
+          className={`p-2.5 sm:p-3.5 rounded-full transition-all duration-200 flex-shrink-0 ${
             hasMessage
               ? 'bg-domo-primary text-white hover:bg-domo-secondary shadow-lg shadow-domo-primary/30'
               : 'bg-domo-bg-elevated text-domo-text-secondary opacity-50'
           } ${disabled || !hasMessage ? 'cursor-not-allowed' : ''}`}
           title="Send message"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </motion.button>
       </div>
 
       {/* Voice mode hint */}
-      <p className="text-center text-xs text-domo-text-secondary/50 mt-2">
+      <p className="text-center text-[10px] sm:text-xs text-domo-text-secondary/50 mt-1.5 sm:mt-2">
         Speak to the agent or type your question
       </p>
     </motion.div>

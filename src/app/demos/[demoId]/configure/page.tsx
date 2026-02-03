@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { UIState } from '@/lib/tavus/UI_STATES';
 import { ProcessingStatus } from './types';
-import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft, ChevronDown, User, Megaphone, Code2 } from 'lucide-react';
+import { Loader2, AlertCircle, Settings, BarChart3, Video, BookOpen, ArrowLeft, ChevronDown, User, Megaphone, Code2, Layers } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { VideoManagement } from './components/VideoManagement';
 import { KnowledgeBaseManagement } from './components/KnowledgeBaseManagement';
@@ -16,6 +16,7 @@ import { CTASettings } from './components/CTASettings';
 import { EmbedSettings } from './components/embed/EmbedSettings';
 import { OnboardingStepper, getStepFromTab, getTabFromStep } from './components/OnboardingStepper';
 import { OnboardingComplete } from './components/OnboardingComplete';
+import { ModuleConfigurationEditor } from './components/ModuleConfigurationEditor';
 
 // Custom hooks
 import { useDemoData } from './hooks/useDemoData';
@@ -23,8 +24,9 @@ import { useAutoSaveMetadata } from './hooks/useAutoSaveMetadata';
 import { useOnboardingStatus } from './hooks/useOnboardingStatus';
 
 // Handlers
-import { handleVideoUpload as videoUpload, handlePreviewVideo as previewVideo, handleDeleteVideo as deleteVideo } from './handlers/videoHandlers';
+import { handleVideoUpload as videoUpload, handlePreviewVideo as previewVideo, handleDeleteVideo as deleteVideo, handleUpdateVideoModule as updateVideoModule } from './handlers/videoHandlers';
 import { handleAddQAPair as addQAPair, handleDeleteKnowledgeChunk as deleteKnowledgeChunk, handleKnowledgeDocUpload as knowledgeDocUpload, handleUrlImport as urlImport } from './handlers/knowledgeHandlers';
+import type { ModuleId } from '@/lib/modules/types';
 import { handleSaveCTA as saveCTA } from './handlers/ctaHandlers';
 
 export default function DemoConfigurationPage({ params }: { params: { demoId: string } }) {
@@ -175,7 +177,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
   useAutoSaveMetadata(demo, demoId, agentName, agentPersonality, agentGreeting, selectedObjectiveTemplate);
 
   // Wrapper functions that call extracted handlers
-  const handleVideoUpload = async () => {
+  const handleVideoUpload = async (moduleId?: ModuleId | null) => {
     if (!selectedVideoFile || !videoTitle) {
       setError('Please select a video file and provide a title.');
       return;
@@ -190,6 +192,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setDemoVideos,
       setSelectedVideoFile,
       setVideoTitle,
+      moduleId,
     });
   };
 
@@ -201,7 +204,11 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     await deleteVideo(id, demoVideos, setDemoVideos, setError);
   };
 
-  const handleAddQAPair = async () => {
+  const handleUpdateVideoModule = async (videoId: string, moduleId: ModuleId | null) => {
+    await updateVideoModule(videoId, moduleId, demoVideos, setDemoVideos, setError);
+  };
+
+  const handleAddQAPair = async (moduleId?: ModuleId | null) => {
     await addQAPair(
       newQuestion,
       newAnswer,
@@ -210,7 +217,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setKnowledgeChunks,
       setNewQuestion,
       setNewAnswer,
-      setError
+      setError,
+      moduleId
     );
   };
 
@@ -218,7 +226,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
     await deleteKnowledgeChunk(id, knowledgeChunks, setKnowledgeChunks, setError);
   };
 
-  const handleKnowledgeDocUpload = async () => {
+  const handleKnowledgeDocUpload = async (moduleId?: ModuleId | null) => {
     await knowledgeDocUpload(
       knowledgeDoc,
       demoId,
@@ -226,11 +234,12 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setKnowledgeChunks,
       setKnowledgeDoc,
       setError,
-      setIsUploadingFile
+      setIsUploadingFile,
+      moduleId
     );
   };
 
-  const handleUrlImport = async () => {
+  const handleUrlImport = async (moduleId?: ModuleId | null) => {
     await urlImport(
       knowledgeUrl,
       demoId,
@@ -238,7 +247,8 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
       setKnowledgeChunks,
       setKnowledgeUrl,
       setError,
-      setIsUploadingUrl
+      setIsUploadingUrl,
+      moduleId
     );
   };
 
@@ -391,7 +401,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           <div className="mb-2">
             <Link
               href="/dashboard"
-              className="inline-flex items-center text-sm text-domo-text-secondary hover:text-white transition-colors"
+              className="inline-flex items-center text-xs sm:text-sm text-domo-text-secondary hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Dashboard
@@ -399,31 +409,32 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           </div>
 
           {/* Main header row */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-white font-heading">Configure: {demo?.name}</h1>
-              <p className="text-sm text-domo-text-secondary">Manage your demo videos, knowledge base, and agent settings.</p>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-white font-heading truncate">Configure: {demo?.name}</h1>
+              <p className="text-xs sm:text-sm text-domo-text-secondary">Manage your demo videos, knowledge base, and agent settings.</p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <Link
                 href={`/demos/${demoId}/reporting`}
-                className="inline-flex items-center px-4 py-2 text-domo-text-secondary bg-domo-bg-elevated border border-domo-border font-medium rounded-lg hover:text-white hover:border-domo-primary transition-colors"
+                className="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-2 text-xs sm:text-sm text-domo-text-secondary bg-domo-bg-elevated border border-domo-border font-medium rounded-lg hover:text-white hover:border-domo-primary transition-colors flex-1 sm:flex-none"
               >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Reporting
+                <BarChart3 className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Reporting</span>
               </Link>
               <Link
                 href={`/demos/${demoId}/experience`}
-                className="px-4 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary transition-colors"
+                className="px-3 sm:px-4 py-2.5 sm:py-2 text-xs sm:text-sm bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary transition-colors flex-1 sm:flex-none text-center whitespace-nowrap"
               >
-                View Demo Experience
+                <span className="sm:hidden">View Demo</span>
+                <span className="hidden sm:inline">View Demo Experience</span>
               </Link>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         {/* UI State Indicator */}
         {uiState === UIState.VIDEO_PLAYING && (
           <div className="mb-4 p-3 bg-domo-primary/10 border border-domo-primary/20 rounded-lg">
@@ -467,17 +478,17 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
           {/* Show different navigation based on onboarding status */}
           {isOnboardingComplete ? (
             /* Post-onboarding: Main navigation with settings dropdown */
-            <Tabs.List className="flex items-center gap-1 border-b border-domo-border pb-0">
+            <Tabs.List className="flex flex-wrap items-center gap-1 border-b border-domo-border pb-0">
               {/* Content Management - Primary tabs */}
               <div className="flex items-center">
                 <div className="flex bg-domo-bg-card rounded-t-lg">
-                  <Tabs.Trigger value="videos" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-domo-text-secondary hover:text-domo-primary rounded-t border-b-2 border-transparent data-[state=active]:text-domo-primary data-[state=active]:border-domo-primary transition-all">
+                  <Tabs.Trigger value="videos" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-domo-text-secondary hover:text-domo-primary rounded-t border-b-2 border-transparent data-[state=active]:text-domo-primary data-[state=active]:border-domo-primary transition-all">
                     <Video className="w-4 h-4" />
-                    Videos
+                    <span className="hidden xs:inline">Videos</span>
                   </Tabs.Trigger>
-                  <Tabs.Trigger value="knowledge" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-domo-text-secondary hover:text-domo-primary rounded-t border-b-2 border-transparent data-[state=active]:text-domo-primary data-[state=active]:border-domo-primary transition-all">
+                  <Tabs.Trigger value="knowledge" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-domo-text-secondary hover:text-domo-primary rounded-t border-b-2 border-transparent data-[state=active]:text-domo-primary data-[state=active]:border-domo-primary transition-all">
                     <BookOpen className="w-4 h-4" />
-                    Knowledge Base
+                    <span className="hidden xs:inline">Knowledge</span>
                   </Tabs.Trigger>
                 </div>
               </div>
@@ -486,28 +497,29 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               <Tabs.Trigger value="agent" className="sr-only">Agent</Tabs.Trigger>
               <Tabs.Trigger value="cta" className="sr-only">CTA</Tabs.Trigger>
               <Tabs.Trigger value="embed" className="sr-only">Embed</Tabs.Trigger>
+              <Tabs.Trigger value="modules" className="sr-only">Modules</Tabs.Trigger>
 
               {/* Settings Dropdown */}
               <div className="ml-auto relative" ref={settingsRef}>
                 <button
                   onClick={() => setSettingsOpen(!settingsOpen)}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t border-b-2 transition-all ${
-                    ['agent', 'cta', 'embed'].includes(activeTab)
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-t border-b-2 transition-all ${
+                    ['agent', 'cta', 'embed', 'modules'].includes(activeTab)
                       ? 'text-white border-domo-primary'
                       : 'text-domo-text-muted hover:text-domo-text-secondary border-transparent'
                   }`}
                 >
                   <Settings className="w-4 h-4" />
-                  Settings
+                  <span className="hidden sm:inline">Settings</span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}
                 {settingsOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-56 bg-domo-bg-elevated rounded-xl shadow-domo-lg border border-domo-border py-1 z-50">
+                  <div className="absolute right-0 top-full mt-1 w-48 sm:w-56 bg-domo-bg-elevated rounded-xl shadow-domo-lg border border-domo-border py-1 z-50">
                     <button
                       onClick={() => handleSettingsOptionClick('agent')}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 sm:py-2.5 text-sm text-left transition-colors ${
                         activeTab === 'agent' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
                       }`}
                     >
@@ -516,7 +528,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     </button>
                     <button
                       onClick={() => handleSettingsOptionClick('cta')}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 sm:py-2.5 text-sm text-left transition-colors ${
                         activeTab === 'cta' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
                       }`}
                     >
@@ -525,12 +537,22 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                     </button>
                     <button
                       onClick={() => handleSettingsOptionClick('embed')}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 sm:py-2.5 text-sm text-left transition-colors ${
                         activeTab === 'embed' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
                       }`}
                     >
                       <Code2 className="w-4 h-4" />
                       Embed Settings
+                    </button>
+                    <div className="border-t border-domo-border my-1" />
+                    <button
+                      onClick={() => handleSettingsOptionClick('modules')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 sm:py-2.5 text-sm text-left transition-colors ${
+                        activeTab === 'modules' ? 'bg-domo-bg-card text-domo-primary' : 'text-domo-text-secondary hover:text-white hover:bg-domo-bg-card'
+                      }`}
+                    >
+                      <Layers className="w-4 h-4" />
+                      Demo Modules
                     </button>
                   </div>
                 )}
@@ -544,6 +566,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
               <Tabs.Trigger value="agent">Agent Settings</Tabs.Trigger>
               <Tabs.Trigger value="cta">Call-to-Action</Tabs.Trigger>
               <Tabs.Trigger value="embed">Embed</Tabs.Trigger>
+              <Tabs.Trigger value="modules">Modules</Tabs.Trigger>
             </Tabs.List>
           )}
 
@@ -558,6 +581,7 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                 handleVideoUpload={handleVideoUpload}
                 handlePreviewVideo={handlePreviewVideo}
                 handleDeleteVideo={handleDeleteVideo}
+                handleUpdateVideoModule={handleUpdateVideoModule}
                 processingStatus={processingStatus}
                 previewVideoUrl={previewVideoUrl}
                 setPreviewVideoUrl={setPreviewVideoUrl}
@@ -709,6 +733,25 @@ export default function DemoConfigurationPage({ params }: { params: { demoId: st
                   </button>
                 </div>
               )}
+            </Tabs.Content>
+
+            <Tabs.Content value="modules">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-2 font-heading">Demo Modules</h2>
+                  <p className="text-domo-text-secondary">
+                    Customize the demo flow modules for this specific demo. Modules organize your content into logical stages
+                    that guide visitors through the demo experience.
+                  </p>
+                </div>
+                <ModuleConfigurationEditor
+                  demoId={demoId}
+                  onModulesChanged={() => {
+                    // Refresh data when modules change
+                    fetchDemoData();
+                  }}
+                />
+              </div>
             </Tabs.Content>
 
           </div>

@@ -3,6 +3,8 @@
  * These define structured conversation workflows for different demo scenarios
  */
 
+import type { ModuleId } from '@/lib/modules/types';
+
 export interface ObjectiveDefinition {
   objective_name: string;
   objective_prompt: string;
@@ -12,6 +14,8 @@ export interface ObjectiveDefinition {
   next_conditional_objectives?: Record<string, string>;
   next_required_objectives?: string[];
   callback_url?: string;
+  /** Module this objective belongs to for sub-context architecture */
+  moduleId?: ModuleId;
 }
 
 export interface ObjectivesTemplate {
@@ -31,6 +35,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
   objectives: [
     {
       objective_name: "introduce_domo_agent",
+      moduleId: "intro",
       objective_prompt:
         "Introduce yourself as Domo A.I., an intelligent demo assistant with comprehensive knowledge about the product. Explain that you can show relevant videos, answer detailed questions, and guide them through features that matter most to their specific needs. Set expectations for an interactive, personalized demo experience.",
       confirmation_mode: "auto",
@@ -40,6 +45,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "needs_discovery",
+      moduleId: "qualification",
       objective_prompt:
         "Conduct thorough needs discovery by understanding their current challenges, goals, and what success looks like for them. Ask about their role, company size, current tools they use, and specific pain points they're trying to solve. Focus on understanding their 'why' before showing any features.",
       confirmation_mode: "auto",
@@ -65,6 +71,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "explain_and_show_overview",
+      moduleId: "overview",
       objective_prompt:
         "Before showing any video, explain what they're about to see and why it's relevant to their specific needs. Say something like 'Based on what you've told me about [their challenge], I'm going to show you our main overview that demonstrates how we solve exactly that problem. This video will show you [specific benefits relevant to them].' Then show the overview video. After the video, connect what they saw back to their specific situation and ask what resonated most.",
       confirmation_mode: "auto",
@@ -79,6 +86,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "explain_and_show_specific_feature",
+      moduleId: "feature_deep_dive",
       objective_prompt:
         "Before showing the feature video, explain exactly what they're about to see and how it addresses their specific challenge. Say 'I'm going to show you [feature name] which directly solves your [specific pain point]. In this video, you'll see how [specific benefit for their use case].' Then show the video. After, ask specific questions about how this would work in their environment.",
       confirmation_mode: "auto",
@@ -97,6 +105,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "feature_deep_dive",
+      moduleId: "feature_deep_dive",
       objective_prompt:
         "For each additional feature video, first explain what they're about to see and why it's relevant: 'Now I want to show you [feature] because you mentioned [their specific need]. This will demonstrate how you can [specific outcome they want].' Show the video, then pause to discuss how it applies to their situation. Repeat this explain-show-discuss pattern for 2-3 features most relevant to their use case.",
       confirmation_mode: "auto",
@@ -111,6 +120,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "address_pain_points",
+      moduleId: "feature_deep_dive",
       objective_prompt:
         "Before showing any videos, explain how each feature directly addresses their specific pain points. Say 'You mentioned [their challenge], so I want to show you exactly how we solve that. This video will demonstrate [specific solution].' Show the relevant videos with context. After each video, confirm they understand how it solves their specific problem.",
       confirmation_mode: "auto",
@@ -124,6 +134,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "handle_objections",
+      moduleId: "pricing",
       objective_prompt:
         "Proactively address common concerns like pricing, implementation time, security, or integration challenges. Use your knowledge base to provide detailed, accurate answers. Gauge their comfort level with the solutions.",
       confirmation_mode: "auto",
@@ -140,6 +151,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "show_social_proof",
+      moduleId: "pricing",
       objective_prompt:
         "Share relevant customer success stories, case studies, or testimonials that match their company size and use case. Show any available customer demo videos or results. Build confidence in the solution.",
       confirmation_mode: "auto",
@@ -149,6 +161,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "discuss_next_steps",
+      moduleId: "cta",
       objective_prompt:
         "Based on their interest level and company fit, suggest appropriate next steps. This could be a trial signup, speaking with sales, getting a custom demo, or accessing additional resources. Gauge their timeline and decision-making process.",
       confirmation_mode: "auto",
@@ -163,6 +176,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "capture_contact_info",
+      moduleId: "cta",
       objective_prompt:
         "If they're interested in next steps, collect their contact information and preferred communication method. Confirm their details and set expectations for follow-up. Thank them for their time and interest.",
       confirmation_mode: "manual",
@@ -177,6 +191,7 @@ export const PRODUCT_DEMO_OBJECTIVES: ObjectivesTemplate = {
     },
     {
       objective_name: "complete_demo",
+      moduleId: "cta",
       objective_prompt:
         "Summarize what was covered, confirm their next steps, and provide any promised resources or links. End on a positive note and show the call-to-action for their chosen next step.",
       confirmation_mode: "auto",

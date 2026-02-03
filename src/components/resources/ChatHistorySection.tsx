@@ -69,68 +69,44 @@ export function ChatHistorySection({ transcript }: ChatHistorySectionProps) {
   return (
     <div
       ref={containerRef}
-      className="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-domo-border scrollbar-track-transparent"
+      className="max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-domo-border scrollbar-track-transparent"
     >
-      <AnimatePresence initial={false}>
-        {transcript.map((message, index) => (
-          <motion.div
-            key={message.id}
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className={`flex flex-col gap-1 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
-          >
-            {/* Role label */}
-            <div
-              className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-medium ${
-                message.role === 'user' ? 'text-domo-primary' : 'text-domo-text-secondary'
-              }`}
+      <ul className="space-y-2">
+        <AnimatePresence initial={false}>
+          {transcript.map((message) => (
+            <motion.li
+              key={message.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              className="flex items-start gap-2"
             >
-              {message.role === 'user' ? (
-                <>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  You
-                </>
-              ) : (
-                <>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Agent
-                </>
-              )}
-            </div>
+              {/* Bullet point */}
+              <span
+                className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                  message.role === 'user' ? 'bg-domo-primary' : 'bg-domo-text-secondary'
+                }`}
+              />
 
-            {/* Message bubble */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className={`max-w-[95%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                message.role === 'user'
-                  ? 'bg-domo-primary text-white rounded-br-md'
-                  : 'bg-domo-bg-dark text-domo-text-primary rounded-bl-md border border-domo-border/50'
-              }`}
-            >
-              {message.content}
-            </motion.div>
-
-            {/* Timestamp */}
-            <span className="text-[10px] text-domo-text-secondary/50 px-1">{formatTime(message.timestamp)}</span>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+              {/* Message content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-medium ${
+                      message.role === 'user' ? 'text-domo-primary' : 'text-domo-text-secondary'
+                    }`}
+                  >
+                    {message.role === 'user' ? 'You' : 'Agent'}
+                  </span>
+                  <span className="text-[10px] text-domo-text-secondary/50">{formatTime(message.timestamp)}</span>
+                </div>
+                <p className="text-sm text-domo-text-primary leading-relaxed mt-0.5">{message.content}</p>
+              </div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
 
       {/* Scroll indicator when there's more content */}
       {transcript.length > 3 && (

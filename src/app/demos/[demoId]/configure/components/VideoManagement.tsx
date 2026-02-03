@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2, RotateCcw, Brain, Sparkles, X } from 'lucide-react';
+import { Play, Upload, Trash2, AlertCircle, CheckCircle, Clock, Loader2, RotateCcw, Brain, Sparkles, X, Layers } from 'lucide-react';
 import { DemoVideo, ProcessingStatus } from '@/app/demos/[demoId]/configure/types';
+import { ModuleSelector } from './ModuleSelector';
+import { DEFAULT_PRODUCT_DEMO_MODULES } from '@/lib/modules/default-modules';
+import type { ModuleId } from '@/lib/modules/types';
 
 // Helper to get Twelve Labs status from video metadata
 function getTwelveLabsStatus(video: DemoVideo): {
@@ -62,9 +65,10 @@ interface VideoManagementProps {
   setVideoTitle: (title: string) => void;
   selectedVideoFile: File | null;
   setSelectedVideoFile: (file: File | null) => void;
-  handleVideoUpload: () => void;
+  handleVideoUpload: (moduleId?: ModuleId | null) => void;
   handlePreviewVideo: (video: DemoVideo) => void;
   handleDeleteVideo: (id: string) => void;
+  handleUpdateVideoModule?: (videoId: string, moduleId: ModuleId | null) => Promise<void>;
   previewVideoUrl: string | null;
   setPreviewVideoUrl: (url: string | null) => void;
   onRetryTranscription?: (videoId: string) => Promise<void>;
@@ -82,6 +86,7 @@ export const VideoManagement = ({
   handleVideoUpload,
   handlePreviewVideo,
   handleDeleteVideo,
+  handleUpdateVideoModule,
   previewVideoUrl,
   setPreviewVideoUrl,
   onRetryTranscription,
@@ -94,6 +99,8 @@ export const VideoManagement = ({
   const [processingProgress, setProcessingProgress] = useState({ current: 0, total: 0, phase: '' });
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedModuleId, setSelectedModuleId] = useState<ModuleId | null>(null);
+  const [editingModuleVideoId, setEditingModuleVideoId] = useState<string | null>(null);
 
   // Calculate AI context stats
   const aiContextStats = useMemo(() => {
@@ -327,9 +334,31 @@ export const VideoManagement = ({
                 className="block w-full text-sm text-domo-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-domo-primary/10 file:text-domo-primary hover:file:bg-domo-primary/20"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-domo-text-secondary mb-2">
+                Demo Module <span className="text-domo-error">*</span>
+              </label>
+              <ModuleSelector
+                value={selectedModuleId}
+                onChange={setSelectedModuleId}
+                placeholder="Select module..."
+                size="md"
+              />
+              <p className="text-xs text-domo-text-muted mt-1">
+                Required: Assign content to a demo stage for organized agent responses
+              </p>
+              {!selectedModuleId && videoTitle && selectedVideoFile && (
+                <p className="text-xs text-amber-400 mt-1">
+                  Please select a module before uploading
+                </p>
+              )}
+            </div>
             <button
-              onClick={handleVideoUpload}
-              disabled={processingStatus.stage === 'uploading' || !videoTitle || !selectedVideoFile}
+              onClick={() => {
+                handleVideoUpload(selectedModuleId);
+                setSelectedModuleId(null);
+              }}
+              disabled={processingStatus.stage === 'uploading' || !videoTitle || !selectedVideoFile || !selectedModuleId}
               className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
             >
               <Upload className="-ml-1 mr-2 h-5 w-5" />
@@ -574,6 +603,38 @@ export const VideoManagement = ({
                       </div>
                     );
                   })()}
+
+                  {/* Module Assignment */}
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <Layers className="h-3 w-3 text-domo-text-muted" />
+                    {editingModuleVideoId === video.id ? (
+                      <ModuleSelector
+                        value={video.module_id as ModuleId | null}
+                        onChange={async (newModuleId) => {
+                          if (handleUpdateVideoModule) {
+                            await handleUpdateVideoModule(video.id, newModuleId);
+                          }
+                          setEditingModuleVideoId(null);
+                        }}
+                        size="sm"
+                        placeholder="Select module..."
+                        allowUnassigned={true}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => setEditingModuleVideoId(video.id)}
+                        className="text-xs text-domo-text-muted hover:text-domo-primary transition-colors"
+                      >
+                        {video.module_id ? (
+                          <span className="text-domo-primary">
+                            {DEFAULT_PRODUCT_DEMO_MODULES.find(m => m.moduleId === video.module_id)?.name || video.module_id}
+                          </span>
+                        ) : (
+                          <span className="italic">No module assigned</span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 ml-4">
                   <button

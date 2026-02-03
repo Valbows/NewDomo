@@ -1,6 +1,9 @@
-import { Plus, Trash2, Upload, Link, FileText, Loader2, AlertCircle, Video, Globe, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Upload, Link, FileText, Loader2, AlertCircle, Video, Globe, MessageSquare, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { KnowledgeChunk, DemoVideo } from '@/app/demos/[demoId]/configure/types';
 import React, { useState, useMemo } from 'react';
+import { ModuleSelector } from './ModuleSelector';
+import { DEFAULT_PRODUCT_DEMO_MODULES } from '@/lib/modules/default-modules';
+import type { ModuleId } from '@/lib/modules/types';
 
 interface KnowledgeBaseManagementProps {
   knowledgeChunks: KnowledgeChunk[];
@@ -9,14 +12,14 @@ interface KnowledgeBaseManagementProps {
   setNewQuestion: (question: string) => void;
   newAnswer: string;
   setNewAnswer: (answer: string) => void;
-  handleAddQAPair: () => void;
+  handleAddQAPair: (moduleId?: ModuleId | null) => void;
   handleDeleteKnowledgeChunk: (id: string) => void;
   knowledgeDoc: File | null;
   setKnowledgeDoc: (file: File | null) => void;
-  handleKnowledgeDocUpload: () => void;
+  handleKnowledgeDocUpload: (moduleId?: ModuleId | null) => void;
   knowledgeUrl?: string;
   setKnowledgeUrl?: (url: string) => void;
-  handleUrlImport?: () => void;
+  handleUrlImport?: (moduleId?: ModuleId | null) => void;
   isUploadingFile?: boolean;
   isUploadingUrl?: boolean;
 }
@@ -28,6 +31,7 @@ interface GroupedKnowledge {
   icon: React.ReactNode;
   link?: string;
   chunks: KnowledgeChunk[];
+  moduleId?: ModuleId | null;
 }
 
 // Group knowledge chunks by source
@@ -132,6 +136,11 @@ export const KnowledgeBaseManagement = ({
   // Track expanded groups
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
+  // Module selection states for each upload type
+  const [docModuleId, setDocModuleId] = useState<ModuleId | null>(null);
+  const [urlModuleId, setUrlModuleId] = useState<ModuleId | null>(null);
+  const [qaModuleId, setQaModuleId] = useState<ModuleId | null>(null);
+
   // Filter videos that are pending/processing transcription
   const pendingVideos = demoVideos.filter(
     v => v.processing_status === 'pending' || v.processing_status === 'processing'
@@ -189,9 +198,21 @@ export const KnowledgeBaseManagement = ({
                 {knowledgeDoc && <p className="text-xs text-white mt-1 truncate max-w-[150px]">{knowledgeDoc.name}</p>}
               </div>
             </div>
+            <ModuleSelector
+              value={docModuleId}
+              onChange={setDocModuleId}
+              placeholder="Select module *"
+              size="sm"
+            />
+            {!docModuleId && knowledgeDoc && (
+              <p className="text-xs text-amber-400">Select a module first</p>
+            )}
             <button
-              onClick={handleKnowledgeDocUpload}
-              disabled={!knowledgeDoc || isUploadingFile}
+              onClick={() => {
+                handleKnowledgeDocUpload(docModuleId);
+                setDocModuleId(null);
+              }}
+              disabled={!knowledgeDoc || isUploadingFile || !docModuleId}
               className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
             >
               {isUploadingFile ? (
@@ -232,9 +253,21 @@ export const KnowledgeBaseManagement = ({
                   />
                 </div>
               </div>
+              <ModuleSelector
+                value={urlModuleId}
+                onChange={setUrlModuleId}
+                placeholder="Select module *"
+                size="sm"
+              />
+              {!urlModuleId && knowledgeUrl.trim() && (
+                <p className="text-xs text-amber-400">Select a module first</p>
+              )}
               <button
-                onClick={handleUrlImport}
-                disabled={!knowledgeUrl.trim() || isUploadingUrl}
+                onClick={() => {
+                  handleUrlImport(urlModuleId);
+                  setUrlModuleId(null);
+                }}
+                disabled={!knowledgeUrl.trim() || isUploadingUrl || !urlModuleId}
                 className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
               >
                 {isUploadingUrl ? (
@@ -276,9 +309,21 @@ export const KnowledgeBaseManagement = ({
               className="block w-full px-3 py-1.5 bg-domo-bg-dark border border-domo-border rounded-lg text-white placeholder-domo-text-muted focus:outline-none focus:border-domo-primary focus:ring-1 focus:ring-domo-primary text-sm"
               placeholder="Answer..."
             ></textarea>
+            <ModuleSelector
+              value={qaModuleId}
+              onChange={setQaModuleId}
+              placeholder="Select module *"
+              size="sm"
+            />
+            {!qaModuleId && newQuestion.trim() && newAnswer.trim() && (
+              <p className="text-xs text-amber-400">Select a module first</p>
+            )}
             <button
-              onClick={handleAddQAPair}
-              disabled={!newQuestion.trim() || !newAnswer.trim()}
+              onClick={() => {
+                handleAddQAPair(qaModuleId);
+                setQaModuleId(null);
+              }}
+              disabled={!newQuestion.trim() || !newAnswer.trim() || !qaModuleId}
               className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-domo-primary hover:bg-domo-secondary disabled:bg-domo-bg-elevated disabled:text-domo-text-muted disabled:cursor-not-allowed transition-colors"
             >
               <Plus className="-ml-1 mr-2 h-4 w-4" />
@@ -358,6 +403,18 @@ export const KnowledgeBaseManagement = ({
                         {group.chunks.length} segments
                       </span>
                     )}
+                    {/* Show module badge if any chunk has a module */}
+                    {(() => {
+                      const moduleId = group.chunks.find(c => c.module_id)?.module_id as ModuleId | undefined;
+                      if (!moduleId) return null;
+                      const module = DEFAULT_PRODUCT_DEMO_MODULES.find(m => m.moduleId === moduleId);
+                      return module ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-domo-primary/10 text-domo-primary">
+                          <Layers className="h-3 w-3" />
+                          {module.name}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                   <button
                     onClick={(e) => {

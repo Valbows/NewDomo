@@ -10,7 +10,7 @@
  * - Help button
  */
 
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useMeetingState } from '@daily-co/daily-react';
 
 interface AgentHeaderProps {
@@ -20,12 +20,15 @@ interface AgentHeaderProps {
   connectionStatus?: 'connected' | 'connecting' | 'disconnected' | 'error';
   /** Callback when help button is clicked */
   onHelpClick?: () => void;
+  /** Optional children to render (e.g., ModuleProgressIndicator) */
+  children?: ReactNode;
 }
 
 export const AgentHeader = memo(function AgentHeader({
   agentName = 'Video Agent',
   connectionStatus: overrideStatus,
   onHelpClick,
+  children,
 }: AgentHeaderProps) {
   const meetingState = useMeetingState();
 
@@ -84,24 +87,29 @@ export const AgentHeader = memo(function AgentHeader({
     .slice(0, 2);
 
   return (
-    <header className="flex-shrink-0 bg-domo-bg-card border-b border-domo-border px-4 py-3">
+    <header className="flex-shrink-0 bg-domo-bg-card border-b border-domo-border px-3 sm:px-4 py-2 sm:py-3">
       <div className="flex items-center justify-between">
         {/* Left side: Agent info */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Agent avatar with initials */}
-          <div className="w-10 h-10 rounded-full bg-domo-bg-elevated border border-domo-border flex items-center justify-center">
-            <span className="text-sm font-semibold text-domo-text-primary">{initials}</span>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-domo-bg-elevated border border-domo-border flex items-center justify-center flex-shrink-0">
+            <span className="text-xs sm:text-sm font-semibold text-domo-text-primary">{initials}</span>
           </div>
           {/* Agent name */}
-          <span className="text-base font-semibold text-domo-text-primary">{agentName}</span>
+          <span className="text-sm sm:text-base font-semibold text-domo-text-primary truncate max-w-[120px] sm:max-w-none">{agentName}</span>
+
+          {/* Optional children (e.g., ModuleProgressIndicator) - hidden on very small screens */}
+          <div className="hidden sm:block">
+            {children}
+          </div>
         </div>
 
         {/* Right side: Status and help */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           {/* Connection status */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <div className={`w-2 h-2 rounded-full ${dotClass}`} />
-            <span className={`text-sm font-medium ${textClass}`}>{text}</span>
+            <span className={`text-xs sm:text-sm font-medium ${textClass} hidden sm:inline`}>{text}</span>
           </div>
 
           {/* Help button */}

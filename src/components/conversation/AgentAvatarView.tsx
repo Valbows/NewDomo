@@ -9,7 +9,7 @@
 
 import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DailyVideo, useActiveSpeakerId } from '@daily-co/daily-react';
+import { DailyVideo, useActiveSpeakerId, useLocalSessionId } from '@daily-co/daily-react';
 import { useReplicaIDs } from '@/components/cvi/hooks/use-replica-ids';
 import { AudioWave } from '@/components/cvi/components/audio-wave';
 import type { SpeakingStatus } from './types';
@@ -28,6 +28,7 @@ export const AgentAvatarView = memo(function AgentAvatarView({
   const replicaIds = useReplicaIDs();
   const replicaId = replicaIds[0];
   const activeSpeakerId = useActiveSpeakerId();
+  const localSessionId = useLocalSessionId();
 
   // Determine if the agent is speaking
   const isAgentSpeaking = activeSpeakerId === replicaId;
@@ -152,6 +153,21 @@ export const AgentAvatarView = memo(function AgentAvatarView({
             {status === 'speaking' ? 'Speaking' : status === 'processing' ? 'Processing' : 'Listening'}
           </span>
         </div>
+
+        {/* User video thumbnail - bottom right corner */}
+        {localSessionId && (
+          <div className="absolute bottom-4 right-4 w-32 h-24 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg bg-domo-bg-dark">
+            <DailyVideo
+              sessionId={localSessionId}
+              type="video"
+              className="w-full h-full object-cover mirror"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+            <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-white font-medium">
+              You
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );

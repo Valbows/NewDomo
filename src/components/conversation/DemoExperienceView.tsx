@@ -58,6 +58,7 @@ import {
   TextInputBar,
   HelpModal,
   SubtitleDisplay,
+  ModuleProgressIndicator,
 } from '@/components/conversation';
 import { ResourcesPanel } from '@/components/resources';
 import { useInsightsData } from '@/app/demos/[demoId]/experience/hooks/useInsightsData';
@@ -169,6 +170,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
     const [showCTA, setShowCTA] = useState(false);
     const [conversationEnded, setConversationEnded] = useState(false);
+    const [isEnding, setIsEnding] = useState(false);
     const [startTime] = useState<number>(Date.now());
     const [currentVideoTime, setCurrentVideoTime] = useState<number>(0);
 
@@ -178,6 +180,18 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
     const [pendingTextMessage, setPendingTextMessage] = useState<string | null>(null);
+
+    // Debug: track subtitle state changes
+    useEffect(() => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SUBTITLE DEBUG] DemoExperienceView state updated:', {
+          hasSubtitle: !!currentSubtitle,
+          subtitleLength: currentSubtitle?.length || 0,
+          willRender: !conversationEnded && !!currentSubtitle,
+          conversationEnded,
+        });
+      }
+    }, [currentSubtitle, conversationEnded]);
 
     const videoPlayerRef = useRef<InlineVideoPlayerHandle | null>(null);
 
@@ -532,6 +546,10 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     // Handle conversation end
     const handleConversationEnd = useCallback(() => {
+      // Show ending UI immediately
+      setIsEnding(true);
+      setCurrentSubtitle(null);
+
       const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
 
       analytics.demoEnded({
@@ -542,16 +560,21 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
         conversationId: conversationId || undefined,
       });
 
-      if (skipEndedScreen) {
+      // Delay actual end to show ending UI
+      setTimeout(() => {
+        setIsEnding(false);
+
+        if (skipEndedScreen) {
+          onConversationEnd();
+          return;
+        }
+
+        setConversationEnded(true);
+        setUiState(UIState.IDLE);
+        setShowCTA(true);
+
         onConversationEnd();
-        return;
-      }
-
-      setConversationEnded(true);
-      setUiState(UIState.IDLE);
-      setShowCTA(true);
-
-      onConversationEnd();
+      }, 1500);
     }, [onConversationEnd, demoId, demoName, source, conversationId, startTime, skipEndedScreen]);
 
     // Handle restart conversation
@@ -631,6 +654,12 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
 
     // Handle subtitle changes from AgentConversationView
     const handleSubtitleChange = useCallback((text: string | null) => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SUBTITLE DEBUG] DemoExperienceView received subtitle:', {
+          hasText: !!text,
+          preview: text ? text.substring(0, 50) : null,
+        });
+      }
       setCurrentSubtitle(text);
     }, []);
 
@@ -792,7 +821,15 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       <CVIProvider>
         <div className="h-screen bg-domo-bg-dark flex flex-col overflow-hidden">
           {/* Header */}
-          <AgentHeader agentName={agentName || demoName} onHelpClick={handleHelpClick} />
+          <AgentHeader agentName={agentName || demoName} onHelpClick={handleHelpClick}>
+            {/* Module Progress - compact in header */}
+            <ModuleProgressIndicator
+              conversationId={conversationId || null}
+              demoId={demoId}
+              compact={true}
+              className="ml-4"
+            />
+          </AgentHeader>
 
           {/* Main content area */}
           <div className="flex-1 flex overflow-hidden">
@@ -917,10 +954,25 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                     className={
                       uiState === UIState.VIDEO_PLAYING
                         ? 'absolute -left-[9999px] -top-[9999px] w-1 h-1 overflow-hidden'
-                        : 'flex-1 flex flex-col'
+                        : 'flex-1 flex flex-col relative'
                     }
                     aria-hidden={uiState === UIState.VIDEO_PLAYING}
                   >
+                    {/* Ending overlay - shows when user clicks End */}
+                    {isEnding && (
+                      <div className="absolute inset-0 z-50 bg-domo-bg-dark/95 backdrop-blur-sm flex flex-col items-center justify-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-domo-bg-elevated border-2 border-domo-border flex items-center justify-center">
+                            <svg className="w-8 h-8 text-domo-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </div>
+                          <p className="text-white text-xl font-medium">Ending conversation...</p>
+                          <p className="text-domo-text-secondary text-sm">Thank you for chatting!</p>
+                        </div>
+                      </div>
+                    )}
+
                     {conversationUrl ? (
                       <AgentConversationView
                         conversationUrl={conversationUrl}
@@ -936,6 +988,17 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                       />
                     ) : (
                       <div className="flex-1 flex items-center justify-center text-white">Connecting...</div>
+                    )}
+
+                    {/* Subtitles - clean caption style at bottom of video */}
+                    {!conversationEnded && !isEnding && currentSubtitle && (
+                      <div className="absolute bottom-16 left-0 right-0 z-40 px-8 pointer-events-none">
+                        <div className="max-w-2xl mx-auto">
+                          <p className="text-white text-base leading-relaxed text-center font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                            {currentSubtitle}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </>
@@ -954,19 +1017,6 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
               )}
             </main>
           </div>
-
-          {/* Subtitles - positioned above input bar, always visible during conversation */}
-          {!conversationEnded && currentSubtitle && (
-            <div className="relative z-50 px-4 pb-2">
-              <div className="max-w-2xl mx-auto">
-                <div className="bg-black/80 backdrop-blur-md rounded-2xl px-6 py-4 shadow-xl border border-white/10">
-                  <p className="text-white text-lg leading-relaxed text-center font-medium">
-                    &ldquo;{currentSubtitle}&rdquo;
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Bottom input bar - always visible when not ended */}
           {!conversationEnded && (

@@ -15,4 +15,5 @@ export { AgentConversationView } from './AgentConversationView';
 export { SubtitleDisplay } from './SubtitleDisplay';
 export { TextInputBar } from './TextInputBar';
 export { HelpModal } from './HelpModal';
+export { ModuleProgressIndicator } from './ModuleProgressIndicator';
 export type { TranscriptMessage, SpeakingStatus } from './types';

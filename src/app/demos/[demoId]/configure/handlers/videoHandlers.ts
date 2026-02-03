@@ -2,12 +2,15 @@ import { supabase } from '@/lib/supabase';
 import { logError, getErrorMessage } from '@/lib/errors';
 import { v4 as uuidv4 } from 'uuid';
 import type { DemoVideo, ProcessingStatus } from '../types';
+import type { ModuleId } from '@/lib/modules/types';
 
 interface VideoUploadParams {
   selectedVideoFile: File;
   videoTitle: string;
   demoId: string;
   demoVideos: DemoVideo[];
+  /** Module this video belongs to */
+  moduleId?: ModuleId | null;
   setProcessingStatus: (status: ProcessingStatus) => void;
   setError: (error: string | null) => void;
   setDemoVideos: (videos: DemoVideo[]) => void;
@@ -21,6 +24,7 @@ export async function handleVideoUpload(params: VideoUploadParams) {
     videoTitle,
     demoId,
     demoVideos,
+    moduleId,
     setProcessingStatus,
     setError,
     setDemoVideos,
@@ -69,6 +73,7 @@ export async function handleVideoUpload(params: VideoUploadParams) {
         title: videoTitle,
         order_index: demoVideos.length + 1,
         processing_status: 'pending',
+        module_id: moduleId || null,
       })
       .select()
       .single();
@@ -79,11 +84,14 @@ export async function handleVideoUpload(params: VideoUploadParams) {
     }
     if (!newVideo) throw new Error('Failed to create video record in database.');
 
-    // Start transcription in background
+    // Start transcription in background, passing module_id
     fetch('/api/transcribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ demo_video_id: newVideo.id }),
+      body: JSON.stringify({
+        demo_video_id: newVideo.id,
+        module_id: moduleId || null,
+      }),
     }).catch((err: unknown) => logError(err, 'Transcription request failed'));
 
     // Start Twelve Labs video indexing in background (for AI video understanding)
@@ -153,5 +161,33 @@ export async function handleDeleteVideo(
     setDemoVideos(demoVideos.filter(v => v.id !== id));
   } catch (err: unknown) {
     setError(getErrorMessage(err, 'Failed to delete video.'));
+  }
+}
+
+/**
+ * Update a video's module assignment
+ */
+export async function handleUpdateVideoModule(
+  videoId: string,
+  moduleId: ModuleId | null,
+  demoVideos: DemoVideo[],
+  setDemoVideos: (videos: DemoVideo[]) => void,
+  setError: (error: string | null) => void
+) {
+  try {
+    const { error } = await supabase
+      .from('demo_videos')
+      .update({ module_id: moduleId })
+      .eq('id', videoId);
+
+    if (error) throw error;
+
+    setDemoVideos(
+      demoVideos.map((v) =>
+        v.id === videoId ? { ...v, module_id: moduleId } : v
+      )
+    );
+  } catch (err: unknown) {
+    setError(getErrorMessage(err, 'Failed to update video module.'));
   }
 }

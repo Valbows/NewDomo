@@ -117,13 +117,23 @@ export const AgentConversationView = React.memo(function AgentConversationView({
       subtitleTimeoutRef.current = null;
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[SUBTITLE DEBUG] setSubtitleWithTimeout called:', {
+        text: text ? text.substring(0, 80) + (text.length > 80 ? '...' : '') : null,
+        textLength: text?.length || 0,
+      });
+    }
+
     setCurrentSubtitle(text);
 
-    // Auto-clear after 8 seconds if text is set
+    // Auto-clear after 3 seconds as fallback (primary clear is on stop-speaking event)
     if (text) {
       subtitleTimeoutRef.current = setTimeout(() => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[SUBTITLE DEBUG] Auto-clearing subtitle after timeout');
+        }
         setCurrentSubtitle(null);
-      }, 8000);
+      }, 3000);
     }
   }, []);
 
@@ -145,6 +155,12 @@ export const AgentConversationView = React.memo(function AgentConversationView({
 
   // Notify parent when subtitle changes
   useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[SUBTITLE DEBUG] Notifying parent of subtitle change:', {
+        hasSubtitle: !!currentSubtitle,
+        preview: currentSubtitle ? currentSubtitle.substring(0, 50) : null,
+      });
+    }
     onSubtitleChange?.(currentSubtitle);
   }, [currentSubtitle, onSubtitleChange]);
 
@@ -358,6 +374,15 @@ export const AgentConversationView = React.memo(function AgentConversationView({
         }
       }
 
+      // Clear subtitle when agent stops speaking
+      if (data?.event_type === 'conversation.replica.stopped_speaking') {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[SUBTITLE DEBUG] Agent stopped speaking - clearing subtitle');
+        }
+        setSubtitleWithTimeout(null);
+        return;
+      }
+
       // ===== Handle transcript updates =====
       if (data?.transcript && Array.isArray(data.transcript)) {
         const messages: TranscriptMessage[] = [];
@@ -394,7 +419,10 @@ export const AgentConversationView = React.memo(function AgentConversationView({
             const lastAssistantMsg = messages.filter((m) => m.role === 'assistant').pop();
             if (lastAssistantMsg) {
               if (process.env.NODE_ENV !== 'production') {
-                console.log('[AgentConversationView] Setting subtitle from transcript:', lastAssistantMsg.content.substring(0, 50));
+                console.log('[SUBTITLE DEBUG] Source: TRANSCRIPT', {
+                  content: lastAssistantMsg.content.substring(0, 80),
+                  totalMessages: messages.length,
+                });
               }
               setSubtitleWithTimeout(lastAssistantMsg.content);
             }
@@ -414,7 +442,14 @@ export const AgentConversationView = React.memo(function AgentConversationView({
 
       if (partialText && typeof partialText === 'string' && partialText.trim()) {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[AgentConversationView] Setting subtitle from partial:', partialText.substring(0, 50));
+          console.log('[SUBTITLE DEBUG] Source: PARTIAL_TRANSCRIPT', {
+            content: partialText.substring(0, 80),
+            sourceField: data?.partial_transcript ? 'partial_transcript' :
+                         data?.speech ? 'speech' :
+                         data?.text ? 'text' :
+                         data?.caption ? 'caption' :
+                         data?.subtitle ? 'subtitle' : 'other',
+          });
         }
         setSubtitleWithTimeout(partialText);
       }
@@ -425,8 +460,18 @@ export const AgentConversationView = React.memo(function AgentConversationView({
           console.log('[AgentConversationView] Utterance event full data:', JSON.stringify(data, null, 2));
         }
 
-        // Try multiple possible locations for the utterance text
+        // Only show subtitles for replica (agent) speech, not user speech
+        const role = data?.properties?.role;
+        if (role === 'user') {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[SUBTITLE DEBUG] Skipping user utterance');
+          }
+          return;
+        }
+
+        // Try multiple possible locations for the utterance text - including properties.speech!
         const utteranceText =
+          data?.properties?.speech ||  // Tavus sends speech here!
           data?.text ||
           data?.content ||
           data?.utterance ||
@@ -438,7 +483,11 @@ export const AgentConversationView = React.memo(function AgentConversationView({
 
         if (utteranceText && typeof utteranceText === 'string' && utteranceText.trim()) {
           if (process.env.NODE_ENV !== 'production') {
-            console.log('[AgentConversationView] Setting subtitle from utterance:', utteranceText.substring(0, 50));
+            console.log('[SUBTITLE DEBUG] Source: UTTERANCE_EVENT', {
+              content: utteranceText.substring(0, 80),
+              eventType: data?.event_type || data?.type,
+              role: role,
+            });
           }
           setSubtitleWithTimeout(utteranceText);
         }

@@ -1,6 +1,6 @@
 # Domo AI Architecture Guide
 
-This document provides a high-level overview of the Domo AI codebase architecture for developers.
+This document provides a high-level overview of the Domo AI codebase architecture.
 
 ## Table of Contents
 - [System Overview](#system-overview)
