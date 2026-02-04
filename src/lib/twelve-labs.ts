@@ -43,10 +43,12 @@ async function apiRequest(
 ): Promise<any> {
   const url = `${TWELVE_LABS_BASE_URL}${endpoint}`;
 
-  console.log(`[TwelveLabs] API Request: ${method} ${url}`);
-  console.log(`[TwelveLabs] API Key present: ${!!TWELVE_LABS_API_KEY}, length: ${TWELVE_LABS_API_KEY.length}`);
-  if (body) {
-    console.log(`[TwelveLabs] Request body:`, JSON.stringify(body).substring(0, 200));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[TwelveLabs] API Request: ${method} ${url}`);
+    console.log(`[TwelveLabs] API Key present: ${!!TWELVE_LABS_API_KEY}, length: ${TWELVE_LABS_API_KEY.length}`);
+    if (body) {
+      console.log(`[TwelveLabs] Request body:`, JSON.stringify(body).substring(0, 200));
+    }
   }
 
   const response = await fetch(url, {
@@ -58,8 +60,8 @@ async function apiRequest(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  console.log(`[TwelveLabs] API Response status: ${response.status}`);
-
+  if (process.env.NODE_ENV !== 'production') { console.log(`[TwelveLabs] API Response status: ${response.status}`);
+ }
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[TwelveLabs] API Error: ${response.status}`);
@@ -75,8 +77,8 @@ async function apiRequest(
   }
 
   const data = await response.json();
-  console.log(`[TwelveLabs] API Response:`, JSON.stringify(data).substring(0, 500));
-  return data;
+  if (process.env.NODE_ENV !== 'production') { console.log(`[TwelveLabs] API Response:`, JSON.stringify(data).substring(0, 500));
+ }  return data;
 }
 
 /**
@@ -126,8 +128,8 @@ export async function indexVideo(
   try {
     const indexId = await getOrCreateIndex();
 
-    console.log('[TwelveLabs] Creating task with FormData for video URL');
-
+    if (process.env.NODE_ENV !== 'production') { console.log('[TwelveLabs] Creating task with FormData for video URL');
+ }
     // Create FormData for multipart request (required by Twelve Labs)
     const formData = new FormData();
     formData.append('index_id', indexId);
@@ -143,8 +145,8 @@ export async function indexVideo(
       body: formData,
     });
 
-    console.log('[TwelveLabs] Task creation response status:', response.status);
-
+    if (process.env.NODE_ENV !== 'production') { console.log('[TwelveLabs] Task creation response status:', response.status);
+ }
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[TwelveLabs] Task creation error:', errorText);
@@ -152,8 +154,8 @@ export async function indexVideo(
     }
 
     const task = await response.json();
-    console.log('[TwelveLabs] Task created:', task);
-
+    if (process.env.NODE_ENV !== 'production') { console.log('[TwelveLabs] Task created:', task);
+ }
     return {
       indexId,
       videoId: task.video_id || '',

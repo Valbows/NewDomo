@@ -14,12 +14,9 @@ import { useParams } from 'next/navigation';
 import { Loader2, AlertCircle, BarChart3, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Reporting } from '@/app/demos/[demoId]/configure/components/reporting';
+import type { Demo } from '@/app/demos/[demoId]/configure/types';
 
-interface DemoData {
-  id: string;
-  name: string;
-  tavus_persona_id: string | null;
-  tavus_conversation_id: string | null;
+interface DemoData extends Demo {
   is_embeddable: boolean;
   cta_button_url: string | null;
 }
@@ -40,7 +37,7 @@ export default function PublicReportingPage() {
 
         const { data, error: fetchError } = await supabase
           .from('demos')
-          .select('id, name, tavus_persona_id, tavus_conversation_id, is_embeddable, cta_button_url')
+          .select('id, name, user_id, created_at, tavus_persona_id, tavus_conversation_id, is_embeddable, cta_button_url, metadata')
           .eq('id', demoId)
           .single();
 
