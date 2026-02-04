@@ -126,14 +126,15 @@ export const AgentConversationView = React.memo(function AgentConversationView({
 
     setCurrentSubtitle(text);
 
-    // Auto-clear after 3 seconds as fallback (primary clear is on stop-speaking event)
+    // Auto-clear after 10 seconds as fallback (SubtitleDisplay handles its own chunk timing)
+    // Primary clear is on stop-speaking event
     if (text) {
       subtitleTimeoutRef.current = setTimeout(() => {
         if (process.env.NODE_ENV !== 'production') {
           console.log('[SUBTITLE DEBUG] Auto-clearing subtitle after timeout');
         }
         setCurrentSubtitle(null);
-      }, 3000);
+      }, 10000);
     }
   }, []);
 
@@ -460,14 +461,7 @@ export const AgentConversationView = React.memo(function AgentConversationView({
           console.log('[AgentConversationView] Utterance event full data:', JSON.stringify(data, null, 2));
         }
 
-        // Only show subtitles for replica (agent) speech, not user speech
         const role = data?.properties?.role;
-        if (role === 'user') {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[SUBTITLE DEBUG] Skipping user utterance');
-          }
-          return;
-        }
 
         // Try multiple possible locations for the utterance text - including properties.speech!
         const utteranceText =
@@ -489,7 +483,31 @@ export const AgentConversationView = React.memo(function AgentConversationView({
               role: role,
             });
           }
-          setSubtitleWithTimeout(utteranceText);
+
+          // Add to transcript for BOTH user and agent speech
+          const messageRole = role === 'user' ? 'user' : 'assistant';
+          setTranscript((prev) => {
+            // Avoid duplicate messages by checking content
+            const isDuplicate = prev.some(
+              (m) => m.content === utteranceText && m.role === messageRole
+            );
+            if (isDuplicate) return prev;
+
+            const newMessage: TranscriptMessage = {
+              id: `${messageRole}-utterance-${Date.now()}`,
+              role: messageRole,
+              content: utteranceText,
+              timestamp: new Date(),
+            };
+            const updated = [...prev, newMessage];
+            onTranscriptUpdate?.(updated);
+            return updated;
+          });
+
+          // Only show subtitle for agent (replica) speech
+          if (role !== 'user') {
+            setSubtitleWithTimeout(utteranceText);
+          }
         }
       }
 

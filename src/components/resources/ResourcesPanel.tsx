@@ -36,6 +36,8 @@ interface ResourcesPanelProps {
   onVideoClick?: (videoTitle: string) => void;
   /** Conversation transcript messages */
   transcript?: TranscriptMessage[];
+  /** Current real-time subtitle from agent speech */
+  currentSubtitle?: string | null;
   /** Whether the panel is in mobile drawer mode */
   isMobileDrawer?: boolean;
   /** Callback to close the mobile drawer */
@@ -58,6 +60,7 @@ export function ResourcesPanel({
   onChapterClick,
   onVideoClick,
   transcript = [],
+  currentSubtitle = null,
   isMobileDrawer = false,
   onClose,
 }: ResourcesPanelProps) {
@@ -233,7 +236,12 @@ export function ResourcesPanel({
                         painPoints={insightsData.topicsDiscussed.painPoints}
                       />
                     )}
-                    {section.id === 'chatHistory' && <ChatHistorySection transcript={transcript} />}
+                    {section.id === 'chatHistory' && (
+                      <ChatHistorySection
+                        transcript={transcript}
+                        currentSubtitle={currentSubtitle}
+                      />
+                    )}
                   </div>
                 </motion.div>
               )}

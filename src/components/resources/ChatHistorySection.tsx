@@ -3,8 +3,11 @@
 /**
  * ChatHistorySection Component
  *
- * Displays the conversation transcript with smooth message animations.
- * Shows messages with different styling for user vs agent.
+ * Displays the conversation transcript with real-time agent speech.
+ * Features:
+ * - Smooth message animations
+ * - Real-time agent typing indicator with current speech
+ * - Different styling for user vs agent messages
  */
 
 import { useEffect, useRef } from 'react';
@@ -14,12 +17,14 @@ import type { TranscriptMessage } from '@/components/conversation/types';
 interface ChatHistorySectionProps {
   /** Transcript messages to display */
   transcript: TranscriptMessage[];
+  /** Current real-time subtitle from agent speech */
+  currentSubtitle?: string | null;
 }
 
-export function ChatHistorySection({ transcript }: ChatHistorySectionProps) {
+export function ChatHistorySection({ transcript, currentSubtitle }: ChatHistorySectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive or subtitle changes
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTo({
@@ -27,7 +32,7 @@ export function ChatHistorySection({ transcript }: ChatHistorySectionProps) {
         behavior: 'smooth',
       });
     }
-  }, [transcript.length]);
+  }, [transcript.length, currentSubtitle]);
 
   // Format timestamp
   const formatTime = (date: Date): string => {
@@ -38,8 +43,8 @@ export function ChatHistorySection({ transcript }: ChatHistorySectionProps) {
     });
   };
 
-  // Empty state
-  if (transcript.length === 0) {
+  // Empty state (only show if no transcript AND no current subtitle)
+  if (transcript.length === 0 && !currentSubtitle) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -69,47 +74,78 @@ export function ChatHistorySection({ transcript }: ChatHistorySectionProps) {
   return (
     <div
       ref={containerRef}
-      className="max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-domo-border scrollbar-track-transparent"
+      className="max-h-96 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-domo-border scrollbar-track-transparent"
     >
-      <ul className="space-y-2">
+      <div className="space-y-3">
         <AnimatePresence initial={false}>
+          {/* Transcript messages */}
           {transcript.map((message) => (
-            <motion.li
+            <motion.div
               key={message.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="flex items-start gap-2"
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              {/* Bullet point */}
-              <span
-                className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  message.role === 'user' ? 'bg-domo-primary' : 'bg-domo-text-secondary'
+              <div
+                className={`max-w-[85%] rounded-2xl px-3 py-2 ${
+                  message.role === 'user'
+                    ? 'bg-domo-primary text-white rounded-br-md'
+                    : 'bg-domo-bg-elevated text-domo-text-primary rounded-bl-md'
                 }`}
-              />
-
-              {/* Message content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-medium ${
-                      message.role === 'user' ? 'text-domo-primary' : 'text-domo-text-secondary'
-                    }`}
-                  >
-                    {message.role === 'user' ? 'You' : 'Agent'}
-                  </span>
-                  <span className="text-[10px] text-domo-text-secondary/50">{formatTime(message.timestamp)}</span>
-                </div>
-                <p className="text-sm text-domo-text-primary leading-relaxed mt-0.5">{message.content}</p>
+              >
+                <p className="text-sm leading-relaxed">{message.content}</p>
+                <p
+                  className={`text-[10px] mt-1 ${
+                    message.role === 'user' ? 'text-white/60' : 'text-domo-text-secondary/50'
+                  }`}
+                >
+                  {formatTime(message.timestamp)}
+                </p>
               </div>
-            </motion.li>
+            </motion.div>
           ))}
+
+          {/* Real-time agent speech (current subtitle) */}
+          {currentSubtitle && (
+            <motion.div
+              key="current-subtitle"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              className="flex justify-start"
+            >
+              <div className="max-w-[85%] rounded-2xl px-3 py-2 bg-domo-bg-elevated border border-domo-primary/30 rounded-bl-md">
+                {/* Typing indicator dots */}
+                <div className="flex items-center gap-1 mb-1">
+                  <motion.span
+                    className="w-1.5 h-1.5 bg-domo-primary rounded-full"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                  />
+                  <motion.span
+                    className="w-1.5 h-1.5 bg-domo-primary rounded-full"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                  />
+                  <motion.span
+                    className="w-1.5 h-1.5 bg-domo-primary rounded-full"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                  />
+                  <span className="text-[10px] text-domo-primary ml-1 font-medium">Speaking</span>
+                </div>
+                <p className="text-sm leading-relaxed text-domo-text-primary">{currentSubtitle}</p>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
-      </ul>
+      </div>
 
       {/* Scroll indicator when there's more content */}
-      {transcript.length > 3 && (
+      {(transcript.length > 3 || currentSubtitle) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

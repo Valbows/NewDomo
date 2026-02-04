@@ -144,10 +144,12 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
     const languageSection = `\n\n## LANGUAGE SUPPORT\nAutomatically detect and respond in the user's language while keeping all tool calls (fetch_video, show_trial_cta) in English with exact titles.\n`;
 
     // Build enhanced system prompt with module-structured content
-    // Order: base prompt -> identity -> modules overview -> objectives -> module content -> video context -> language
-    const enhancedSystemPrompt = baseSystemPrompt
+    // Order: MODULES FIRST (to avoid truncation) -> base prompt -> identity -> objectives -> module content -> video context -> language
+    // Putting modules at top ensures the demo flow structure is always visible to the LLM
+    const enhancedSystemPrompt = modulesObjectivesSection
+      + '\n\n---\n\n'
+      + baseSystemPrompt
       + identitySection
-      + modulesObjectivesSection
       + objectivesSection
       + moduleContentSection
       + videoContextSection

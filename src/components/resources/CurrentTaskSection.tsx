@@ -5,13 +5,14 @@
  *
  * Displays the qualification progress and topics discussed with smooth animations.
  * Shows real-time updates as the AI agent collects information during the demo.
+ * Now displays captured values (name, email, position) when available.
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
 import type { QualificationFields } from '@/components/insights/QualificationChecklist';
 
 interface CurrentTaskSectionProps {
-  /** Qualification fields with captured status */
+  /** Qualification fields with captured status and values */
   qualificationFields: QualificationFields;
   /** Primary interest captured during conversation */
   primaryInterest: string | null;
@@ -24,6 +25,29 @@ const fieldLabels: Record<string, string> = {
   lastName: 'Last Name',
   email: 'Email',
   position: 'Position',
+};
+
+const fieldIcons: Record<string, React.ReactNode> = {
+  firstName: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  lastName: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  email: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
+  position: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
 };
 
 export function CurrentTaskSection({
@@ -61,83 +85,105 @@ export function CurrentTaskSection({
             />
           </svg>
         </motion.div>
-        <p className="text-sm text-domo-text-secondary/70">Qualification progress</p>
-        <p className="text-xs text-domo-text-secondary/50 mt-1">appears as you chat</p>
+        <p className="text-sm text-domo-text-secondary/70">Contact information</p>
+        <p className="text-xs text-domo-text-secondary/50 mt-1">will appear as captured</p>
       </motion.div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Qualification Progress */}
-      <div className="space-y-3">
+      {/* Qualification Progress Header */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-domo-text-secondary uppercase tracking-wide font-medium">Qualification</span>
+          <span className="text-xs text-domo-text-secondary uppercase tracking-wide font-medium">
+            Contact Info
+          </span>
           <motion.span
             key={capturedCount}
             initial={{ scale: 1.2, color: 'var(--color-domo-primary)' }}
             animate={{ scale: 1, color: 'var(--color-domo-text-secondary)' }}
             className="text-xs"
           >
-            {capturedCount}/{totalFields}
+            {capturedCount}/{totalFields} captured
           </motion.span>
         </div>
 
         {/* Progress bar */}
-        <div className="h-2 bg-domo-bg-elevated rounded-full overflow-hidden">
+        <div className="h-1.5 bg-domo-bg-elevated rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-domo-primary to-domo-secondary rounded-full"
+            className="h-full bg-gradient-to-r from-domo-primary to-domo-success rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
           />
         </div>
+      </div>
 
-        {/* Field status list */}
-        <div className="grid grid-cols-2 gap-2">
+      {/* Captured Fields - Show values when captured */}
+      <div className="space-y-2">
+        <AnimatePresence>
           {Object.entries(qualificationFields).map(([key, field], index) => (
             <motion.div
               key={key}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${
-                field.captured ? 'bg-domo-success/10' : 'bg-domo-bg-dark/30'
+              className={`rounded-lg transition-all duration-200 ${
+                field.captured
+                  ? 'bg-domo-success/10 border border-domo-success/20'
+                  : 'bg-domo-bg-elevated/50 border border-transparent'
               }`}
             >
-              <AnimatePresence mode="wait">
-                {field.captured ? (
+              <div className="flex items-center gap-3 px-3 py-2">
+                {/* Icon */}
+                <div
+                  className={`flex-shrink-0 ${
+                    field.captured ? 'text-domo-success' : 'text-domo-text-secondary/50'
+                  }`}
+                >
+                  {fieldIcons[key]}
+                </div>
+
+                {/* Label and Value */}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={`text-xs ${
+                      field.captured ? 'text-domo-text-secondary' : 'text-domo-text-secondary/50'
+                    }`}
+                  >
+                    {fieldLabels[key] || key}
+                  </p>
+                  {field.captured && field.value ? (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-sm font-medium text-domo-text-primary truncate"
+                    >
+                      {field.value}
+                    </motion.p>
+                  ) : (
+                    <p className="text-sm text-domo-text-secondary/40 italic">Not captured</p>
+                  )}
+                </div>
+
+                {/* Check mark for captured */}
+                {field.captured && (
                   <motion.div
-                    key="checked"
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
-                    exit={{ scale: 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    className="flex-shrink-0"
                   >
-                    <svg className="w-4 h-4 text-domo-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-domo-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   </motion.div>
-                ) : (
-                  <motion.div
-                    key="unchecked"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="w-4 h-4 rounded-full border-2 border-domo-text-secondary/30"
-                  />
                 )}
-              </AnimatePresence>
-              <span
-                className={`text-xs truncate ${
-                  field.captured ? 'text-domo-text-primary font-medium' : 'text-domo-text-secondary'
-                }`}
-              >
-                {fieldLabels[key] || key}
-              </span>
+              </div>
             </motion.div>
           ))}
-        </div>
+        </AnimatePresence>
       </div>
 
       {/* Topics Discussed */}
@@ -147,7 +193,7 @@ export function CurrentTaskSection({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-2 overflow-hidden"
+            className="space-y-2 overflow-hidden pt-2 border-t border-domo-border"
           >
             <span className="text-xs text-domo-text-secondary uppercase tracking-wide font-medium flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +204,7 @@ export function CurrentTaskSection({
                   d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
                 />
               </svg>
-              Topics
+              Topics Discussed
             </span>
 
             <div className="flex flex-wrap gap-1.5">

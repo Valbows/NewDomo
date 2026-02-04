@@ -18,6 +18,49 @@
  */
 
 import { broadcastToDemo } from '../utils/broadcast';
+import { syncContactToHubSpotAsync } from '@/lib/hubspot/sync';
+
+/**
+ * Normalize a spoken email address to proper format.
+ * Converts common speech-to-text patterns:
+ * - "at" / "at sign" → "@"
+ * - "dot" → "."
+ * - Removes extra spaces
+ *
+ * Examples:
+ * - "john at gmail dot com" → "john@gmail.com"
+ * - "john at sign gmail dot com" → "john@gmail.com"
+ * - "john.doe at company dot co dot uk" → "john.doe@company.co.uk"
+ */
+function normalizeSpokenEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+
+  let normalized = email
+    .toLowerCase()
+    .trim()
+    // Handle "at sign" or "at-sign" first (before handling plain "at")
+    .replace(/\s*at[\s-]*sign\s*/gi, '@')
+    // Handle " at " with spaces (to avoid replacing "at" in words like "chat")
+    .replace(/\s+at\s+/gi, '@')
+    // Handle "dot com", "dot org", etc. with space
+    .replace(/\s+dot\s+/gi, '.')
+    // Handle any remaining spaces around @ or .
+    .replace(/\s*@\s*/g, '@')
+    .replace(/\s*\.\s*/g, '.')
+    // Remove any remaining spaces (email should have none)
+    .replace(/\s+/g, '');
+
+  // Basic validation - should have @ and at least one dot after @
+  const atIndex = normalized.indexOf('@');
+  const hasDotAfterAt = atIndex > 0 && normalized.indexOf('.', atIndex) > atIndex;
+
+  if (atIndex > 0 && hasDotAfterAt) {
+    return normalized;
+  }
+
+  // If still doesn't look like an email, return original (trimmed)
+  return email.trim();
+}
 
 /**
  * Helper to resolve demoId from a Tavus conversationId.
@@ -147,13 +190,16 @@ export async function handleContactInfoCollection(
   event: any
 ): Promise<void> {
   try {
+    // Normalize spoken email to proper format (e.g., "john at gmail dot com" → "john@gmail.com")
+    const normalizedEmail = normalizeSpokenEmail(outputVariables.email);
+
     const { error: insertError } = await supabase
       .from('qualification_data')
       .insert({
         conversation_id: conversationId,
         first_name: outputVariables.first_name || null,
         last_name: outputVariables.last_name || null,
-        email: outputVariables.email || null,
+        email: normalizedEmail,
         position: outputVariables.position || null,
         objective_name: objectiveName,
         event_type: event.event_type,
@@ -180,10 +226,10 @@ export async function handleContactInfoCollection(
             value: outputVariables.last_name,
           });
         }
-        if (outputVariables.email) {
+        if (normalizedEmail) {
           await broadcastToDemo(supabase, demoId, 'field_captured', {
             field: 'email',
-            value: outputVariables.email,
+            value: normalizedEmail,
           });
         }
         if (outputVariables.position) {
@@ -191,6 +237,21 @@ export async function handleContactInfoCollection(
             field: 'position',
             value: outputVariables.position,
           });
+        }
+
+        // Sync contact to HubSpot CRM (fire-and-forget, non-blocking)
+        if (normalizedEmail) {
+          syncContactToHubSpotAsync(
+            {
+              firstName: outputVariables.first_name || undefined,
+              lastName: outputVariables.last_name || undefined,
+              email: normalizedEmail,
+              position: outputVariables.position || undefined,
+              demoId,
+              conversationId,
+            },
+            supabase
+          );
         }
       }
     }

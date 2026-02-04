@@ -337,7 +337,7 @@ Real-time module progress display during demo experience.
 
 #### DELETE - Delete module or reset
 ```typescript
-// Delete single module:
+// Delete single module:1
 DELETE /api/demos/[demoId]/modules?moduleId=uuid
 
 // Reset to defaults:

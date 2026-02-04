@@ -11,7 +11,10 @@ const fs = require('fs');
 const path = require('path');
 
 // Try to load env files in order of priority
-const envFiles = ['.env.local', '.env.development', '.env'];
+// Use ENV_FILE env var to override, e.g.: ENV_FILE=.env.production npm run test:connections
+const envFiles = process.env.ENV_FILE
+  ? [process.env.ENV_FILE]
+  : ['.env.local', '.env.development', '.env.production', '.env'];
 let loadedEnvFile = null;
 
 for (const envFile of envFiles) {
@@ -213,6 +216,39 @@ async function testOpenAI() {
 }
 
 /**
+ * Test HubSpot API
+ */
+async function testHubSpot() {
+  const apiKey = process.env.HUBSPOT_API_KEY;
+
+  if (!apiKey || apiKey === 'your_hubspot_private_app_token_here') {
+    return { status: 'missing', message: 'HUBSPOT_API_KEY not configured (optional)' };
+  }
+
+  try {
+    // Test by fetching account info
+    const response = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=1', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const total = data.total || 0;
+      return { status: 'valid', message: `Connected (${total} contacts)` };
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    return { status: 'invalid', message: `${response.status}: ${errorData.message || 'Invalid key'}` };
+  } catch (error) {
+    return { status: 'error', message: error.message };
+  }
+}
+
+/**
  * Main
  */
 async function main() {
@@ -226,6 +262,7 @@ async function main() {
     { name: 'ElevenLabs', fn: testElevenLabs },
     { name: 'Supabase', fn: testSupabase },
     { name: 'OpenAI', fn: testOpenAI },
+    { name: 'HubSpot', fn: testHubSpot },
   ];
 
   const results = { valid: 0, missing: 0, invalid: 0, error: 0 };

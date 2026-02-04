@@ -57,7 +57,6 @@ import {
   AgentConversationView,
   TextInputBar,
   HelpModal,
-  SubtitleDisplay,
   ModuleProgressIndicator,
 } from '@/components/conversation';
 import { ResourcesPanel } from '@/components/resources';
@@ -126,6 +125,9 @@ export interface DemoExperienceViewProps {
 
   // Layout mode
   useNewLayout?: boolean;
+
+  // Viewer mode - read-only experience
+  isViewerMode?: boolean;
 }
 
 export interface DemoExperienceViewHandle {
@@ -162,6 +164,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
       source = 'experience',
       embedToken,
       useNewLayout = true,
+      isViewerMode = false,
     },
     ref
   ) {
@@ -648,8 +651,20 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
     }, []);
 
     // Handle transcript updates from AgentConversationView
+    // Merge new messages instead of replacing to preserve user-sent messages
     const handleTranscriptUpdate = useCallback((messages: TranscriptMessage[]) => {
-      setTranscript(messages);
+      setTranscript((prev) => {
+        // Get existing content set to avoid duplicates
+        const existingContents = new Set(prev.map((m) => m.content));
+        // Filter out messages that already exist
+        const newMessages = messages.filter((m) => !existingContents.has(m.content));
+        if (newMessages.length === 0) return prev;
+        // Merge and sort by timestamp
+        const merged = [...prev, ...newMessages].sort(
+          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+        );
+        return merged;
+      });
     }, []);
 
     // Handle subtitle changes from AgentConversationView
@@ -843,6 +858,7 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                 isVideoPlaying={uiState === UIState.VIDEO_PLAYING}
                 onChapterClick={handleChapterClick}
                 transcript={transcript}
+                currentSubtitle={currentSubtitle}
               />
             </aside>
 
@@ -990,13 +1006,15 @@ export const DemoExperienceView = forwardRef<DemoExperienceViewHandle, DemoExper
                       <div className="flex-1 flex items-center justify-center text-white">Connecting...</div>
                     )}
 
-                    {/* Subtitles - clean caption style at bottom of video */}
+                    {/* Subtitles - shown on video as fallback when chat history is collapsed */}
                     {!conversationEnded && !isEnding && currentSubtitle && (
                       <div className="absolute bottom-16 left-0 right-0 z-40 px-8 pointer-events-none">
                         <div className="max-w-2xl mx-auto">
-                          <p className="text-white text-base leading-relaxed text-center font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                            {currentSubtitle}
-                          </p>
+                          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-4 py-2">
+                            <p className="text-white text-base leading-relaxed text-center font-medium">
+                              {currentSubtitle}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     )}
