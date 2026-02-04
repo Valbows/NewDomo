@@ -70,10 +70,10 @@ function DemosPage() {
   if (demos.length === 0) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-full p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-white font-heading">No Demos Found</h2>
-          <p className="text-domo-text-secondary mb-6">You haven't created any demos yet. Let's get started!</p>
-          <Link href="/demos/create" className="bg-domo-primary hover:bg-domo-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors">
+        <div className="flex flex-col items-center justify-center h-full p-4 sm:p-8 text-center">
+          <h2 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-white font-heading">No Demos Found</h2>
+          <p className="text-sm sm:text-base text-domo-text-secondary mb-4 sm:mb-6">You haven't created any demos yet. Let's get started!</p>
+          <Link href="/demos/create" className="bg-domo-primary hover:bg-domo-secondary text-white font-bold py-3 sm:py-2 px-6 sm:px-4 rounded-lg transition-colors text-sm sm:text-base w-full sm:w-auto">
             Create Your First Demo
           </Link>
         </div>
@@ -83,18 +83,18 @@ function DemosPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white font-heading">Your Demos</h1>
-        <Link href="/demos/create" className="bg-domo-primary hover:bg-domo-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white font-heading">Your Demos</h1>
+        <Link href="/demos/create" className="bg-domo-primary hover:bg-domo-secondary text-white font-bold py-3 sm:py-2 px-4 rounded-lg transition-colors w-full sm:w-auto text-center text-sm sm:text-base">
           + New Demo
         </Link>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {demos.map((demo) => (
           <Link href={`/demos/${demo.id}/configure`} key={demo.id}>
-            <div className="block p-6 bg-domo-bg-card border border-domo-border rounded-xl shadow hover:bg-domo-bg-elevated transition-colors">
-              <h5 className="mb-2 text-xl font-bold tracking-tight text-white">{demo.name}</h5>
-              <p className="font-normal text-domo-text-secondary">
+            <div className="block p-4 sm:p-6 bg-domo-bg-card border border-domo-border rounded-xl shadow hover:bg-domo-bg-elevated transition-colors">
+              <h5 className="mb-2 text-lg sm:text-xl font-bold tracking-tight text-white">{demo.name}</h5>
+              <p className="font-normal text-sm sm:text-base text-domo-text-secondary">
                 Created on: {new Date(demo.created_at).toLocaleDateString()}
               </p>
             </div>

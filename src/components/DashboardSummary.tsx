@@ -125,23 +125,23 @@ const DashboardSummary: React.FC<Props> = ({ demos, loading = false }) => {
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
       aria-live="polite"
     >
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="bg-domo-bg-card border border-domo-border rounded-xl p-5"
+          className="bg-domo-bg-card border border-domo-border rounded-xl p-3 sm:p-5"
         >
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
             {stat.icon}
-            <p className="text-sm text-domo-text-muted">{stat.label}</p>
+            <p className="text-xs sm:text-sm text-domo-text-muted truncate">{stat.label}</p>
           </div>
           {isLoading ? (
-            <div className="h-8 w-16 bg-domo-bg-elevated animate-pulse rounded"></div>
+            <div className="h-6 sm:h-8 w-12 sm:w-16 bg-domo-bg-elevated animate-pulse rounded"></div>
           ) : (
             <p
-              className={`${stat.isText ? 'text-sm' : 'text-2xl'} font-semibold text-white`}
+              className={`${stat.isText ? 'text-xs sm:text-sm' : 'text-xl sm:text-2xl'} font-semibold text-white truncate`}
               data-testid={stat.testId}
             >
               {stat.value}

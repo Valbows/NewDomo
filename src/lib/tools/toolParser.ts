@@ -1,12 +1,60 @@
+/**
+ * ============================================================================
+ * TOOL PARSER - Multi-Level Tool Call Parsing from Tavus Events
+ * ============================================================================
+ *
+ * This module parses tool calls from various Tavus event formats.
+ * The AI agent can emit tool calls in many different ways, and this parser
+ * normalizes them all to a consistent { toolName, toolArgs } format.
+ *
+ * PARSING PRIORITY (checked in order):
+ *
+ * 1. EXPLICIT TOOL CALL EVENTS
+ *    event_type: 'conversation.tool_call' or 'conversation_toolcall'
+ *    Contains name/function.name and args/arguments
+ *
+ * 2. TRANSCRIPTION EVENTS
+ *    event_type: 'application.transcription_ready'
+ *    Contains transcript array with assistant messages that have tool_calls
+ *
+ * 3. UTTERANCE EVENTS (optional, requires env flag)
+ *    event_type: 'conversation.utterance'
+ *    Parses natural language commands from agent speech
+ *    e.g., "pause()" or "fetch_video(\"Product Demo\")"
+ *
+ * NAME CANONICALIZATION:
+ *
+ * The AI might say "pause", "pause the video", "hold on", etc.
+ * We map these aliases to canonical names:
+ *   - pause, hold, hold on → pause_video
+ *   - resume, play, continue → play_video
+ *   - next, skip → next_video
+ *   - close, exit, stop → close_video
+ *
+ * NEGATION DETECTION:
+ *
+ * We guard against false positives from phrases like:
+ *   - "don't pause the video"
+ *   - "no need to close"
+ * These should NOT trigger tool calls.
+ *
+ * COMMAND-IN-TITLE DETECTION:
+ *
+ * Sometimes the AI calls fetch_video("pause") instead of pause_video().
+ * We detect this and remap to the correct control tool.
+ *
+ * RELATED FILES:
+ *   - AgentConversationView.tsx: Uses this parser for app-message events
+ *   - tavus-webhook/handler.ts: Uses this parser for webhook events
+ *
+ * ============================================================================
+ */
+
 export type ToolParseResult = {
   toolName: string | null;
   toolArgs: any | null;
 };
 
-/**
- * Extracts tool call name and args from a Tavus event.
- * Mirrors the Hybrid Listener logic used in the webhook route.
- */
 // Canonical tool names supported by the client UI
 const CANONICAL_TOOLS = [
   "fetch_video",
@@ -17,7 +65,10 @@ const CANONICAL_TOOLS = [
   "show_trial_cta",
 ] as const;
 
-// Map short/alias command names to canonical tool names
+/**
+ * Maps short/alias command names to canonical tool names.
+ * Handles variations like "pause", "pause the video", "hold on" → "pause_video"
+ */
 function canonicalizeShortToolName(
   name: string | null | undefined
 ): string | null {
@@ -72,7 +123,15 @@ function canonicalizeShortToolName(
   return null;
 }
 
-// Attempt to map a spoken utterance (free text) directly to a canonical tool
+/**
+ * Maps spoken utterances (free text) to canonical tool names.
+ * Uses keyword detection with negation guards.
+ *
+ * Examples:
+ *   "Could you pause the video please?" → "pause_video"
+ *   "Don't pause the video" → null (negation detected)
+ *   "Let's skip to the next one" → "next_video"
+ */
 function mapUtteranceToCanonicalTool(
   speech: string | null | undefined
 ): string | null {

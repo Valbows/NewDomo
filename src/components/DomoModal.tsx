@@ -99,41 +99,41 @@ export function DomoModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-domo-bg-card border border-domo-border rounded-xl shadow-domo-lg max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-domo-bg-card border border-domo-border rounded-xl shadow-domo-lg max-w-[calc(100%-2rem)] sm:max-w-sm md:max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center gap-3 p-5 border-b border-domo-border">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-domo-bg-elevated flex items-center justify-center">
+        <div className="flex items-center gap-2 sm:gap-3 p-4 sm:p-5 border-b border-domo-border">
+          <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-domo-bg-elevated flex items-center justify-center">
             {getIcon()}
           </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-white font-heading">{title}</h3>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base sm:text-lg font-semibold text-white font-heading truncate">{title}</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-domo-bg-elevated transition-colors"
+            className="p-1.5 rounded-lg hover:bg-domo-bg-elevated transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5 text-domo-text-muted" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5">
-          <p className="text-domo-text-secondary">{message}</p>
+        <div className="p-4 sm:p-5">
+          <p className="text-sm sm:text-base text-domo-text-secondary">{message}</p>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-5 bg-domo-bg-dark border-t border-domo-border">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-5 bg-domo-bg-dark border-t border-domo-border">
           {showCancel && type !== 'alert' && type !== 'info' && type !== 'success' && (
             <button
               onClick={onClose}
-              className="px-4 py-2.5 text-sm font-medium text-domo-text-secondary bg-domo-bg-elevated border border-domo-border rounded-lg hover:text-white hover:border-domo-text-muted transition-colors"
+              className="w-full sm:w-auto px-4 py-3 sm:py-2.5 text-sm font-medium text-domo-text-secondary bg-domo-bg-elevated border border-domo-border rounded-lg hover:text-white hover:border-domo-text-muted transition-colors order-2 sm:order-1"
             >
               {cancelText}
             </button>
           )}
           <button
             onClick={handleConfirm}
-            className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${getConfirmButtonStyle()}`}
+            className={`w-full sm:w-auto px-4 py-3 sm:py-2.5 text-sm font-medium rounded-lg transition-colors order-1 sm:order-2 ${getConfirmButtonStyle()}`}
           >
             {confirmText || getDefaultConfirmText()}
           </button>

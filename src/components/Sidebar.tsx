@@ -32,7 +32,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-domo-bg-card border-r border-domo-border min-h-screen flex flex-col select-none">
+    <div className="hidden lg:flex w-64 bg-domo-bg-card border-r border-domo-border min-h-screen flex-col select-none">
       {/* Logo */}
       <div className="p-5 border-b border-domo-border">
         <Link href="/dashboard">

@@ -27,16 +27,16 @@ export function DualPipOverlay({ visible }: DualPipOverlayProps) {
   if (!visible || !replicaId) return null;
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-auto" style={{ zIndex: 30 }}>
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-4 pointer-events-auto" style={{ zIndex: 30 }}>
       {/* Domo Agent Video */}
       <div className="relative">
         <div
-          className="w-28 h-28 rounded-full overflow-hidden border-3 border-domo-primary shadow-xl bg-domo-bg-card"
+          className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 sm:border-3 border-domo-primary shadow-xl bg-domo-bg-card"
           title="Domo AI"
         >
           {replicaVideoState.isOff ? (
             <div className="w-full h-full flex items-center justify-center bg-domo-bg-elevated">
-              <img src="/domo-logo.png" alt="Domo" className="w-16 h-16 object-contain" />
+              <img src="/domo-logo.png" alt="Domo" className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain" />
             </div>
           ) : (
             <DailyVideo
@@ -47,7 +47,7 @@ export function DualPipOverlay({ visible }: DualPipOverlayProps) {
             />
           )}
         </div>
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-domo-primary text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-domo-primary text-white text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
           Domo
         </div>
       </div>
@@ -55,12 +55,12 @@ export function DualPipOverlay({ visible }: DualPipOverlayProps) {
       {/* User Video */}
       <div className="relative">
         <div
-          className="w-28 h-28 rounded-full overflow-hidden border-3 border-domo-border shadow-xl bg-domo-bg-card"
+          className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 sm:border-3 border-domo-border shadow-xl bg-domo-bg-card"
           title="You"
         >
           {localVideoState.isOff ? (
             <div className="w-full h-full flex items-center justify-center bg-domo-bg-elevated">
-              <svg className="w-12 h-12 text-domo-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-domo-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
@@ -74,7 +74,7 @@ export function DualPipOverlay({ visible }: DualPipOverlayProps) {
             />
           )}
         </div>
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-domo-bg-elevated text-domo-text-secondary text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-domo-border">
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-domo-bg-elevated text-domo-text-secondary text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-medium border border-domo-border whitespace-nowrap">
           You
         </div>
       </div>

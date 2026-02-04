@@ -28,6 +28,11 @@ import { broadcastToDemo } from './utils/broadcast';
 import { storeDetailedConversationData } from './utils/conversationData';
 import { handleProductInterestDiscovery, handleContactInfoCollection, handleVideoShowcaseObjective } from './handlers/objectiveHandlers';
 import { handleFetchVideo, handleShowTrialCTA } from './handlers/toolCallHandlers';
+import {
+  updateModuleStateOnObjectiveComplete,
+  createInitialModuleState,
+} from '@/lib/modules';
+import type { ModuleId, ModuleState } from '@/lib/modules/types';
 
 // Testable handler for Tavus webhook; used by tests directly and by the route wrapper.
 export async function handlePOST(req: NextRequest) {
@@ -224,6 +229,7 @@ async function handleObjectiveCompletion(
   // This is critical for the reporting page to show the conversation
   await ensureConversationDetailsRecord(supabase, conversationId);
 
+  // Handle specific objective types for scoring
   if (objectiveName === 'product_interest_discovery') {
     await handleProductInterestDiscovery(supabase, conversationId, objectiveName, outputVariables, event);
   } else if (objectiveName === 'contact_information_collection' || objectiveName === 'greeting_and_qualification') {
@@ -232,7 +238,79 @@ async function handleObjectiveCompletion(
     await handleVideoShowcaseObjective(supabase, conversationId, outputVariables, event);
   }
 
+  // Update module state for ALL objective completions
+  await updateModuleProgressOnObjective(supabase, conversationId, objectiveName);
+
   return NextResponse.json({ received: true });
+}
+
+/**
+ * Update module progress when an objective completes.
+ * Tracks current_module_id and module_state in conversation_details.
+ */
+async function updateModuleProgressOnObjective(
+  supabase: any,
+  conversationId: string,
+  objectiveName: string
+): Promise<void> {
+  try {
+    // Get current conversation details
+    const { data: convDetails, error: fetchError } = await supabase
+      .from('conversation_details')
+      .select('demo_id, current_module_id, module_state')
+      .eq('tavus_conversation_id', conversationId)
+      .single();
+
+    if (fetchError || !convDetails) {
+      console.warn('Could not fetch conversation_details for module tracking:', fetchError);
+      return;
+    }
+
+    const currentState = (convDetails.module_state as ModuleState | null) || createInitialModuleState();
+    const currentModuleId = convDetails.current_module_id as ModuleId | null;
+
+    // Update module state based on completed objective
+    const { newState, newModuleId, moduleChanged, previousModuleId } =
+      updateModuleStateOnObjectiveComplete(currentState, currentModuleId, objectiveName);
+
+    // Update conversation_details with new module state
+    const { error: updateError } = await supabase
+      .from('conversation_details')
+      .update({
+        current_module_id: newModuleId,
+        module_state: newState,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tavus_conversation_id', conversationId);
+
+    if (updateError) {
+      console.error('Failed to update module state:', updateError);
+      return;
+    }
+
+    // Broadcast events for frontend updates
+    if (convDetails.demo_id) {
+      // Always broadcast objective completion
+      await broadcastToDemo(supabase, convDetails.demo_id, 'objective_completed', {
+        objectiveName,
+        currentModule: newModuleId,
+        completedObjectives: newState.completedObjectives,
+      });
+
+      // Broadcast module change if we advanced to a new module
+      if (moduleChanged) {
+        await broadcastToDemo(supabase, convDetails.demo_id, 'module_changed', {
+          previousModule: previousModuleId,
+          currentModule: newModuleId,
+          completedModules: newState.completedModules,
+          completedObjectives: newState.completedObjectives,
+        });
+      }
+    }
+  } catch (error) {
+    // Non-fatal - log but don't fail the webhook
+    console.error('Error updating module progress:', error);
+  }
 }
 
 async function ensureConversationDetailsRecord(
@@ -264,6 +342,7 @@ async function ensureConversationDetailsRecord(
     }
 
     // Create a minimal conversation_details record with proper demo name format
+    // Initialize with empty module_state for module tracking
     const { error: insertError } = await supabase
       .from('conversation_details')
       .insert({
@@ -272,6 +351,8 @@ async function ensureConversationDetailsRecord(
         conversation_name: `${demo.name || 'Demo'} - ${new Date().toLocaleString()}`,
         status: 'active',
         started_at: new Date().toISOString(),
+        current_module_id: 'intro',  // Start at the intro module
+        module_state: createInitialModuleState(),
       });
 
     if (insertError) {

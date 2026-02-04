@@ -1,3 +1,45 @@
+/**
+ * ============================================================================
+ * USE TOOL CALL HANDLER - Hook for Processing AI Tool Calls
+ * ============================================================================
+ *
+ * This hook processes real-time tool calls from the Daily.co conversation.
+ * It's used by the experience page to handle video playback, CTA display, etc.
+ *
+ * KEY ARCHITECTURE DECISIONS:
+ *
+ * 1. SUPPRESSION WINDOW (suppressFetchUntilRef, suppressReasonRef)
+ *    After certain actions (close, pause, resume), we suppress fetch_video
+ *    for 1 second. This prevents the AI from immediately re-fetching a video
+ *    the user just closed, causing frustrating UX.
+ *
+ *    Example: User clicks "close video" → AI might say "let me show you..."
+ *    Without suppression, video would immediately reopen.
+ *
+ * 2. VIDEO LOOKUP STRATEGY
+ *    Similar to DemoExperienceView, we use fallback matching:
+ *      - Case-insensitive match (ilike)
+ *      - Exact match (eq)
+ *    Note: This hook has FEWER fallbacks than DemoExperienceView.
+ *    Consider using DemoExperienceView's 5-level strategy if needed.
+ *
+ * 3. SIGNED URL GENERATION
+ *    Videos can be stored as:
+ *      - Direct URLs (https://...)
+ *      - Supabase storage paths (bucket/path/to/video.mp4)
+ *    We detect which and generate signed URLs for storage paths.
+ *
+ * 4. DOMO SCORE TRACKING
+ *    Every video view is tracked via /api/track-video-view for the
+ *    "Platform Feature Interest" Domo Score criterion.
+ *
+ * RELATED FILES:
+ *   - DemoExperienceView.tsx: Has more comprehensive video lookup
+ *   - toolParser.ts: Parses tool names from various event formats
+ *
+ * ============================================================================
+ */
+
 import { useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { UIState } from '@/lib/tavus/UI_STATES';
@@ -6,6 +48,7 @@ import type { Demo } from './useDemoData';
 import type { InlineVideoPlayerHandle } from '../components/InlineVideoPlayer';
 
 // Helper function to extract conversation ID from Tavus Daily URL
+// URL format: https://tavus.daily.co/{conversationId}
 function extractConversationIdFromUrl(url: string): string | null {
   try {
     const match = url.match(/tavus\.daily\.co\/([a-zA-Z0-9]+)/);
@@ -62,8 +105,12 @@ export function useToolCallHandler({
   setCtaOverrides,
   setAlert,
 }: UseToolCallHandlerParams): UseToolCallHandlerResult {
+  // Suppression mechanism: Prevents AI from immediately re-fetching videos
+  // after user actions like close/pause. Set to Date.now() + 1000ms.
   const suppressFetchUntilRef = useRef<number>(0);
+  // Tracks WHY suppression is active (for debugging)
   const suppressReasonRef = useRef<'close' | 'pause' | 'resume' | null>(null);
+  // Stores playback position when video is paused (for resume feature)
   const pausedPositionRef = useRef<number>(0);
 
   // Helper function to play a video by title

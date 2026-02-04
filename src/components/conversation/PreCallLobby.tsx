@@ -73,32 +73,31 @@ export function PreCallLobby({
   };
 
   return (
-    <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center p-4">
-      <div className="bg-domo-bg-card border border-domo-border rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+    <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-domo-bg-card border border-domo-border rounded-xl sm:rounded-2xl shadow-2xl max-w-[calc(100%-1.5rem)] sm:max-w-md w-full overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-domo-primary to-domo-secondary px-6 py-8 text-center">
+        <div className="bg-gradient-to-r from-domo-primary to-domo-secondary px-4 sm:px-6 py-6 sm:py-8 text-center">
           {/* Domo Logo */}
-          <div className="mx-auto mb-4">
+          <div className="mx-auto mb-3 sm:mb-4">
             <img
               src="/domo-logo.png"
               alt="Domo"
-              className="h-32 w-auto"
-              style={{ height: '128px' }}
+              className="h-20 sm:h-32 w-auto mx-auto"
             />
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-1 font-heading">
+          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 font-heading">
             Meet {agentName}
           </h1>
-          <p className="text-white/80 text-sm">
+          <p className="text-white/80 text-xs sm:text-sm">
             Your AI Demo Assistant
           </p>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6">
-          <div className="text-center mb-6">
-            <p className="text-domo-text-secondary leading-relaxed">
+        <div className="px-4 sm:px-6 py-4 sm:py-6">
+          <div className="text-center mb-4 sm:mb-6">
+            <p className="text-sm sm:text-base text-domo-text-secondary leading-relaxed">
               Ready to explore <span className="font-semibold text-white">{demoName}</span>?
               I'll guide you through the features and answer any questions you have.
             </p>
@@ -135,14 +134,14 @@ export function PreCallLobby({
 
           {/* Permission Status */}
           {!checkingPermissions && (
-            <div className="mt-4 flex justify-center gap-6">
-              <div className="flex items-center gap-2 text-sm">
+            <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row justify-center gap-2 sm:gap-6">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
                 {getPermissionIcon(cameraPermission, 'camera')}
                 <span className={`${cameraPermission === 'denied' ? 'text-domo-error' : 'text-domo-text-secondary'}`}>
                   Camera: {getPermissionText(cameraPermission)}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
                 {getPermissionIcon(micPermission, 'mic')}
                 <span className={`${micPermission === 'denied' ? 'text-domo-error' : 'text-domo-text-secondary'}`}>
                   Mic: {getPermissionText(micPermission)}
@@ -153,15 +152,15 @@ export function PreCallLobby({
 
           {/* Permission Warning */}
           {(cameraPermission === 'denied' || micPermission === 'denied') && (
-            <p className="mt-3 text-xs text-center text-amber-400">
+            <p className="mt-2 sm:mt-3 text-[10px] sm:text-xs text-center text-amber-400">
               Please enable camera and microphone in your browser settings for the best experience.
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-domo-bg-elevated border-t border-domo-border">
-          <p className="text-xs text-center text-domo-text-muted">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-domo-bg-elevated border-t border-domo-border">
+          <p className="text-[10px] sm:text-xs text-center text-domo-text-muted">
             Powered by <span className="font-medium text-domo-text-secondary">Domo</span>
           </p>
         </div>

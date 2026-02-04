@@ -77,10 +77,10 @@ const DemoList: React.FC<DemoListProps> = ({ demos: demosProp, loading: loadingP
 
   return (
     <div className="mt-8" data-testid="demo-list" aria-busy={loading} aria-live="polite">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-white font-heading">Your Demos</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white font-heading">Your Demos</h2>
         <Link href="/demos/create">
-          <button className="bg-domo-primary hover:bg-domo-secondary text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+          <button className="bg-domo-primary hover:bg-domo-secondary text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm w-full sm:w-auto">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>

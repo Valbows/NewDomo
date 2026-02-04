@@ -12,6 +12,9 @@ async function handlePOST(req: NextRequest) {
   try {
     const body = await req.json();
     const rawId = body.demo_video_id;
+    // module_id can be passed explicitly or inherited from the video record
+    const requestModuleId = body.module_id || null;
+
     if (!rawId || typeof rawId !== 'string') {
       return NextResponse.json({ error: 'Missing demo_video_id' }, { status: 400 });
     }
@@ -27,10 +30,10 @@ async function handlePOST(req: NextRequest) {
 
     // TODO: Add ElevenLabs transcription logic here
 
-    // 2. Fetch video details
+    // 2. Fetch video details including module_id
     const { data: video, error: videoError } = await supabase
       .from('demo_videos')
-      .select('storage_url')
+      .select('storage_url, module_id')
       .eq('id', demo_video_id)
       .single();
 
@@ -133,11 +136,15 @@ async function handlePOST(req: NextRequest) {
     }
 
     const videoIdForSource = demo_video_id!; // non-null after validation above
+    // Use module_id from request, or inherit from video record
+    const effectiveModuleId = requestModuleId || video?.module_id || null;
+
     const rowsBase = chunks.map((chunk) => ({
       demo_id: demoId,
       content: chunk,
       chunk_type: 'transcript' as const,
       source: `video:${videoIdForSource}`,
+      module_id: effectiveModuleId,
     }));
 
     const openaiApiKey = process.env.OPENAI_API_KEY;

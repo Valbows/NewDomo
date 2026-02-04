@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getErrorMessage } from '@/lib/errors';
 import type { KnowledgeChunk } from '../types';
+import type { ModuleId } from '@/lib/modules/types';
 
 export async function handleAddQAPair(
   newQuestion: string,
@@ -10,7 +11,8 @@ export async function handleAddQAPair(
   setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void,
   setNewQuestion: (question: string) => void,
   setNewAnswer: (answer: string) => void,
-  setError: (error: string | null) => void
+  setError: (error: string | null) => void,
+  moduleId?: ModuleId | null
 ) {
   if (!newQuestion.trim() || !newAnswer.trim()) {
     setError('Please provide both a question and an answer.');
@@ -25,6 +27,7 @@ export async function handleAddQAPair(
         demo_id: demoId,
         content: `Q: ${newQuestion}\nA: ${newAnswer}`,
         chunk_type: 'qa',
+        module_id: moduleId || null,
       })
       .select()
       .single();
@@ -62,7 +65,8 @@ export async function handleKnowledgeDocUpload(
   setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void,
   setKnowledgeDoc: (doc: File | null) => void,
   setError: (error: string | null) => void,
-  setIsUploading?: (uploading: boolean) => void
+  setIsUploading?: (uploading: boolean) => void,
+  moduleId?: ModuleId | null
 ) {
   if (!knowledgeDoc) {
     setError('Please select a document to upload.');
@@ -101,7 +105,8 @@ export async function handleKnowledgeDocUpload(
         demo_id: demoId,
         content: content,
         chunk_type: 'document',
-        source: source
+        source: source,
+        module_id: moduleId || null,
       }).select().single();
 
       if (insertError) throw insertError;
@@ -126,7 +131,8 @@ export async function handleKnowledgeDocUpload(
             demo_id: demoId,
             content: content,
             chunk_type: 'document',
-            source: knowledgeDoc.name
+            source: knowledgeDoc.name,
+            module_id: moduleId || null,
           }).select().single();
 
           if (insertError) throw insertError;
@@ -159,7 +165,8 @@ export async function handleUrlImport(
   setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void,
   setKnowledgeUrl: (url: string) => void,
   setError: (error: string | null) => void,
-  setIsUploading?: (uploading: boolean) => void
+  setIsUploading?: (uploading: boolean) => void,
+  moduleId?: ModuleId | null
 ) {
   if (!url.trim()) {
     setError('Please enter a URL.');
@@ -203,7 +210,8 @@ export async function handleUrlImport(
       demo_id: demoId,
       content: content,
       chunk_type: 'document',
-      source: source
+      source: source,
+      module_id: moduleId || null,
     }).select().single();
 
     if (insertError) throw insertError;
@@ -215,5 +223,33 @@ export async function handleUrlImport(
     setError(getErrorMessage(err, 'Failed to import URL content.'));
   } finally {
     setIsUploading?.(false);
+  }
+}
+
+/**
+ * Update a knowledge chunk's module assignment
+ */
+export async function handleUpdateKnowledgeModule(
+  chunkId: string,
+  moduleId: ModuleId | null,
+  knowledgeChunks: KnowledgeChunk[],
+  setKnowledgeChunks: (chunks: KnowledgeChunk[]) => void,
+  setError: (error: string | null) => void
+) {
+  try {
+    const { error } = await supabase
+      .from('knowledge_chunks')
+      .update({ module_id: moduleId })
+      .eq('id', chunkId);
+
+    if (error) throw error;
+
+    setKnowledgeChunks(
+      knowledgeChunks.map((c) =>
+        c.id === chunkId ? { ...c, module_id: moduleId } : c
+      )
+    );
+  } catch (err: unknown) {
+    setError(getErrorMessage(err, 'Failed to update knowledge module.'));
   }
 }
