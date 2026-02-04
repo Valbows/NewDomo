@@ -23,6 +23,8 @@ const VIEWER_CONFIG = {
   viewerEmail: 'test@example.com',
   // Disable editing capabilities
   readOnly: true,
+  // Only allow this specific demo ID for public viewing (Workday demo)
+  allowedDemoId: 'cbb04ff3-07e7-46bf-bfc3-db47ceaf85de',
 };
 
 interface DemoData {
@@ -51,11 +53,17 @@ export default function DemoViewerPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [joiningCall, setJoiningCall] = useState(false);
 
-  // Fetch demo data (public access)
+  // Fetch demo data (public access - restricted to allowed demo only)
   useEffect(() => {
     async function fetchDemo() {
       try {
         setLoading(true);
+
+        // Check if this demo ID is allowed for public viewing
+        if (demoId !== VIEWER_CONFIG.allowedDemoId) {
+          setError('Demo not found');
+          return;
+        }
 
         // Fetch demo data - this is public viewing
         const { data, error: fetchError } = await supabase

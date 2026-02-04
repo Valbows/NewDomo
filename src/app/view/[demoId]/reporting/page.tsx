@@ -16,6 +16,9 @@ import { supabase } from '@/lib/supabase';
 import { Reporting } from '@/app/demos/[demoId]/configure/components/reporting';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
 
+// Only allow this specific demo ID for public reporting (Workday demo)
+const ALLOWED_DEMO_ID = 'cbb04ff3-07e7-46bf-bfc3-db47ceaf85de';
+
 interface DemoData extends Demo {
   is_embeddable: boolean;
   cta_button_url: string | null;
@@ -29,11 +32,17 @@ export default function PublicReportingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch demo data (public access for embeddable demos only)
+  // Fetch demo data (restricted to allowed demo only)
   useEffect(() => {
     async function fetchDemo() {
       try {
         setLoading(true);
+
+        // Check if this demo ID is allowed for public viewing
+        if (demoId !== ALLOWED_DEMO_ID) {
+          setError('Demo not found');
+          return;
+        }
 
         const { data, error: fetchError } = await supabase
           .from('demos')
@@ -43,12 +52,6 @@ export default function PublicReportingPage() {
 
         if (fetchError || !data) {
           setError('Demo not found');
-          return;
-        }
-
-        // Only allow access to embeddable demos
-        if (!data.is_embeddable) {
-          setError('This demo is not publicly accessible');
           return;
         }
 
