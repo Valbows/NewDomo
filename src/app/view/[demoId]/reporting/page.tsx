@@ -17,7 +17,7 @@ import { Reporting } from '@/app/demos/[demoId]/configure/components/reporting';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
 
 // Only allow this specific demo ID for public reporting (Workday demo)
-const ALLOWED_DEMO_ID = 'cbb04ff3-07e7-46bf-bfc3-db47ceaf85de';
+const ALLOWED_DEMO_ID = '8cc16f2d-b407-4895-9639-643d1a976da4';
 
 interface DemoData extends Demo {
   is_embeddable: boolean;

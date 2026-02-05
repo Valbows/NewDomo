@@ -9,7 +9,7 @@ import { logger } from '@/lib/debug-logger';
 const MAX_CONCURRENT_CONVERSATIONS = parseInt(process.env.TAVUS_MAX_CONCURRENT || '3', 10);
 
 // Public demo ID that can be accessed without authentication (Workday demo)
-const PUBLIC_DEMO_ID = 'cbb04ff3-07e7-46bf-bfc3-db47ceaf85de';
+const PUBLIC_DEMO_ID = '8cc16f2d-b407-4895-9639-643d1a976da4';
 
 // Simple in-memory lock to dedupe concurrent starts per user session
 const startLocks = new Map<string, Promise<unknown>>();

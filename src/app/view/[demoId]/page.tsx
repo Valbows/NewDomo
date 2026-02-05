@@ -25,7 +25,7 @@ const VIEWER_CONFIG = {
   // Disable editing capabilities
   readOnly: true,
   // Only allow this specific demo ID for public viewing (Workday demo)
-  allowedDemoId: 'cbb04ff3-07e7-46bf-bfc3-db47ceaf85de',
+  allowedDemoId: '8cc16f2d-b407-4895-9639-643d1a976da4',
 };
 
 // Demo metadata for the lobby screen
