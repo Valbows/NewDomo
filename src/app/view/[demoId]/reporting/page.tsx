@@ -189,7 +189,7 @@ export default function PublicReportingPage() {
                 </span>
               </div>
               <a
-                href={demo.cta_button_url || 'https://domo.ai'}
+                href={demo.cta_button_url || 'https://app.domoagent.ai/login'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-domo-primary text-white font-medium rounded-lg hover:bg-domo-secondary transition-colors text-sm"
@@ -232,7 +232,7 @@ export default function PublicReportingPage() {
             Start converting more visitors into customers with Domo.
           </p>
           <a
-            href={demo.cta_button_url || 'https://domo.ai'}
+            href={demo.cta_button_url || 'https://app.domoagent.ai/login'}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-8 py-3 bg-domo-primary text-white font-semibold rounded-xl hover:bg-domo-secondary transition-colors text-lg"
