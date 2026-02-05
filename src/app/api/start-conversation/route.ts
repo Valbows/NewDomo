@@ -8,6 +8,9 @@ import { logger } from '@/lib/debug-logger';
 // Maximum concurrent conversations allowed per account (Tavus Starter plan = 3)
 const MAX_CONCURRENT_CONVERSATIONS = parseInt(process.env.TAVUS_MAX_CONCURRENT || '3', 10);
 
+// Public demo ID that can be accessed without authentication (Workday demo)
+const PUBLIC_DEMO_ID = 'cbb04ff3-07e7-46bf-bfc3-db47ceaf85de';
+
 // Simple in-memory lock to dedupe concurrent starts per user session
 const startLocks = new Map<string, Promise<unknown>>();
 
@@ -134,26 +137,53 @@ async function handlePOST(req: NextRequest): Promise<NextResponse> {
   const serviceSupabase = createServiceClient();
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { demoId } = await req.json();
+    const body = await req.json();
+    const { demoId, viewerMode, viewerEmail } = body;
 
     if (!demoId) {
       return NextResponse.json({ error: 'Missing demoId' }, { status: 400 });
     }
 
-    // Verify user owns the demo and get the persona ID
-    const { data: demo, error: demoError } = await supabase
-      .from('demos')
-      .select('user_id, tavus_persona_id, metadata, name')
-      .eq('id', demoId)
-      .single();
+    let user: { id: string } | null = null;
+    let demo: { user_id: string; tavus_persona_id: string | null; metadata: any; name: string } | null = null;
 
-    if (demoError || !demo || demo.user_id !== user.id) {
-      return NextResponse.json({ error: 'Demo not found or you do not have permission.' }, { status: 404 });
+    // Check if this is a viewer mode request for the public demo
+    if (viewerMode && demoId === PUBLIC_DEMO_ID) {
+      // Use service client to fetch public demo data (bypasses RLS)
+      const { data: publicDemo, error: publicDemoError } = await serviceSupabase
+        .from('demos')
+        .select('user_id, tavus_persona_id, metadata, name')
+        .eq('id', demoId)
+        .single();
+
+      if (publicDemoError || !publicDemo) {
+        return NextResponse.json({ error: 'Demo not found.' }, { status: 404 });
+      }
+
+      demo = publicDemo;
+      // Use the demo owner's ID for tracking purposes
+      user = { id: publicDemo.user_id };
+      logger.info('Public viewer mode: starting conversation for Workday demo', { viewerEmail });
+    } else {
+      // Standard authenticated flow
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = authUser;
+
+      // Verify user owns the demo and get the persona ID
+      const { data: userDemo, error: demoError } = await supabase
+        .from('demos')
+        .select('user_id, tavus_persona_id, metadata, name')
+        .eq('id', demoId)
+        .single();
+
+      if (demoError || !userDemo || userDemo.user_id !== authUser.id) {
+        return NextResponse.json({ error: 'Demo not found or you do not have permission.' }, { status: 404 });
+      }
+
+      demo = userDemo;
     }
 
     if (!demo.tavus_persona_id) {
