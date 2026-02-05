@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, AlertCircle, BarChart3, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, BarChart3, ExternalLink, X, Eye, Clock, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Reporting } from '@/app/demos/[demoId]/configure/components/reporting';
 import type { Demo } from '@/app/demos/[demoId]/configure/types';
@@ -24,6 +24,30 @@ interface DemoData extends Demo {
   cta_button_url: string | null;
 }
 
+// Welcome modal content
+const WELCOME_INFO = {
+  title: 'Welcome to Your Analytics Dashboard',
+  subtitle: 'Here\'s what to look for in your demo results',
+  sections: [
+    {
+      icon: Eye,
+      title: 'Visual Analysis',
+      description: 'See how Domo tracked your attention, facial expressions, and engagement throughout the demo.',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Engagement Metrics',
+      description: 'View detailed metrics on how you interacted with the demo content and videos.',
+    },
+    {
+      icon: Clock,
+      title: 'Processing Time',
+      description: 'Analytics data may take a few moments to fully load. Refresh the page if needed.',
+    },
+  ],
+  note: 'This is a preview of the analytics that Domo provides for every demo conversation. In a real deployment, you would see data from all your demo viewers.',
+};
+
 export default function PublicReportingPage() {
   const params = useParams();
   const demoId = params.demoId as string;
@@ -31,6 +55,7 @@ export default function PublicReportingPage() {
   const [demo, setDemo] = useState<DemoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
 
   // Fetch demo data (restricted to allowed demo only)
   useEffect(() => {
@@ -102,6 +127,55 @@ export default function PublicReportingPage() {
 
   return (
     <div className="min-h-screen bg-domo-bg-dark">
+      {/* Welcome Modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-domo-bg-card border border-domo-border rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white font-heading">{WELCOME_INFO.title}</h2>
+                <p className="text-sm text-domo-text-secondary mt-1">{WELCOME_INFO.subtitle}</p>
+              </div>
+              <button
+                onClick={() => setShowWelcomeModal(false)}
+                className="p-1 text-domo-text-muted hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Sections */}
+            <div className="space-y-4 mb-6">
+              {WELCOME_INFO.sections.map((section, idx) => (
+                <div key={idx} className="flex items-start gap-3 p-3 bg-domo-bg-elevated rounded-xl">
+                  <div className="p-2 bg-domo-primary/20 rounded-lg">
+                    <section.icon className="w-5 h-5 text-domo-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-white">{section.title}</h3>
+                    <p className="text-sm text-domo-text-muted mt-0.5">{section.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Note */}
+            <div className="bg-domo-primary/10 border border-domo-primary/30 rounded-xl p-3 mb-6">
+              <p className="text-sm text-domo-primary">{WELCOME_INFO.note}</p>
+            </div>
+
+            {/* Button */}
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="w-full py-3 bg-domo-primary text-white font-semibold rounded-xl hover:bg-domo-secondary transition-colors"
+            >
+              View Analytics
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-domo-bg-card border-b border-domo-border">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">

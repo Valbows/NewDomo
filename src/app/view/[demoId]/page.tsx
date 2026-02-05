@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { DemoExperienceView } from '@/components/conversation';
-import { Video, Camera, BarChart3, Play } from 'lucide-react';
+import { Video, Camera, BarChart3, Play, MessageSquare, Lightbulb } from 'lucide-react';
 
 // Viewer mode configuration
 const VIEWER_CONFIG = {
@@ -51,6 +51,33 @@ const DEMO_INFO = {
     },
   ],
   disclaimer: 'For the best experience and to see our perception analysis capabilities, please enable your camera. Your video is processed in real-time and not stored.',
+  // Example prompts to trigger video content
+  examplePrompts: [
+    {
+      category: 'Pain Points to Mention',
+      prompts: [
+        '"I spend too much time on manual HR tasks"',
+        '"Our payroll process is inefficient"',
+        '"We struggle with employee onboarding"',
+        '"I need better workforce analytics"',
+      ],
+    },
+    {
+      category: 'Questions to Ask',
+      prompts: [
+        '"How does Workday handle time tracking?"',
+        '"Show me the reporting dashboard"',
+        '"What integrations are available?"',
+        '"How can I manage employee benefits?"',
+      ],
+    },
+  ],
+  demoTips: [
+    'Mention a specific pain point to see relevant product videos',
+    'Ask follow-up questions to explore features in detail',
+    'After the demo, check the Analytics Dashboard to see your engagement data',
+    'Look at the Visual Analysis section to see how Domo tracks attention and sentiment',
+  ],
 };
 
 interface DemoData {
@@ -240,7 +267,47 @@ export default function DemoViewerPage() {
             </div>
           </div>
 
-          {/* Disclaimer */}
+          {/* How to Experience This Demo */}
+          <div className="bg-domo-bg-card border border-domo-border rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="w-5 h-5 text-domo-primary" />
+              <h3 className="text-lg font-semibold text-white">How to Experience This Demo</h3>
+            </div>
+
+            {/* Example Prompts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {DEMO_INFO.examplePrompts.map((section, idx) => (
+                <div key={idx} className="bg-domo-bg-elevated rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="w-4 h-4 text-domo-primary" />
+                    <h4 className="text-sm font-medium text-domo-primary">{section.category}</h4>
+                  </div>
+                  <ul className="space-y-2">
+                    {section.prompts.map((prompt, pIdx) => (
+                      <li key={pIdx} className="text-sm text-domo-text-secondary italic">
+                        {prompt}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            {/* Tips */}
+            <div className="border-t border-domo-border pt-4">
+              <h4 className="text-sm font-medium text-white mb-3">Tips for the Best Experience:</h4>
+              <ul className="space-y-2">
+                {DEMO_INFO.demoTips.map((tip, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm text-domo-text-secondary">
+                    <span className="text-domo-primary mt-1">•</span>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Camera Disclaimer */}
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
             <div className="flex items-start gap-3">
               <Camera className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
