@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { DemoExperienceView } from '@/components/conversation';
 import { Video, Camera, BarChart3, Play } from 'lucide-react';
 
@@ -200,10 +201,16 @@ export default function DemoViewerPage() {
     return (
       <div className="min-h-screen bg-domo-bg-dark flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
-          {/* Header */}
+          {/* Header with Domo Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-domo-primary/20 mb-4">
-              <Play className="w-8 h-8 text-domo-primary" />
+            <div className="inline-flex items-center justify-center mb-4">
+              <Image
+                src="/domo-logo.png"
+                alt="Domo AI"
+                width={80}
+                height={80}
+                className="rounded-2xl"
+              />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2 font-heading">
               {DEMO_INFO.title}
@@ -262,10 +269,18 @@ export default function DemoViewerPage() {
             )}
           </button>
 
-          {/* Footer */}
-          <p className="text-center text-domo-text-muted text-sm mt-6">
-            Powered by <span className="text-domo-primary font-medium">Domo AI</span>
-          </p>
+          {/* Footer with Domo Logo */}
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <span className="text-domo-text-muted text-sm">Powered by</span>
+            <Image
+              src="/domo-logo.png"
+              alt="Domo AI"
+              width={24}
+              height={24}
+              className="rounded"
+            />
+            <span className="text-domo-primary font-medium text-sm">Domo AI</span>
+          </div>
         </div>
       </div>
     );
